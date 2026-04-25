@@ -34,7 +34,6 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.7")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.7")
-	testRuntimeOnly("com.h2database:h2")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
