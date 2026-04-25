@@ -7,6 +7,8 @@ import com.sanggwonai.api.area.dto.AreaCenterDto
 import com.sanggwonai.api.area.dto.AreaSearchResponseDto
 import com.sanggwonai.api.area.facade.AreaFacade
 import com.sanggwonai.api.common.api.ApiResponse
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
@@ -15,11 +17,16 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/areas")
+@Tag(name = "지역", description = "지역 검색 관련 API 모음임")
 class AreaController(
     private val areaFacade: AreaFacade
 ) {
 
     @GetMapping("/search")
+    @Operation(
+        summary = "지역 검색함",
+        description = "행정동/지역 키워드로 분석 가능한 지역 후보를 조회함."
+    )
     fun search(
         @ModelAttribute request: AreaSearchRequest
     ): ResponseEntity<ApiResponse<*>> {

@@ -27,3 +27,8 @@ app:
     refresh-token-expiry-days: 30
   analysis:
     estimated-seconds: 4
+
+springdoc:
+  swagger-ui:
+    operations-sorter: alpha
+    tags-sorter: alpha

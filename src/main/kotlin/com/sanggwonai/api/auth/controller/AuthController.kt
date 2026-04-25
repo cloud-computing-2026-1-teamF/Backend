@@ -16,6 +16,9 @@ import com.sanggwonai.api.auth.facade.AuthFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.common.error.ApiException
 import com.sanggwonai.api.common.error.ErrorCode
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -31,11 +34,17 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/auth")
+@Tag(name = "인증", description = "회원 인증/인가 관련 API 모음임")
 class AuthController(
     private val authFacade: AuthFacade
 ) {
 
     @GetMapping("/me")
+    @Operation(
+        summary = "내 정보 조회함",
+        description = "Access 토큰 기준으로 현재 로그인 사용자 정보를 조회함.",
+        security = [SecurityRequirement(name = "bearerAuth")]
+    )
     fun me(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?
     ): ResponseEntity<ApiResponse<*>> {
@@ -44,6 +53,10 @@ class AuthController(
     }
 
     @PostMapping("/login")
+    @Operation(
+        summary = "로그인 수행함",
+        description = "이메일/비밀번호로 로그인하고 사용자 정보와 토큰 묶음을 반환함."
+    )
     fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<ApiResponse<*>> {
         val data = authFacade.login(request)
         return ResponseEntity.ok()
@@ -52,6 +65,10 @@ class AuthController(
     }
 
     @PostMapping("/signup")
+    @Operation(
+        summary = "회원가입 수행함",
+        description = "신규 계정을 생성하고 즉시 로그인 처리된 토큰을 반환함."
+    )
     fun signup(@Valid @RequestBody request: SignupRequest): ResponseEntity<ApiResponse<*>> {
         val data = authFacade.signup(request)
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -60,6 +77,10 @@ class AuthController(
     }
 
     @PostMapping("/refresh")
+    @Operation(
+        summary = "Access 토큰 재발급함",
+        description = "HttpOnly 쿠키의 refresh token으로 access token을 재발급함."
+    )
     fun refresh(
         @CookieValue(name = REFRESH_COOKIE, required = false) refreshToken: String?
     ): ResponseEntity<ApiResponse<*>> {

@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 	implementation("org.mapstruct:mapstruct:1.6.3")
 	implementation("io.jsonwebtoken:jjwt-api:0.12.7")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
