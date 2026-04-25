@@ -4,6 +4,7 @@ import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.dto.AnalysisEventDto
 import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
+import com.sanggwonai.api.analysis.dto.AnalysisSectionTodoDto
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
 import com.sanggwonai.api.analysis.entity.AnalysisEntity
 import com.sanggwonai.api.analysis.entity.AnalysisStatus
@@ -134,6 +135,58 @@ class AnalysisService(
             throw ApiException(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "접근 권한이 없어요")
         }
         return analysis
+    }
+
+    @Transactional(readOnly = true)
+    fun getRecommendedProperties(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "recommended_properties", "추천 매물")
+    }
+
+    @Transactional(readOnly = true)
+    fun getKeyMetrics(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "key_metrics", "주요 지표")
+    }
+
+    @Transactional(readOnly = true)
+    fun getFootTraffic(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "foot_traffic", "유동인구")
+    }
+
+    @Transactional(readOnly = true)
+    fun getCompetition(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "competition", "경쟁 점포")
+    }
+
+    @Transactional(readOnly = true)
+    fun getEstimatedRevenue(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "estimated_revenue", "추정 매출")
+    }
+
+    @Transactional(readOnly = true)
+    fun getIndustryGrowth(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "industry_growth", "업종 성장률")
+    }
+
+    @Transactional(readOnly = true)
+    fun getAccessibility(authContext: AuthContext, analysisId: String): AnalysisSectionTodoDto {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        return todoSection(analysis, "accessibility", "입지 접근성")
+    }
+
+    private fun todoSection(analysis: AnalysisEntity, sectionKey: String, sectionLabel: String): AnalysisSectionTodoDto {
+        return AnalysisSectionTodoDto(
+            analysisId = analysis.id,
+            sectionKey = sectionKey,
+            sectionLabel = sectionLabel,
+            todo = "TODO: 공식 API/크롤링 데이터 스키마 확정 후 상세 필드 정의 예정",
+            updatedAt = analysis.updatedAt
+        )
     }
 
     private fun validateDailyLimit(userId: String, tier: UserTier) {

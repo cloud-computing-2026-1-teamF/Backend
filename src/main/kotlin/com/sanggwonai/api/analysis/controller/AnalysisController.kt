@@ -4,11 +4,13 @@ import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.controller.response.AnalysisErrorResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisLinksResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisPollingResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisSectionTodoResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisStepResponse
 import com.sanggwonai.api.analysis.controller.response.CreateAnalysisResponse
 import com.sanggwonai.api.analysis.dto.AnalysisErrorDto
 import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
+import com.sanggwonai.api.analysis.dto.AnalysisSectionTodoDto
 import com.sanggwonai.api.analysis.dto.AnalysisStepDto
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
@@ -56,6 +58,69 @@ class AnalysisController(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @PathVariable("id") analysisId: String
     ): SseEmitter = analysisFacade.events(authorization, analysisId)
+
+    @GetMapping("/{id}/recommended-properties", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun recommendedProperties(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.recommendedProperties(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/key-metrics", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun keyMetrics(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.keyMetrics(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/foot-traffic", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun footTraffic(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.footTraffic(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/competition", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun competition(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.competition(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/estimated-revenue", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun estimatedRevenue(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.estimatedRevenue(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/industry-growth", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun industryGrowth(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.industryGrowth(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping("/{id}/accessibility", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun accessibility(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.accessibility(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
 
     private fun toResponse(data: CreateAnalysisData): CreateAnalysisResponse {
         return CreateAnalysisResponse(
@@ -105,6 +170,16 @@ class AnalysisController(
         return AnalysisErrorResponse(
             code = data.code,
             message = data.message
+        )
+    }
+
+    private fun toResponse(data: AnalysisSectionTodoDto): AnalysisSectionTodoResponse {
+        return AnalysisSectionTodoResponse(
+            analysisId = data.analysisId,
+            sectionKey = data.sectionKey,
+            sectionLabel = data.sectionLabel,
+            todo = data.todo,
+            updatedAt = data.updatedAt
         )
     }
 }

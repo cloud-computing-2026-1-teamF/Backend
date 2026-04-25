@@ -20,4 +20,25 @@ class AnalysisFacade(
 
     fun events(authorizationHeader: String?, analysisId: String): SseEmitter =
         analysisService.openEvents(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun recommendedProperties(authorizationHeader: String?, analysisId: String) =
+        analysisService.getRecommendedProperties(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun keyMetrics(authorizationHeader: String?, analysisId: String) =
+        analysisService.getKeyMetrics(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun footTraffic(authorizationHeader: String?, analysisId: String) =
+        analysisService.getFootTraffic(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun competition(authorizationHeader: String?, analysisId: String) =
+        analysisService.getCompetition(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun estimatedRevenue(authorizationHeader: String?, analysisId: String) =
+        analysisService.getEstimatedRevenue(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun industryGrowth(authorizationHeader: String?, analysisId: String) =
+        analysisService.getIndustryGrowth(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun accessibility(authorizationHeader: String?, analysisId: String) =
+        analysisService.getAccessibility(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 }
