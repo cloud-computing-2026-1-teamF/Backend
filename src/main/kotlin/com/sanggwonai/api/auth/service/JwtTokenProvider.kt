@@ -1,11 +1,10 @@
 package com.sanggwonai.api.auth.service
 
 import com.sanggwonai.api.common.error.ApiException
-import com.sanggwonai.api.common.error.ErrorCode
+import com.sanggwonai.api.common.error.ErrorType
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -35,11 +34,7 @@ class JwtTokenProvider(
             val claims: Claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).payload
             return claims.subject
         } catch (_: Exception) {
-            throw ApiException(
-                status = HttpStatus.UNAUTHORIZED,
-                code = ErrorCode.AUTH_REQUIRED,
-                message = "인증이 필요해요"
-            )
+            throw ApiException.of(ErrorType.AUTH_REQUIRED)
         }
     }
 }

@@ -15,7 +15,7 @@ import com.sanggwonai.api.auth.dto.UserDto
 import com.sanggwonai.api.auth.facade.AuthFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.common.error.ApiException
-import com.sanggwonai.api.common.error.ErrorCode
+import com.sanggwonai.api.common.error.ErrorType
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -85,7 +85,7 @@ class AuthController(
         @CookieValue(name = REFRESH_COOKIE, required = false) refreshToken: String?
     ): ResponseEntity<ApiResponse<RefreshResponse>> {
         if (refreshToken.isNullOrBlank()) {
-            throw ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "리프레시 토큰이 없어요")
+            throw ApiException.of(ErrorType.REFRESH_TOKEN_MISSING)
         }
         return ResponseEntity.ok(ApiResponse(toResponse(authFacade.refresh(refreshToken))))
     }

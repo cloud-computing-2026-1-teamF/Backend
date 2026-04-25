@@ -13,9 +13,8 @@ import com.sanggwonai.api.auth.mapper.UserMapper
 import com.sanggwonai.api.auth.repository.RefreshTokenRepository
 import com.sanggwonai.api.auth.repository.UserRepository
 import com.sanggwonai.api.common.error.ApiException
-import com.sanggwonai.api.common.error.ErrorCode
+import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
-import org.springframework.http.HttpStatus
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -36,7 +35,7 @@ class AuthService(
     @Transactional(readOnly = true)
     fun me(authContext: AuthContext): MeData {
         val user = userRepository.findById(authContext.userId)
-            .orElseThrow { ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "인증이 필요해요") }
+            .orElseThrow { ApiException.of(ErrorType.AUTH_REQUIRED) }
         return MeData(user = userMapper.toDto(user))
     }
 
@@ -44,10 +43,10 @@ class AuthService(
     fun login(request: LoginRequest): LoginData {
         val user = userRepository.findByEmail(request.email)
             .orElseThrow {
-                ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, "이메일 또는 비밀번호가 일치하지 않아요")
+                ApiException.of(ErrorType.INVALID_CREDENTIALS)
             }
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
-            throw ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, "이메일 또는 비밀번호가 일치하지 않아요")
+            throw ApiException.of(ErrorType.INVALID_CREDENTIALS)
         }
         val tokens = issueTokens(user)
         return LoginData(user = userMapper.toDto(user), tokens = tokens)
@@ -56,7 +55,7 @@ class AuthService(
     @Transactional
     fun signup(request: SignupRequest): LoginData {
         if (userRepository.existsByEmail(request.email)) {
-            throw ApiException(HttpStatus.CONFLICT, ErrorCode.CONFLICT, "이미 가입된 이메일이에요")
+            throw ApiException.of(ErrorType.EMAIL_CONFLICT)
         }
         val now = Instant.now(clock)
         val user = userRepository.save(
@@ -64,7 +63,7 @@ class AuthService(
                 id = IdGenerator.next("usr"),
                 email = request.email.lowercase(),
                 passwordHash = passwordEncoder.encode(request.password)
-                    ?: throw ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.UPSTREAM_UNAVAILABLE, "비밀번호 암호화에 실패했어요"),
+                    ?: throw ApiException.of(ErrorType.PASSWORD_ENCODING_FAILED),
                 name = request.name,
                 tier = UserTier.FREE,
                 createdAt = now
@@ -78,11 +77,11 @@ class AuthService(
     fun refresh(refreshToken: String): RefreshData {
         val now = Instant.now(clock)
         val tokenEntity = refreshTokenRepository.findByTokenAndRevokedFalse(refreshToken)
-            .orElseThrow { ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "리프레시 토큰이 유효하지 않아요") }
+            .orElseThrow { ApiException.of(ErrorType.REFRESH_TOKEN_INVALID) }
 
         if (tokenEntity.expiresAt.isBefore(now)) {
             tokenEntity.revoked = true
-            throw ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "리프레시 토큰이 만료되었어요")
+            throw ApiException.of(ErrorType.REFRESH_TOKEN_EXPIRED)
         }
 
         val accessToken = jwtTokenProvider.issueAccessToken(tokenEntity.user.id)

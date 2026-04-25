@@ -2,7 +2,6 @@ package com.sanggwonai.api.common.error
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -21,7 +20,7 @@ class GlobalExceptionHandler {
                 ErrorEnvelope(
                     ErrorBody(
                         code = ex.code.toWireCode(),
-                        message = ex.message,
+                        message = ex.errorType.message,
                         details = ex.details,
                         trace_id = request.traceId()
                     )
@@ -49,12 +48,12 @@ class GlobalExceptionHandler {
             is IllegalArgumentException -> details["request"] = ex.message ?: "invalid request"
         }
         return ResponseEntity
-            .status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .status(ErrorType.VALIDATION_FAILED.status)
             .body(
                 ErrorEnvelope(
                     ErrorBody(
-                        code = ErrorCode.VALIDATION_FAILED.toWireCode(),
-                        message = "요청 값이 올바르지 않아요",
+                        code = ErrorType.VALIDATION_FAILED.code.toWireCode(),
+                        message = ErrorType.VALIDATION_FAILED.message,
                         details = details.ifEmpty { null },
                         trace_id = request.traceId()
                     )
@@ -65,12 +64,12 @@ class GlobalExceptionHandler {
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(ex: Exception, request: HttpServletRequest): ResponseEntity<ErrorEnvelope> {
         return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .status(ErrorType.INTERNAL_SERVER_ERROR.status)
             .body(
                 ErrorEnvelope(
                     ErrorBody(
-                        code = ErrorCode.UPSTREAM_UNAVAILABLE.toWireCode(),
-                        message = "서버 오류가 발생했어요",
+                        code = ErrorType.INTERNAL_SERVER_ERROR.code.toWireCode(),
+                        message = ErrorType.INTERNAL_SERVER_ERROR.message,
                         trace_id = request.traceId()
                     )
                 )
@@ -81,5 +80,5 @@ class GlobalExceptionHandler {
         return this.getAttribute(TraceIdFilter.TRACE_ID_ATTR)?.toString() ?: "req_unknown"
     }
 
-    private fun ErrorCode.toWireCode(): String = this.name.lowercase()
+    private fun ErrorCode.toWireCode(): String = this.wire
 }

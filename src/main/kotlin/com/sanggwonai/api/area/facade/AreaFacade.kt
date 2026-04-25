@@ -3,8 +3,7 @@ package com.sanggwonai.api.area.facade
 import com.sanggwonai.api.area.dto.AreaSearchResponseDto
 import com.sanggwonai.api.area.service.AreaService
 import com.sanggwonai.api.common.error.ApiException
-import com.sanggwonai.api.common.error.ErrorCode
-import org.springframework.http.HttpStatus
+import com.sanggwonai.api.common.error.ErrorType
 import org.springframework.stereotype.Component
 
 @Component
@@ -14,10 +13,8 @@ class AreaFacade(
     fun search(query: String?, limit: Int?): List<AreaSearchResponseDto> {
         val normalizedQuery = query?.trim()
             ?.takeIf { it.isNotBlank() }
-            ?: throw ApiException(
-                status = HttpStatus.UNPROCESSABLE_ENTITY,
-                code = ErrorCode.VALIDATION_FAILED,
-                message = "q 파라미터가 필요해요",
+            ?: throw ApiException.of(
+                errorType = ErrorType.QUERY_REQUIRED,
                 details = mapOf("q" to "required")
             )
 
