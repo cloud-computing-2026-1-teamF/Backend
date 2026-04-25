@@ -1,7 +1,17 @@
 package com.sanggwonai.api.auth.controller
 
-import com.sanggwonai.api.auth.dto.LoginRequest
-import com.sanggwonai.api.auth.dto.SignupRequest
+import com.sanggwonai.api.auth.controller.request.LoginRequest
+import com.sanggwonai.api.auth.controller.request.SignupRequest
+import com.sanggwonai.api.auth.controller.response.LoginResponse
+import com.sanggwonai.api.auth.controller.response.MeResponse
+import com.sanggwonai.api.auth.controller.response.RefreshResponse
+import com.sanggwonai.api.auth.controller.response.TokensResponse
+import com.sanggwonai.api.auth.controller.response.UserResponse
+import com.sanggwonai.api.auth.dto.LoginData
+import com.sanggwonai.api.auth.dto.MeData
+import com.sanggwonai.api.auth.dto.RefreshData
+import com.sanggwonai.api.auth.dto.TokenBundleDto
+import com.sanggwonai.api.auth.dto.UserDto
 import com.sanggwonai.api.auth.facade.AuthFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.common.error.ApiException
@@ -29,7 +39,8 @@ class AuthController(
     fun me(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?
     ): ResponseEntity<ApiResponse<*>> {
-        return ResponseEntity.ok(ApiResponse(authFacade.me(authorization)))
+        val data = authFacade.me(authorization)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
     }
 
     @PostMapping("/login")
@@ -37,7 +48,7 @@ class AuthController(
         val data = authFacade.login(request)
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
-            .body(ApiResponse(data))
+            .body(ApiResponse(toResponse(data)))
     }
 
     @PostMapping("/signup")
@@ -45,7 +56,7 @@ class AuthController(
         val data = authFacade.signup(request)
         return ResponseEntity.status(HttpStatus.CREATED)
             .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
-            .body(ApiResponse(data))
+            .body(ApiResponse(toResponse(data)))
     }
 
     @PostMapping("/refresh")
@@ -55,7 +66,41 @@ class AuthController(
         if (refreshToken.isNullOrBlank()) {
             throw ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "리프레시 토큰이 없어요")
         }
-        return ResponseEntity.ok(ApiResponse(authFacade.refresh(refreshToken)))
+        return ResponseEntity.ok(ApiResponse(toResponse(authFacade.refresh(refreshToken))))
+    }
+
+    private fun toResponse(data: MeData): MeResponse = MeResponse(user = toResponse(data.user))
+
+    private fun toResponse(data: LoginData): LoginResponse {
+        return LoginResponse(
+            user = toResponse(data.user),
+            tokens = toResponse(data.tokens)
+        )
+    }
+
+    private fun toResponse(data: RefreshData): RefreshResponse {
+        return RefreshResponse(
+            accessToken = data.accessToken,
+            expiresIn = data.expiresIn
+        )
+    }
+
+    private fun toResponse(data: UserDto): UserResponse {
+        return UserResponse(
+            id = data.id,
+            email = data.email,
+            name = data.name,
+            tier = data.tier,
+            createdAt = data.createdAt
+        )
+    }
+
+    private fun toResponse(data: TokenBundleDto): TokensResponse {
+        return TokensResponse(
+            accessToken = data.accessToken,
+            refreshToken = data.refreshToken,
+            expiresIn = data.expiresIn
+        )
     }
 
     private fun buildRefreshCookie(token: String): ResponseCookie {

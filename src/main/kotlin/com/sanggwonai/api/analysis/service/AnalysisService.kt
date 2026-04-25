@@ -1,10 +1,10 @@
 package com.sanggwonai.api.analysis.service
 
+import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.dto.AnalysisEventDto
 import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
-import com.sanggwonai.api.analysis.dto.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.entity.AnalysisEntity
 import com.sanggwonai.api.analysis.entity.AnalysisStatus
 import com.sanggwonai.api.analysis.mapper.AnalysisMapper

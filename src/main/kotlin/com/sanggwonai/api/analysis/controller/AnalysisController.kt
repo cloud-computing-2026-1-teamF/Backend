@@ -1,6 +1,16 @@
 package com.sanggwonai.api.analysis.controller
 
-import com.sanggwonai.api.analysis.dto.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.response.AnalysisErrorResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisLinksResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisPollingResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisStepResponse
+import com.sanggwonai.api.analysis.controller.response.CreateAnalysisResponse
+import com.sanggwonai.api.analysis.dto.AnalysisErrorDto
+import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
+import com.sanggwonai.api.analysis.dto.AnalysisPollingData
+import com.sanggwonai.api.analysis.dto.AnalysisStepDto
+import com.sanggwonai.api.analysis.dto.CreateAnalysisData
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import jakarta.validation.Valid
@@ -27,8 +37,9 @@ class AnalysisController(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @Valid @RequestBody request: CreateAnalysisRequest
     ): ResponseEntity<ApiResponse<*>> {
+        val data = analysisFacade.create(authorization, request)
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-            .body(ApiResponse(analysisFacade.create(authorization, request)))
+            .body(ApiResponse(toResponse(data)))
     }
 
     @GetMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -36,7 +47,8 @@ class AnalysisController(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @PathVariable("id") analysisId: String
     ): ResponseEntity<ApiResponse<*>> {
-        return ResponseEntity.ok(ApiResponse(analysisFacade.polling(authorization, analysisId)))
+        val data = analysisFacade.polling(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
     }
 
     @GetMapping("/{id}/events", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -44,4 +56,55 @@ class AnalysisController(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @PathVariable("id") analysisId: String
     ): SseEmitter = analysisFacade.events(authorization, analysisId)
+
+    private fun toResponse(data: CreateAnalysisData): CreateAnalysisResponse {
+        return CreateAnalysisResponse(
+            id = data.id,
+            status = data.status,
+            progress = data.progress,
+            createdAt = data.createdAt,
+            estimatedSeconds = data.estimatedSeconds,
+            links = toResponse(data.links)
+        )
+    }
+
+    private fun toResponse(data: AnalysisLinksDto): AnalysisLinksResponse {
+        return AnalysisLinksResponse(
+            self = data.self,
+            events = data.events
+        )
+    }
+
+    private fun toResponse(data: AnalysisPollingData): AnalysisPollingResponse {
+        return AnalysisPollingResponse(
+            id = data.id,
+            status = data.status,
+            progress = data.progress,
+            step = toResponse(data.step),
+            createdAt = data.createdAt,
+            completedAt = data.completedAt,
+            error = toResponse(data.error)
+        )
+    }
+
+    private fun toResponse(data: AnalysisStepDto?): AnalysisStepResponse? {
+        if (data == null) {
+            return null
+        }
+        return AnalysisStepResponse(
+            index = data.index,
+            total = data.total,
+            label = data.label
+        )
+    }
+
+    private fun toResponse(data: AnalysisErrorDto?): AnalysisErrorResponse? {
+        if (data == null) {
+            return null
+        }
+        return AnalysisErrorResponse(
+            code = data.code,
+            message = data.message
+        )
+    }
 }

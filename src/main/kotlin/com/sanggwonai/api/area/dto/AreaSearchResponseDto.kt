@@ -5,10 +5,5 @@ data class AreaSearchResponseDto(
     val name: String,
     val region: String,
     val fullName: String,
-    val center: CenterDto
-)
-
-data class CenterDto(
-    val lat: Double,
-    val lng: Double
+    val center: AreaCenterDto
 )

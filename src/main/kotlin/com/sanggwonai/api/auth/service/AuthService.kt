@@ -1,11 +1,11 @@
 package com.sanggwonai.api.auth.service
 
 import com.sanggwonai.api.auth.dto.LoginData
-import com.sanggwonai.api.auth.dto.LoginRequest
 import com.sanggwonai.api.auth.dto.MeData
 import com.sanggwonai.api.auth.dto.RefreshData
-import com.sanggwonai.api.auth.dto.SignupRequest
 import com.sanggwonai.api.auth.dto.TokenBundleDto
+import com.sanggwonai.api.auth.controller.request.LoginRequest
+import com.sanggwonai.api.auth.controller.request.SignupRequest
 import com.sanggwonai.api.auth.entity.RefreshTokenEntity
 import com.sanggwonai.api.auth.entity.UserEntity
 import com.sanggwonai.api.auth.entity.UserTier

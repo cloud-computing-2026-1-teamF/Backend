@@ -1,6 +1,6 @@
 package com.sanggwonai.api.analysis.facade
 
-import com.sanggwonai.api.analysis.dto.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.service.AnalysisService
 import com.sanggwonai.api.auth.service.AuthContextResolver
 import org.springframework.stereotype.Component
