@@ -29,7 +29,7 @@ class AreaController(
     )
     fun search(
         @ModelAttribute request: AreaSearchRequest
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<List<AreaSearchResponse>>> {
         val data = areaFacade.search(request.q, request.limit).map(::toResponse)
         return ResponseEntity.ok(ApiResponse(data))
     }

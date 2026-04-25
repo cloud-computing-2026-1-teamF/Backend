@@ -22,7 +22,7 @@ class BusinessTypeController(
         summary = "업종 목록 조회함",
         description = "분석 가능한 요식업 업종 목록을 정렬 순서대로 조회함."
     )
-    fun getBusinessTypes(): ResponseEntity<ApiResponse<*>> {
+    fun getBusinessTypes(): ResponseEntity<ApiResponse<List<BusinessTypeResponse>>> {
         val data = businessTypeFacade.getBusinessTypes().map(::toResponse)
         return ResponseEntity.ok(ApiResponse(data))
     }

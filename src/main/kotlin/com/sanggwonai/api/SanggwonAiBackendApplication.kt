@@ -11,5 +11,5 @@ import org.springframework.scheduling.annotation.EnableAsync
 class SanggwonAiBackendApplication
 
 fun main(args: Array<String>) {
-	runApplication<SanggwonAiBackendApplication>(*args)
+    runApplication<SanggwonAiBackendApplication>(*args)
 }

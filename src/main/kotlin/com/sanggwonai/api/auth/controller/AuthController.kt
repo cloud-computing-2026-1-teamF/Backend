@@ -47,7 +47,7 @@ class AuthController(
     )
     fun me(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<MeResponse>> {
         val data = authFacade.me(authorization)
         return ResponseEntity.ok(ApiResponse(toResponse(data)))
     }
@@ -57,7 +57,7 @@ class AuthController(
         summary = "로그인 수행함",
         description = "이메일/비밀번호로 로그인하고 사용자 정보와 토큰 묶음을 반환함."
     )
-    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<ApiResponse<*>> {
+    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<ApiResponse<LoginResponse>> {
         val data = authFacade.login(request)
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
@@ -69,7 +69,7 @@ class AuthController(
         summary = "회원가입 수행함",
         description = "신규 계정을 생성하고 즉시 로그인 처리된 토큰을 반환함."
     )
-    fun signup(@Valid @RequestBody request: SignupRequest): ResponseEntity<ApiResponse<*>> {
+    fun signup(@Valid @RequestBody request: SignupRequest): ResponseEntity<ApiResponse<LoginResponse>> {
         val data = authFacade.signup(request)
         return ResponseEntity.status(HttpStatus.CREATED)
             .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
@@ -83,7 +83,7 @@ class AuthController(
     )
     fun refresh(
         @CookieValue(name = REFRESH_COOKIE, required = false) refreshToken: String?
-    ): ResponseEntity<ApiResponse<*>> {
+    ): ResponseEntity<ApiResponse<RefreshResponse>> {
         if (refreshToken.isNullOrBlank()) {
             throw ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "리프레시 토큰이 없어요")
         }
