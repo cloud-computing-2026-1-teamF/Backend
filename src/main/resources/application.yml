@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sanggwon_ai}
+    username: ${DB_USERNAME:sanggwon}
+    password: ${DB_PASSWORD:sanggwon}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+server:
+  shutdown: graceful
+
+app:
+  auth:
+    jwt-secret: ${APP_JWT_SECRET:replace-this-with-a-long-secret-for-prod}
+    access-token-expiry-seconds: 900
+    refresh-token-expiry-days: 30
+  analysis:
+    estimated-seconds: 4

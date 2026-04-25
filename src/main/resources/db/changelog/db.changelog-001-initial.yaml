@@ -1,0 +1,364 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-users
+      author: codex
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password_hash
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tier
+                  type: varchar(20)
+                  defaultValue: free
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 002-create-refresh-tokens
+      author: codex
+      changes:
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: token
+                  type: varchar(120)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: refresh_tokens
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_refresh_tokens_user
+            onDelete: CASCADE
+
+  - changeSet:
+      id: 003-create-business-types
+      author: codex
+      changes:
+        - createTable:
+            tableName: business_types
+            columns:
+              - column:
+                  name: business_key
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: label
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: emoji
+                  type: varchar(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sort_order
+                  type: int
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 004-create-areas
+      author: codex
+      changes:
+        - createTable:
+            tableName: areas
+            columns:
+              - column:
+                  name: id
+                  type: varchar(20)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: region
+                  type: varchar(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: center_lat
+                  type: decimal(9,6)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: center_lng
+                  type: decimal(9,6)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 005-create-analyses
+      author: codex
+      changes:
+        - createTable:
+            tableName: analyses
+            columns:
+              - column:
+                  name: id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: business_type_key
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: area_id
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: budget_deposit_max
+                  type: bigint
+              - column:
+                  name: budget_rent_max
+                  type: bigint
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: progress
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: step_index
+                  type: int
+              - column:
+                  name: step_total
+                  type: int
+              - column:
+                  name: step_label
+                  type: varchar(200)
+              - column:
+                  name: error_code
+                  type: varchar(50)
+              - column:
+                  name: error_message
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: timestamp with time zone
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_analyses_user
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: business_type_key
+            referencedTableName: business_types
+            referencedColumnNames: business_key
+            constraintName: fk_analyses_business_type
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: area_id
+            referencedTableName: areas
+            referencedColumnNames: id
+            constraintName: fk_analyses_area
+
+  - changeSet:
+      id: 006-indexes
+      author: codex
+      changes:
+        - createIndex:
+            tableName: analyses
+            indexName: idx_analyses_user_created_at
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: areas
+            indexName: idx_areas_name
+            columns:
+              - column:
+                  name: name
+
+  - changeSet:
+      id: 007-seed-business-types
+      author: codex
+      changes:
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: korean }
+              - column: { name: label, value: 한식당 }
+              - column: { name: emoji, value: "🍚" }
+              - column: { name: sort_order, valueNumeric: 1 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: cafe }
+              - column: { name: label, value: 카페 }
+              - column: { name: emoji, value: "☕" }
+              - column: { name: sort_order, valueNumeric: 2 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: chicken }
+              - column: { name: label, value: 치킨집 }
+              - column: { name: emoji, value: "🍗" }
+              - column: { name: sort_order, valueNumeric: 3 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: bunsik }
+              - column: { name: label, value: 분식점 }
+              - column: { name: emoji, value: "🍜" }
+              - column: { name: sort_order, valueNumeric: 4 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: bakery }
+              - column: { name: label, value: 베이커리 }
+              - column: { name: emoji, value: "🥐" }
+              - column: { name: sort_order, valueNumeric: 5 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: japanese }
+              - column: { name: label, value: 일식 }
+              - column: { name: emoji, value: "🍣" }
+              - column: { name: sort_order, valueNumeric: 6 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: bar }
+              - column: { name: label, value: 주점 }
+              - column: { name: emoji, value: "🍺" }
+              - column: { name: sort_order, valueNumeric: 7 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: western }
+              - column: { name: label, value: 양식 }
+              - column: { name: emoji, value: "🍝" }
+              - column: { name: sort_order, valueNumeric: 8 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: chinese }
+              - column: { name: label, value: 중식 }
+              - column: { name: emoji, value: "🥢" }
+              - column: { name: sort_order, valueNumeric: 9 }
+        - insert:
+            tableName: business_types
+            columns:
+              - column: { name: business_key, value: fastfood }
+              - column: { name: label, value: 패스트푸드 }
+              - column: { name: emoji, value: "🍔" }
+              - column: { name: sort_order, valueNumeric: 10 }
+
+  - changeSet:
+      id: 008-seed-areas
+      author: codex
+      changes:
+        - insert:
+            tableName: areas
+            columns:
+              - column: { name: id, value: "11440540" }
+              - column: { name: name, value: 서교동 }
+              - column: { name: region, value: 서울 마포구 }
+              - column: { name: full_name, value: 서울특별시 마포구 서교동 }
+              - column: { name: center_lat, valueNumeric: 37.553000 }
+              - column: { name: center_lng, valueNumeric: 126.918600 }
+        - insert:
+            tableName: areas
+            columns:
+              - column: { name: id, value: "11440690" }
+              - column: { name: name, value: 동교동 }
+              - column: { name: region, value: 서울 마포구 }
+              - column: { name: full_name, value: 서울특별시 마포구 동교동 }
+              - column: { name: center_lat, valueNumeric: 37.556800 }
+              - column: { name: center_lng, valueNumeric: 126.923200 }
