@@ -20,6 +20,10 @@ spring:
 server:
   shutdown: graceful
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] traceId=%X{traceId:-none} %logger{36} - %msg%n"
+
 app:
   auth:
     jwt-secret: ${APP_JWT_SECRET:replace-this-with-a-long-secret-for-prod}

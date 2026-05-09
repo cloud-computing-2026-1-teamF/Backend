@@ -1,7 +1,9 @@
 package com.sanggwonai.api.common.error
 
+import com.sanggwonai.api.common.logging.ApiLog
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -11,9 +13,23 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(ApiException::class)
     fun handleApiException(ex: ApiException, request: HttpServletRequest): ResponseEntity<ErrorEnvelope> {
+        log.warn(
+            ApiLog.apiError(
+                request = request,
+                traceId = request.traceId(),
+                status = ex.status.value(),
+                code = ex.code.toWireCode(),
+                message = ex.errorType.message,
+                details = ex.details,
+                error = ex,
+                time = java.time.Instant.now()
+            ),
+            ex
+        )
         return ResponseEntity
             .status(ex.status)
             .body(
@@ -47,6 +63,19 @@ class GlobalExceptionHandler {
             is MissingServletRequestParameterException -> details[ex.parameterName] = "required parameter"
             is IllegalArgumentException -> details["request"] = ex.message ?: "invalid request"
         }
+        log.warn(
+            ApiLog.apiError(
+                request = request,
+                traceId = request.traceId(),
+                status = ErrorType.VALIDATION_FAILED.status.value(),
+                code = ErrorType.VALIDATION_FAILED.code.toWireCode(),
+                message = ErrorType.VALIDATION_FAILED.message,
+                details = details.ifEmpty { null },
+                error = ex,
+                time = java.time.Instant.now()
+            ),
+            ex
+        )
         return ResponseEntity
             .status(ErrorType.VALIDATION_FAILED.status)
             .body(
@@ -63,6 +92,19 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(ex: Exception, request: HttpServletRequest): ResponseEntity<ErrorEnvelope> {
+        log.error(
+            ApiLog.apiError(
+                request = request,
+                traceId = request.traceId(),
+                status = ErrorType.INTERNAL_SERVER_ERROR.status.value(),
+                code = ErrorType.INTERNAL_SERVER_ERROR.code.toWireCode(),
+                message = ErrorType.INTERNAL_SERVER_ERROR.message,
+                details = null,
+                error = ex,
+                time = java.time.Instant.now()
+            ),
+            ex
+        )
         return ResponseEntity
             .status(ErrorType.INTERNAL_SERVER_ERROR.status)
             .body(
