@@ -48,6 +48,7 @@ class AnalysisProgressWorker(
             it.stepTotal = 4
             it.stepLabel = null
             it.updatedAt = now
+            analysisRepository.save(it)
         }
     }
 
@@ -61,6 +62,7 @@ class AnalysisProgressWorker(
             it.stepTotal = 4
             it.stepLabel = label
             it.updatedAt = now
+            analysisRepository.save(it)
         }
     }
 
@@ -75,6 +77,7 @@ class AnalysisProgressWorker(
             it.stepLabel = null
             it.completedAt = now
             it.updatedAt = now
+            analysisRepository.save(it)
         }
     }
 
@@ -86,6 +89,7 @@ class AnalysisProgressWorker(
             it.errorCode = errorCode
             it.errorMessage = message
             it.updatedAt = now
+            analysisRepository.save(it)
         }
     }
 }
