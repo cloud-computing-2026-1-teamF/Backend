@@ -57,6 +57,11 @@ enum class ErrorType(
         code = ErrorCode.NOT_FOUND,
         message = "분석을 찾을 수 없어요"
     ),
+    API_NOT_FOUND(
+        status = HttpStatus.NOT_FOUND,
+        code = ErrorCode.NOT_FOUND,
+        message = "요청한 API를 찾을 수 없어요"
+    ),
     ANALYSIS_FORBIDDEN(
         status = HttpStatus.FORBIDDEN,
         code = ErrorCode.FORBIDDEN,

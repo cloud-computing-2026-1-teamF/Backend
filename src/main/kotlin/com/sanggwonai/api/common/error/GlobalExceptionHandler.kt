@@ -5,11 +5,13 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.BindException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -49,6 +51,7 @@ class GlobalExceptionHandler {
         BindException::class,
         ConstraintViolationException::class,
         MissingServletRequestParameterException::class,
+        HttpMessageNotReadableException::class,
         IllegalArgumentException::class
     )
     fun handleValidation(ex: Exception, request: HttpServletRequest): ResponseEntity<ErrorEnvelope> {
@@ -61,6 +64,7 @@ class GlobalExceptionHandler {
                 details[key] = it.message
             }
             is MissingServletRequestParameterException -> details[ex.parameterName] = "required parameter"
+            is HttpMessageNotReadableException -> details["body"] = "invalid or missing required JSON field"
             is IllegalArgumentException -> details["request"] = ex.message ?: "invalid request"
         }
         log.warn(
@@ -84,6 +88,35 @@ class GlobalExceptionHandler {
                         code = ErrorType.VALIDATION_FAILED.code.toWireCode(),
                         message = ErrorType.VALIDATION_FAILED.message,
                         details = details.ifEmpty { null },
+                        trace_id = request.traceId()
+                    )
+                )
+            )
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResource(ex: NoResourceFoundException, request: HttpServletRequest): ResponseEntity<ErrorEnvelope> {
+        log.warn(
+            ApiLog.apiError(
+                request = request,
+                traceId = request.traceId(),
+                status = ErrorType.API_NOT_FOUND.status.value(),
+                code = ErrorType.API_NOT_FOUND.code.toWireCode(),
+                message = ErrorType.API_NOT_FOUND.message,
+                details = mapOf("path" to request.requestURI),
+                error = ex,
+                time = java.time.Instant.now()
+            ),
+            ex
+        )
+        return ResponseEntity
+            .status(ErrorType.API_NOT_FOUND.status)
+            .body(
+                ErrorEnvelope(
+                    ErrorBody(
+                        code = ErrorType.API_NOT_FOUND.code.toWireCode(),
+                        message = ErrorType.API_NOT_FOUND.message,
+                        details = mapOf("path" to request.requestURI),
                         trace_id = request.traceId()
                     )
                 )
