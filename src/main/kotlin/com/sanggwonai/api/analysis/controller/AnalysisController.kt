@@ -38,14 +38,14 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 @RestController
 @RequestMapping("/v1/analyses")
 @Tag(name = "분석", description = "입지 분석 생성/조회/상세 섹션 API 모음임")
+@SecurityRequirement(name = "bearerAuth")
 class AnalysisController(
     private val analysisFacade: AnalysisFacade
 ) {
     @PostMapping
     @Operation(
         summary = "입지 분석 생성함",
-        description = "업종/지역/예산 조건으로 분석 작업을 생성하고 비동기 처리 시작함.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "업종/지역/예산 조건으로 분석 작업을 생성하고 비동기 처리 시작함."
     )
     fun create(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -59,8 +59,7 @@ class AnalysisController(
     @GetMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "분석 상태 조회함",
-        description = "분석 진행률/상태를 폴링 방식으로 조회함.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "분석 진행률/상태를 폴링 방식으로 조회함."
     )
     fun getPolling(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -100,8 +99,7 @@ class AnalysisController(
     @GetMapping("/{id}/events", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     @Operation(
         summary = "분석 SSE 이벤트 구독함",
-        description = "분석 진행 이벤트를 Server-Sent Events 스트림으로 수신함.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "분석 진행 이벤트를 Server-Sent Events 스트림으로 수신함."
     )
     fun events(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -111,8 +109,7 @@ class AnalysisController(
     @GetMapping("/{id}/recommended-properties", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "추천 매물 섹션 조회함",
-        description = "상세 페이지의 추천 매물 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 추천 매물 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun recommendedProperties(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -125,8 +122,7 @@ class AnalysisController(
     @GetMapping("/{id}/key-metrics", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "주요 지표 섹션 조회함",
-        description = "상세 페이지의 주요 지표 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 주요 지표 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun keyMetrics(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -139,8 +135,7 @@ class AnalysisController(
     @GetMapping("/{id}/foot-traffic", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "유동인구 섹션 조회함",
-        description = "상세 페이지의 유동인구 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 유동인구 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun footTraffic(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -153,8 +148,7 @@ class AnalysisController(
     @GetMapping("/{id}/competition", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "경쟁 점포 섹션 조회함",
-        description = "상세 페이지의 경쟁 점포 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 경쟁 점포 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun competition(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -167,8 +161,7 @@ class AnalysisController(
     @GetMapping("/{id}/estimated-revenue", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "추정 매출 섹션 조회함",
-        description = "상세 페이지의 추정 매출 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 추정 매출 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun estimatedRevenue(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -181,8 +174,7 @@ class AnalysisController(
     @GetMapping("/{id}/industry-growth", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "업종 성장률 섹션 조회함",
-        description = "상세 페이지의 업종 성장률 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 업종 성장률 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun industryGrowth(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
@@ -195,8 +187,7 @@ class AnalysisController(
     @GetMapping("/{id}/accessibility", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "입지 접근성 섹션 조회함",
-        description = "상세 페이지의 입지 접근성 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임.",
-        security = [SecurityRequirement(name = "bearerAuth")]
+        description = "상세 페이지의 입지 접근성 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
     )
     fun accessibility(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,

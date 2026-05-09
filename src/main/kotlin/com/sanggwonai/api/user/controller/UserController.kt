@@ -2,6 +2,7 @@ package com.sanggwonai.api.user.controller
 
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/users")
+@SecurityRequirement(name = "bearerAuth")
 class UserController(
     private val analysisFacade: AnalysisFacade
 ) {
