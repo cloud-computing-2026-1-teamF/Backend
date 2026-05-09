@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.Instant
 
 @Entity
@@ -32,6 +33,15 @@ class AnalysisEntity(
 
     @Column(name = "budget_maintenance_fee_max")
     var budgetMaintenanceFeeMax: Long?,
+
+    @Column(name = "center_lat", nullable = false, precision = 9, scale = 6)
+    val centerLat: BigDecimal,
+
+    @Column(name = "center_lng", nullable = false, precision = 9, scale = 6)
+    val centerLng: BigDecimal,
+
+    @Column(name = "radius_m", nullable = false)
+    val radiusM: Int,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

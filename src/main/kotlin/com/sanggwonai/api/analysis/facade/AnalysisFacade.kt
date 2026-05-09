@@ -1,6 +1,7 @@
 package com.sanggwonai.api.analysis.facade
 
 import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.dto.AnalysisRecommendationsDto
 import com.sanggwonai.api.analysis.service.AnalysisService
 import com.sanggwonai.api.auth.service.AuthContextResolver
 import org.springframework.stereotype.Component
@@ -33,7 +34,7 @@ class AnalysisFacade(
     fun events(authorizationHeader: String?, analysisId: String): SseEmitter =
         analysisService.openEvents(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 
-    fun recommendedProperties(authorizationHeader: String?, analysisId: String) =
+    fun recommendedProperties(authorizationHeader: String?, analysisId: String): AnalysisRecommendationsDto =
         analysisService.getRecommendedProperties(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 
     fun keyMetrics(authorizationHeader: String?, analysisId: String) =

@@ -9,5 +9,6 @@ data class CreateAnalysisResponse(
     val progress: Int,
     val createdAt: Instant,
     val estimatedSeconds: Int,
-    val links: AnalysisLinksResponse
+    val links: AnalysisLinksResponse,
+    val recommendations: List<AnalysisRecommendationResponse>
 )

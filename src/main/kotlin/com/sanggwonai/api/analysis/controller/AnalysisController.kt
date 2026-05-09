@@ -4,12 +4,16 @@ import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
 import com.sanggwonai.api.analysis.controller.response.AnalysisErrorResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisLinksResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisPollingResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisRecommendationResponse
+import com.sanggwonai.api.analysis.controller.response.AnalysisRecommendationsResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisSectionTodoResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisStepResponse
 import com.sanggwonai.api.analysis.controller.response.CreateAnalysisResponse
 import com.sanggwonai.api.analysis.dto.AnalysisErrorDto
 import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
+import com.sanggwonai.api.analysis.dto.AnalysisRecommendationDto
+import com.sanggwonai.api.analysis.dto.AnalysisRecommendationsDto
 import com.sanggwonai.api.analysis.dto.AnalysisSectionTodoDto
 import com.sanggwonai.api.analysis.dto.AnalysisStepDto
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
@@ -109,12 +113,12 @@ class AnalysisController(
     @GetMapping("/{id}/recommended-properties", produces = [MediaType.APPLICATION_JSON_VALUE])
     @Operation(
         summary = "추천 매물 섹션 조회함",
-        description = "상세 페이지의 추천 매물 섹션 데이터를 조회함. 현재 응답 필드는 TODO 상태임."
+        description = "분석 조건에 맞는 공실을 점수순으로 정렬한 Top 3 추천 매물을 조회함."
     )
     fun recommendedProperties(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
         @PathVariable("id") analysisId: String
-    ): ResponseEntity<ApiResponse<AnalysisSectionTodoResponse>> {
+    ): ResponseEntity<ApiResponse<AnalysisRecommendationsResponse>> {
         val data = analysisFacade.recommendedProperties(authorization, analysisId)
         return ResponseEntity.ok(ApiResponse(toResponse(data)))
     }
@@ -205,7 +209,8 @@ class AnalysisController(
             progress = data.progress,
             createdAt = data.createdAt,
             estimatedSeconds = data.estimatedSeconds,
-            links = toResponse(data.links)
+            links = toResponse(data.links),
+            recommendations = data.recommendations.map(::toResponse)
         )
     }
 
@@ -257,6 +262,42 @@ class AnalysisController(
             sectionLabel = data.sectionLabel,
             todo = data.todo,
             updatedAt = data.updatedAt
+        )
+    }
+
+    private fun toResponse(data: AnalysisRecommendationsDto): AnalysisRecommendationsResponse {
+        return AnalysisRecommendationsResponse(
+            analysisId = data.analysisId,
+            sectionKey = data.sectionKey,
+            sectionLabel = data.sectionLabel,
+            todo = data.todo,
+            recommendations = data.recommendations.map(::toResponse),
+            updatedAt = data.updatedAt
+        )
+    }
+
+    private fun toResponse(data: AnalysisRecommendationDto): AnalysisRecommendationResponse {
+        return AnalysisRecommendationResponse(
+            rank = data.rank,
+            vacancyId = data.vacancyId,
+            score = data.score,
+            distanceM = data.distanceM,
+            areaId = data.areaId,
+            latitude = data.latitude,
+            longitude = data.longitude,
+            monthlyRent = data.monthlyRent,
+            deposit = data.deposit,
+            maintenanceFee = data.maintenanceFee,
+            facilityTotalSize = data.facilityTotalSize,
+            locationArea = data.locationArea,
+            category = data.category,
+            businessMiddleCategoryName = data.businessMiddleCategoryName,
+            businessSubCategoryName = data.businessSubCategoryName,
+            floatingPopulationAnnualTotal = data.floatingPopulationAnnualTotal,
+            restaurantCount500m = data.restaurantCount500m,
+            cafeCount500m = data.cafeCount500m,
+            industryGrowthRate500m = data.industryGrowthRate500m,
+            averageSalesPerStore = data.averageSalesPerStore
         )
     }
 }
