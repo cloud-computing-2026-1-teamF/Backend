@@ -16,17 +16,17 @@ interface VacancyRepository : JpaRepository<VacancyEntity, String> {
         """
         select v from VacancyEntity v
         where v.areaId = :areaId
+          and v.latitude is not null
+          and v.longitude is not null
           and (:rentMax is null or (v.monthlyRent is not null and v.monthlyRent <= :rentMax))
           and (:depositMax is null or (v.deposit is not null and v.deposit <= :depositMax))
           and (:maintenanceFeeMax is null or (v.maintenanceFee is not null and v.maintenanceFee <= :maintenanceFeeMax))
-        order by v.id asc
-        limit 1
         """
     )
-    fun findFirstMatchingBudget(
+    fun findBudgetAndLocationCandidates(
         @Param("areaId") areaId: String,
         @Param("rentMax") rentMax: Long?,
         @Param("depositMax") depositMax: Long?,
         @Param("maintenanceFeeMax") maintenanceFeeMax: Long?
-    ): VacancyEntity?
+    ): List<VacancyEntity>
 }

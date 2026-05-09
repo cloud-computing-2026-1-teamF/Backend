@@ -26,6 +26,15 @@ class VacancyEntity(
     @Column(name = "maintenance_fee")
     val maintenanceFee: Long?,
 
+    @Column(name = "latitude", precision = 9, scale = 6)
+    val latitude: BigDecimal?,
+
+    @Column(name = "longitude", precision = 9, scale = 6)
+    val longitude: BigDecimal?,
+
+    @Column(name = "survival_score", precision = 5, scale = 2)
+    val survivalScore: BigDecimal?,
+
     @Column(name = "floating_population_annual_total")
     val floatingPopulationAnnualTotal: Long?,
 
