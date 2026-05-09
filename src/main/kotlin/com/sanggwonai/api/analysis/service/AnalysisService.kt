@@ -50,7 +50,12 @@ class AnalysisService(
         if (!businessTypeRepository.existsById(request.businessType)) {
             throw ApiException.of(ErrorType.INVALID_BUSINESS_TYPE)
         }
-        val vacancy = vacancyRepository.findFirstByAreaIdOrderByIdAsc(request.areaId)
+        val vacancy = vacancyRepository.findFirstMatchingBudget(
+            areaId = request.areaId,
+            rentMax = request.budget?.rentMax,
+            depositMax = request.budget?.depositMax,
+            maintenanceFeeMax = request.budget?.maintenanceFeeMax
+        )
             ?: throw ApiException.of(ErrorType.INVALID_AREA)
 
         val now = Instant.now(clock)
@@ -62,6 +67,7 @@ class AnalysisService(
                 vacancyId = vacancy.id,
                 budgetDepositMax = request.budget?.depositMax,
                 budgetRentMax = request.budget?.rentMax,
+                budgetMaintenanceFeeMax = request.budget?.maintenanceFeeMax,
                 status = AnalysisStatus.PENDING,
                 progress = 0,
                 stepIndex = null,

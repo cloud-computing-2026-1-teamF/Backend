@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-001-initial.yaml
   - include:
       file: db/changelog/db.changelog-002-vacancies.yaml
+  - include:
+      file: db/changelog/db.changelog-003-vacancy-budget.yaml

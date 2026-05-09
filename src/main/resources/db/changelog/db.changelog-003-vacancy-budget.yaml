@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-add-vacancy-budget-columns
+      author: codex
+      changes:
+        - addColumn:
+            tableName: vacancies
+            columns:
+              - column:
+                  name: monthly_rent
+                  type: bigint
+              - column:
+                  name: deposit
+                  type: bigint
+              - column:
+                  name: maintenance_fee
+                  type: bigint
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: budget_maintenance_fee_max
+                  type: bigint
+        - sql:
+            dbms: postgresql
+            sql: |
+              update vacancies
+              set monthly_rent = coalesce(monthly_rent, 0),
+                  deposit = coalesce(deposit, 0),
+                  maintenance_fee = coalesce(maintenance_fee, 0)
+              where monthly_rent is null
+                 or deposit is null
+                 or maintenance_fee is null;
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_budget_filter
+            columns:
+              - column:
+                  name: area_id
+              - column:
+                  name: monthly_rent
+              - column:
+                  name: deposit
+              - column:
+                  name: maintenance_fee

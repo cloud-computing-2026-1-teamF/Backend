@@ -2,6 +2,8 @@ package com.sanggwonai.api.vacancy.repository
 
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 
 interface VacancyRepository : JpaRepository<VacancyEntity, String> {
     fun findFirstByAreaIdOrderByIdAsc(areaId: String): VacancyEntity?
@@ -9,4 +11,22 @@ interface VacancyRepository : JpaRepository<VacancyEntity, String> {
     fun findAllByAreaIdOrderByIdAsc(areaId: String): List<VacancyEntity>
 
     fun findAllByOrderByIdAsc(): List<VacancyEntity>
+
+    @Query(
+        """
+        select v from VacancyEntity v
+        where v.areaId = :areaId
+          and (:rentMax is null or (v.monthlyRent is not null and v.monthlyRent <= :rentMax))
+          and (:depositMax is null or (v.deposit is not null and v.deposit <= :depositMax))
+          and (:maintenanceFeeMax is null or (v.maintenanceFee is not null and v.maintenanceFee <= :maintenanceFeeMax))
+        order by v.id asc
+        limit 1
+        """
+    )
+    fun findFirstMatchingBudget(
+        @Param("areaId") areaId: String,
+        @Param("rentMax") rentMax: Long?,
+        @Param("depositMax") depositMax: Long?,
+        @Param("maintenanceFeeMax") maintenanceFeeMax: Long?
+    ): VacancyEntity?
 }

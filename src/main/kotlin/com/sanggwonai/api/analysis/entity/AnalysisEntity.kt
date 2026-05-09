@@ -30,6 +30,9 @@ class AnalysisEntity(
     @Column(name = "budget_rent_max")
     var budgetRentMax: Long?,
 
+    @Column(name = "budget_maintenance_fee_max")
+    var budgetMaintenanceFeeMax: Long?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AnalysisStatus,

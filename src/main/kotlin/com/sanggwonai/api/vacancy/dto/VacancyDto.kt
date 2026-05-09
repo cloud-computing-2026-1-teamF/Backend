@@ -6,6 +6,9 @@ import java.time.Instant
 data class VacancyDto(
     val id: String,
     val areaId: String,
+    val monthlyRent: Long?,
+    val deposit: Long?,
+    val maintenanceFee: Long?,
     val floatingPopulationAnnualTotal: Long?,
     val residentPopulationAnnualTotal: Long?,
     val workerPopulationAnnualTotal: Long?,

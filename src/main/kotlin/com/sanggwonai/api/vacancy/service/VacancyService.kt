@@ -33,6 +33,9 @@ class VacancyService(
         return VacancyDto(
             id = entity.id,
             areaId = entity.areaId,
+            monthlyRent = entity.monthlyRent,
+            deposit = entity.deposit,
+            maintenanceFee = entity.maintenanceFee,
             floatingPopulationAnnualTotal = entity.floatingPopulationAnnualTotal,
             residentPopulationAnnualTotal = entity.residentPopulationAnnualTotal,
             workerPopulationAnnualTotal = entity.workerPopulationAnnualTotal,

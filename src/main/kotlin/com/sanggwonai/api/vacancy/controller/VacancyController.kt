@@ -46,6 +46,9 @@ class VacancyController(
         return VacancyResponse(
             id = data.id,
             areaId = data.areaId,
+            monthlyRent = data.monthlyRent,
+            deposit = data.deposit,
+            maintenanceFee = data.maintenanceFee,
             floatingPopulationAnnualTotal = data.floatingPopulationAnnualTotal,
             residentPopulationAnnualTotal = data.residentPopulationAnnualTotal,
             workerPopulationAnnualTotal = data.workerPopulationAnnualTotal,

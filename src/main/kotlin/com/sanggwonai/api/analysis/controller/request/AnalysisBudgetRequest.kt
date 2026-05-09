@@ -10,5 +10,9 @@ data class AnalysisBudgetRequest(
 
     @field:Min(0)
     @param:JsonAlias("rentMax")
-    val rentMax: Long?
+    val rentMax: Long?,
+
+    @field:Min(0)
+    @param:JsonAlias("maintenanceFeeMax")
+    val maintenanceFeeMax: Long?
 )

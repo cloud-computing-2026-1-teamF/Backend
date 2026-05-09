@@ -17,6 +17,15 @@ class VacancyEntity(
     @Column(name = "area_id", nullable = false, length = 20)
     val areaId: String,
 
+    @Column(name = "monthly_rent")
+    val monthlyRent: Long?,
+
+    @Column
+    val deposit: Long?,
+
+    @Column(name = "maintenance_fee")
+    val maintenanceFee: Long?,
+
     @Column(name = "floating_population_annual_total")
     val floatingPopulationAnnualTotal: Long?,
 
