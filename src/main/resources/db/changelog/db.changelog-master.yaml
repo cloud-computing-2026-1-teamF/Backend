@@ -5,3 +5,9 @@ databaseChangeLog:
       file: db/changelog/db.changelog-002-vacancies.yaml
   - include:
       file: db/changelog/db.changelog-003-vacancy-budget.yaml
+  - include:
+      file: db/changelog/db.changelog-004-vacancy-location-score.yaml
+  - include:
+      file: db/changelog/db.changelog-005-analysis-recommendations.yaml
+  - include:
+      file: db/changelog/db.changelog-006-vacancy-display-labels.yaml

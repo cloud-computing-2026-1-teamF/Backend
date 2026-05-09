@@ -1,0 +1,199 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-add-vacancy-location-score-and-analysis-search
+      author: codex
+      changes:
+        - addColumn:
+            tableName: vacancies
+            columns:
+              - column:
+                  name: latitude
+                  type: "decimal(9,6)"
+              - column:
+                  name: longitude
+                  type: "decimal(9,6)"
+              - column:
+                  name: survival_score
+                  type: "decimal(5,2)"
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: center_lat
+                  type: "decimal(9,6)"
+              - column:
+                  name: center_lng
+                  type: "decimal(9,6)"
+              - column:
+                  name: radius_m
+                  type: int
+        - sql:
+            dbms: postgresql
+            sql: |
+              update vacancies v
+              set latitude = coalesce(v.latitude, a.center_lat),
+                  longitude = coalesce(v.longitude, a.center_lng),
+                  survival_score = coalesce(v.survival_score, 92.00),
+                  monthly_rent = case when v.monthly_rent is null or v.monthly_rent = 0 then 280 else v.monthly_rent end,
+                  deposit = case when v.deposit is null or v.deposit = 0 then 3000 else v.deposit end,
+                  maintenance_fee = case when v.maintenance_fee is null or v.maintenance_fee = 0 then 15 else v.maintenance_fee end,
+                  facility_total_size = coalesce(v.facility_total_size, 33.50),
+                  location_area = coalesce(v.location_area, 33.50),
+                  floating_population_annual_total = coalesce(v.floating_population_annual_total, 3358000),
+                  floating_population_quarterly_average = coalesce(v.floating_population_quarterly_average, 839500.00),
+                  restaurant_count_500m = coalesce(v.restaurant_count_500m, 3),
+                  cafe_count_500m = coalesce(v.cafe_count_500m, 6),
+                  industry_growth_rate_500m = coalesce(v.industry_growth_rate_500m, 12.00),
+                  average_sales_per_store = coalesce(v.average_sales_per_store, 1850.00),
+                  business_middle_category_name = coalesce(v.business_middle_category_name, 'food_service'),
+                  business_sub_category_name = coalesce(v.business_sub_category_name, concat(a.name, ' 1번 공실')),
+                  updated_at = current_timestamp
+              from areas a
+              where v.area_id = a.id;
+        - sql:
+            dbms: postgresql
+            sql: |
+              insert into vacancies (
+                id,
+                area_id,
+                latitude,
+                longitude,
+                survival_score,
+                monthly_rent,
+                deposit,
+                maintenance_fee,
+                floating_population_annual_total,
+                floating_population_quarterly_average,
+                restaurant_count_500m,
+                cafe_count_500m,
+                industry_growth_rate_500m,
+                category,
+                business_middle_category_name,
+                business_sub_category_name,
+                multi_use_facility,
+                facility_total_size,
+                location_area,
+                average_sales_per_store,
+                created_at,
+                updated_at
+              )
+              select
+                concat('vac_', a.id, '_2'),
+                a.id,
+                a.center_lat - 0.001000,
+                a.center_lng + 0.000400,
+                86.00,
+                245,
+                2500,
+                12,
+                2847000,
+                711750.00,
+                5,
+                8,
+                9.00,
+                'food_service',
+                'food_service',
+                concat(a.name, ' 2번 공실'),
+                false,
+                28.00,
+                28.00,
+                1640.00,
+                current_timestamp,
+                current_timestamp
+              from areas a
+              where not exists (
+                select 1 from vacancies v where v.id = concat('vac_', a.id, '_2')
+              );
+        - sql:
+            dbms: postgresql
+            sql: |
+              insert into vacancies (
+                id,
+                area_id,
+                latitude,
+                longitude,
+                survival_score,
+                monthly_rent,
+                deposit,
+                maintenance_fee,
+                floating_population_annual_total,
+                floating_population_quarterly_average,
+                restaurant_count_500m,
+                cafe_count_500m,
+                industry_growth_rate_500m,
+                category,
+                business_middle_category_name,
+                business_sub_category_name,
+                multi_use_facility,
+                facility_total_size,
+                location_area,
+                average_sales_per_store,
+                created_at,
+                updated_at
+              )
+              select
+                concat('vac_', a.id, '_3'),
+                a.id,
+                a.center_lat + 0.000600,
+                a.center_lng + 0.001200,
+                79.00,
+                210,
+                2000,
+                10,
+                2336000,
+                584000.00,
+                4,
+                5,
+                11.00,
+                'food_service',
+                'food_service',
+                concat(a.name, ' 3번 공실'),
+                false,
+                42.00,
+                42.00,
+                1380.00,
+                current_timestamp,
+                current_timestamp
+              from areas a
+              where not exists (
+                select 1 from vacancies v where v.id = concat('vac_', a.id, '_3')
+              );
+        - sql:
+            dbms: postgresql
+            sql: |
+              update analyses an
+              set center_lat = coalesce(an.center_lat, v.latitude),
+                  center_lng = coalesce(an.center_lng, v.longitude),
+                  radius_m = coalesce(an.radius_m, 500),
+                  updated_at = current_timestamp
+              from vacancies v
+              where an.vacancy_id = v.id;
+        - addNotNullConstraint:
+            tableName: analyses
+            columnName: center_lat
+            columnDataType: "decimal(9,6)"
+        - addNotNullConstraint:
+            tableName: analyses
+            columnName: center_lng
+            columnDataType: "decimal(9,6)"
+        - addNotNullConstraint:
+            tableName: analyses
+            columnName: radius_m
+            columnDataType: int
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_area_location
+            columns:
+              - column:
+                  name: area_id
+              - column:
+                  name: latitude
+              - column:
+                  name: longitude
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_survival_score
+            columns:
+              - column:
+                  name: survival_score
+

@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-normalize-vacancy-display-labels
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              update vacancies v
+              set category = coalesce(nullif(v.category, 'unknown'), 'food_service'),
+                  business_middle_category_name = coalesce(nullif(v.business_middle_category_name, 'unknown'), 'food_service'),
+                  business_sub_category_name = concat(a.name, ' 1번 공실'),
+                  updated_at = current_timestamp
+              from areas a
+              where v.area_id = a.id
+                and (
+                  v.business_sub_category_name is null
+                  or trim(v.business_sub_category_name) = ''
+                  or lower(v.business_sub_category_name) = 'unknown'
+                );
+

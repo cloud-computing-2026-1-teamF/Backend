@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-create-analysis-vacancy-recommendations
+      author: codex
+      changes:
+        - createTable:
+            tableName: analysis_vacancy_recommendations
+            columns:
+              - column:
+                  name: id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: analysis_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: vacancy_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rank_order
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: score
+                  type: "decimal(5,2)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: distance_m
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: analysis_vacancy_recommendations
+            baseColumnNames: analysis_id
+            referencedTableName: analyses
+            referencedColumnNames: id
+            constraintName: fk_analysis_recommendations_analysis
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: analysis_vacancy_recommendations
+            baseColumnNames: vacancy_id
+            referencedTableName: vacancies
+            referencedColumnNames: id
+            constraintName: fk_analysis_recommendations_vacancy
+        - addUniqueConstraint:
+            tableName: analysis_vacancy_recommendations
+            columnNames: analysis_id, rank_order
+            constraintName: uk_analysis_recommendations_rank
+        - addUniqueConstraint:
+            tableName: analysis_vacancy_recommendations
+            columnNames: analysis_id, vacancy_id
+            constraintName: uk_analysis_recommendations_vacancy
+        - createIndex:
+            tableName: analysis_vacancy_recommendations
+            indexName: idx_analysis_recommendations_analysis
+            columns:
+              - column:
+                  name: analysis_id
+              - column:
+                  name: rank_order
+
