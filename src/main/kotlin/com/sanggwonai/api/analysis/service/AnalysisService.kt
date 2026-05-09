@@ -18,6 +18,7 @@ import com.sanggwonai.api.business.repository.BusinessTypeRepository
 import com.sanggwonai.api.common.error.ApiException
 import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
@@ -94,6 +95,35 @@ class AnalysisService(
     fun getPolling(authContext: AuthContext, analysisId: String): AnalysisPollingData {
         val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
         return analysisMapper.toPollingData(analysis)
+    }
+
+    @Transactional(readOnly = true)
+    fun list(authContext: AuthContext, limit: Int?): List<AnalysisPollingData> {
+        val pageSize = limit?.coerceIn(1, 50) ?: 20
+        return analysisRepository.findByUserIdOrderByCreatedAtDesc(
+            authContext.userId,
+            PageRequest.of(0, pageSize)
+        ).map(analysisMapper::toPollingData)
+    }
+
+    @Transactional
+    fun patch(authContext: AuthContext, analysisId: String): AnalysisPollingData {
+        return analysisMapper.toPollingData(loadOwnedAnalysis(authContext.userId, analysisId))
+    }
+
+    @Transactional
+    fun delete(authContext: AuthContext, analysisId: String) {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        analysisRepository.delete(analysis)
+    }
+
+    @Transactional(readOnly = true)
+    fun stats(authContext: AuthContext): UserStatsData {
+        return UserStatsData(
+            totalAnalyses = analysisRepository.countByUserId(authContext.userId),
+            savedAnalyses = analysisRepository.countByUserIdAndStatus(authContext.userId, AnalysisStatus.DONE),
+            avgTopScore = 0
+        )
     }
 
     fun openEvents(authContext: AuthContext, analysisId: String): SseEmitter {
@@ -201,3 +231,9 @@ class AnalysisService(
         }
     }
 }
+
+data class UserStatsData(
+    val totalAnalyses: Long,
+    val savedAnalyses: Long,
+    val avgTopScore: Int
+)

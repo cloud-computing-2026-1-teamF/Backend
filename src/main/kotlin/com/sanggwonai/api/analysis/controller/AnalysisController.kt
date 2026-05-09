@@ -24,10 +24,13 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
@@ -65,6 +68,33 @@ class AnalysisController(
     ): ResponseEntity<ApiResponse<AnalysisPollingResponse>> {
         val data = analysisFacade.polling(authorization, analysisId)
         return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun list(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @RequestParam(name = "limit", required = false) limit: Int?
+    ): ResponseEntity<ApiResponse<ListAnalysesResponse>> {
+        val items = analysisFacade.list(authorization, limit).map(::toResponse)
+        return ResponseEntity.ok(ApiResponse(ListAnalysesResponse(items = items, nextCursor = null)))
+    }
+
+    @PatchMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun patch(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<AnalysisPollingResponse>> {
+        val data = analysisFacade.patch(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(toResponse(data)))
+    }
+
+    @DeleteMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun delete(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @PathVariable("id") analysisId: String
+    ): ResponseEntity<ApiResponse<DeleteAnalysisResponse>> {
+        analysisFacade.delete(authorization, analysisId)
+        return ResponseEntity.ok(ApiResponse(DeleteAnalysisResponse(ok = true)))
     }
 
     @GetMapping("/{id}/events", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
@@ -237,3 +267,12 @@ class AnalysisController(
         )
     }
 }
+
+data class ListAnalysesResponse(
+    val items: List<AnalysisPollingResponse>,
+    val nextCursor: String?
+)
+
+data class DeleteAnalysisResponse(
+    val ok: Boolean
+)

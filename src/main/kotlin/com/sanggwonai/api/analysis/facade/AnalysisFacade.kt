@@ -18,6 +18,18 @@ class AnalysisFacade(
     fun polling(authorizationHeader: String?, analysisId: String) =
         analysisService.getPolling(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 
+    fun list(authorizationHeader: String?, limit: Int?) =
+        analysisService.list(authContextResolver.resolveOrThrow(authorizationHeader), limit)
+
+    fun patch(authorizationHeader: String?, analysisId: String) =
+        analysisService.patch(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun delete(authorizationHeader: String?, analysisId: String) =
+        analysisService.delete(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+
+    fun stats(authorizationHeader: String?) =
+        analysisService.stats(authContextResolver.resolveOrThrow(authorizationHeader))
+
     fun events(authorizationHeader: String?, analysisId: String): SseEmitter =
         analysisService.openEvents(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 

@@ -1,12 +1,20 @@
 package com.sanggwonai.api.analysis.repository
 
 import com.sanggwonai.api.analysis.entity.AnalysisEntity
+import com.sanggwonai.api.analysis.entity.AnalysisStatus
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
 
 interface AnalysisRepository : JpaRepository<AnalysisEntity, String> {
+
+    fun findByUserIdOrderByCreatedAtDesc(userId: String, pageable: Pageable): List<AnalysisEntity>
+
+    fun countByUserId(userId: String): Long
+
+    fun countByUserIdAndStatus(userId: String, status: AnalysisStatus): Long
 
     @Query(
         """
