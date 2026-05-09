@@ -9,8 +9,8 @@ object ApiLog {
         request: HttpServletRequest,
         traceId: String,
         time: Instant
-    ): String = block(
-        title = "API REQUEST",
+    ): String = json(
+        type = "api_request",
         level = "INFO",
         time = time,
         traceId = traceId,
@@ -31,8 +31,8 @@ object ApiLog {
         traceId: String,
         durationMs: Long,
         time: Instant
-    ): String = block(
-        title = "API RESPONSE",
+    ): String = json(
+        type = "api_response",
         level = levelForStatus(response.status),
         time = time,
         traceId = traceId,
@@ -41,9 +41,9 @@ object ApiLog {
             "method" to request.method,
             "path" to request.requestURI,
             "query" to request.queryString.orEmpty(),
-            "status" to response.status.toString(),
+            "status" to response.status,
             "outcome" to outcome(response.status),
-            "durationMs" to durationMs.toString(),
+            "durationMs" to durationMs,
             "clientIp" to request.clientIp()
         )
     )
@@ -55,8 +55,8 @@ object ApiLog {
         durationMs: Long,
         time: Instant,
         error: Throwable
-    ): String = block(
-        title = "API ABORTED",
+    ): String = json(
+        type = "api_aborted",
         level = "ERROR",
         time = time,
         traceId = traceId,
@@ -65,8 +65,8 @@ object ApiLog {
             "method" to request.method,
             "path" to request.requestURI,
             "query" to request.queryString.orEmpty(),
-            "status" to response.status.toString(),
-            "durationMs" to durationMs.toString(),
+            "status" to response.status,
+            "durationMs" to durationMs,
             "exception" to error.javaClass.name,
             "message" to error.message.orEmpty()
         )
@@ -81,8 +81,8 @@ object ApiLog {
         details: Map<String, String>?,
         error: Throwable,
         time: Instant
-    ): String = block(
-        title = "API ERROR",
+    ): String = json(
+        type = "api_error",
         level = levelForStatus(status),
         time = time,
         traceId = traceId,
@@ -91,32 +91,78 @@ object ApiLog {
             "method" to request.method,
             "path" to request.requestURI,
             "query" to request.queryString.orEmpty(),
-            "status" to status.toString(),
+            "status" to status,
             "code" to code,
             "message" to message,
-            "details" to (details?.entries?.joinToString(prefix = "{", postfix = "}") { "${it.key}=${it.value}" }.orEmpty()),
+            "details" to details,
             "exception" to error.javaClass.name
         )
     )
 
-    private fun block(
-        title: String,
+    private fun json(
+        type: String,
         level: String,
         time: Instant,
         traceId: String,
-        fields: List<Pair<String, String>>
+        fields: List<Pair<String, Any?>>
     ): String {
-        val width = 78
-        val header = "┌─ $title ${"─".repeat((width - title.length - 4).coerceAtLeast(1))}"
-        val body = buildList {
-            add("│ level=$level")
-            add("│ time=$time")
-            add("│ traceId=$traceId")
-            fields.forEach { (key, value) ->
-                add("│ $key=${value.ifBlank { "-" }}")
+        val orderedFields = listOf(
+            "type" to type,
+            "level" to level,
+            "time" to time.toString(),
+            "traceId" to traceId
+        ) + fields
+
+        return buildString {
+            appendLine("{")
+            orderedFields.forEachIndexed { index, (key, value) ->
+                append("  ")
+                append(quote(key))
+                append(": ")
+                append(jsonValue(value))
+                if (index < orderedFields.lastIndex) {
+                    append(',')
+                }
+                appendLine()
             }
+            append("}")
         }
-        return (listOf(header) + body + "└${"─".repeat(width - 1)}").joinToString("\n")
+    }
+
+    private fun jsonValue(value: Any?): String {
+        return when (value) {
+            null -> "null"
+            is Number -> value.toString()
+            is Boolean -> value.toString()
+            is Map<*, *> -> mapValue(value)
+            else -> quote(value.toString().ifBlank { "-" })
+        }
+    }
+
+    private fun mapValue(value: Map<*, *>): String {
+        if (value.isEmpty()) {
+            return "{}"
+        }
+        return value.entries.joinToString(prefix = "{ ", postfix = " }") { (key, nested) ->
+            "${quote(key.toString())}: ${jsonValue(nested)}"
+        }
+    }
+
+    private fun quote(value: String): String {
+        return buildString {
+            append('"')
+            value.forEach { char ->
+                when (char) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    '\n' -> append("\\n")
+                    '\r' -> append("\\r")
+                    '\t' -> append("\\t")
+                    else -> append(char)
+                }
+            }
+            append('"')
+        }
     }
 
     private fun levelForStatus(status: Int): String = when {

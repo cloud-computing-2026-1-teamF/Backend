@@ -2,7 +2,7 @@
 
 ## Goals
 
-Every backend API request must leave a complete console trail that is useful during local development, staging debugging, and production incident review.
+Every backend API request must leave a complete console trail that is useful during local development, staging debugging, and production incident review. API lifecycle records are printed as pretty JSON-like objects so IDE consoles can scan and fold them cleanly.
 
 ## Required Fields
 
