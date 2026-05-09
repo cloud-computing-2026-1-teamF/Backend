@@ -4,6 +4,7 @@ import java.time.Instant
 
 data class CreateAnalysisResponse(
     val id: String,
+    val vacancyId: String,
     val status: String,
     val progress: Int,
     val createdAt: Instant,

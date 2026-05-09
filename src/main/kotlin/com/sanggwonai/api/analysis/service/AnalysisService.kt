@@ -10,7 +10,6 @@ import com.sanggwonai.api.analysis.entity.AnalysisEntity
 import com.sanggwonai.api.analysis.entity.AnalysisStatus
 import com.sanggwonai.api.analysis.mapper.AnalysisMapper
 import com.sanggwonai.api.analysis.repository.AnalysisRepository
-import com.sanggwonai.api.area.repository.AreaRepository
 import com.sanggwonai.api.auth.entity.UserTier
 import com.sanggwonai.api.auth.repository.UserRepository
 import com.sanggwonai.api.auth.service.AuthContext
@@ -18,6 +17,7 @@ import com.sanggwonai.api.business.repository.BusinessTypeRepository
 import com.sanggwonai.api.common.error.ApiException
 import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
+import com.sanggwonai.api.vacancy.repository.VacancyRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,7 +31,7 @@ import java.util.concurrent.Executors
 @Service
 class AnalysisService(
     private val analysisRepository: AnalysisRepository,
-    private val areaRepository: AreaRepository,
+    private val vacancyRepository: VacancyRepository,
     private val businessTypeRepository: BusinessTypeRepository,
     private val userRepository: UserRepository,
     private val analysisMapper: AnalysisMapper,
@@ -50,9 +50,8 @@ class AnalysisService(
         if (!businessTypeRepository.existsById(request.businessType)) {
             throw ApiException.of(ErrorType.INVALID_BUSINESS_TYPE)
         }
-        if (!areaRepository.existsById(request.areaId)) {
-            throw ApiException.of(ErrorType.INVALID_AREA)
-        }
+        val vacancy = vacancyRepository.findFirstByAreaIdOrderByIdAsc(request.areaId)
+            ?: throw ApiException.of(ErrorType.INVALID_AREA)
 
         val now = Instant.now(clock)
         val analysis = analysisRepository.save(
@@ -60,7 +59,7 @@ class AnalysisService(
                 id = IdGenerator.next("an"),
                 userId = authContext.userId,
                 businessTypeKey = request.businessType,
-                areaId = request.areaId,
+                vacancyId = vacancy.id,
                 budgetDepositMax = request.budget?.depositMax,
                 budgetRentMax = request.budget?.rentMax,
                 status = AnalysisStatus.PENDING,
@@ -80,6 +79,7 @@ class AnalysisService(
 
         return CreateAnalysisData(
             id = analysis.id,
+            vacancyId = analysis.vacancyId,
             status = analysis.status.name.lowercase(),
             progress = analysis.progress,
             createdAt = analysis.createdAt,

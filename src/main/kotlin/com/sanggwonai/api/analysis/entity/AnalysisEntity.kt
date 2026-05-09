@@ -21,8 +21,8 @@ class AnalysisEntity(
     @Column(name = "business_type_key", nullable = false, length = 40)
     val businessTypeKey: String,
 
-    @Column(name = "area_id", nullable = false, length = 20)
-    val areaId: String,
+    @Column(name = "vacancy_id", nullable = false, length = 40)
+    val vacancyId: String,
 
     @Column(name = "budget_deposit_max")
     var budgetDepositMax: Long?,

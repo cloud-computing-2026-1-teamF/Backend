@@ -1,0 +1,155 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-create-vacancies
+      author: codex
+      changes:
+        - createTable:
+            tableName: vacancies
+            columns:
+              - column:
+                  name: id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: area_id
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column: { name: floating_population_annual_total, type: bigint }
+              - column: { name: resident_population_annual_total, type: bigint }
+              - column: { name: worker_population_annual_total, type: bigint }
+              - column: { name: floating_population_quarterly_average, type: "decimal(18,2)" }
+              - column: { name: resident_population_quarterly_average, type: "decimal(18,2)" }
+              - column: { name: worker_population_quarterly_average, type: "decimal(18,2)" }
+              - column: { name: restaurant_count_250m, type: int }
+              - column: { name: cafe_count_250m, type: int }
+              - column: { name: industry_growth_rate_250m, type: "decimal(10,4)" }
+              - column: { name: restaurant_count_500m, type: int }
+              - column: { name: cafe_count_500m, type: int }
+              - column: { name: industry_growth_rate_500m, type: "decimal(10,4)" }
+              - column: { name: restaurant_count_1000m, type: int }
+              - column: { name: cafe_count_1000m, type: int }
+              - column: { name: industry_growth_rate_1000m, type: "decimal(10,4)" }
+              - column: { name: category, type: varchar(100) }
+              - column: { name: business_middle_category_name, type: varchar(150) }
+              - column: { name: business_sub_category_name, type: varchar(150) }
+              - column: { name: multi_use_facility, type: boolean }
+              - column: { name: facility_total_size, type: "decimal(14,2)" }
+              - column: { name: location_area, type: "decimal(14,2)" }
+              - column: { name: evening_population_ratio, type: "decimal(10,4)" }
+              - column: { name: late_night_population_ratio, type: "decimal(10,4)" }
+              - column: { name: morning_population_ratio, type: "decimal(10,4)" }
+              - column: { name: weekend_population_ratio, type: "decimal(10,4)" }
+              - column: { name: age_20_30_population_ratio, type: "decimal(10,4)" }
+              - column: { name: age_40_plus_population_ratio, type: "decimal(10,4)" }
+              - column: { name: female_population_ratio, type: "decimal(10,4)" }
+              - column: { name: resident_to_floating_ratio, type: "decimal(10,4)" }
+              - column: { name: worker_to_floating_ratio, type: "decimal(10,4)" }
+              - column: { name: official_land_price, type: "decimal(18,2)" }
+              - column: { name: closure_rate, type: "decimal(10,4)" }
+              - column: { name: opening_rate, type: "decimal(10,4)" }
+              - column: { name: average_sales_per_store, type: "decimal(18,2)" }
+              - column: { name: time_based_sales_ratio, type: "decimal(10,4)" }
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: vacancies
+            baseColumnNames: area_id
+            referencedTableName: areas
+            referencedColumnNames: id
+            constraintName: fk_vacancies_area
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_area_id
+            columns:
+              - column:
+                  name: area_id
+
+  - changeSet:
+      id: 010-seed-vacancies-from-areas
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              insert into vacancies (
+                id,
+                area_id,
+                category,
+                business_middle_category_name,
+                business_sub_category_name,
+                multi_use_facility,
+                created_at,
+                updated_at
+              )
+              select
+                concat('vac_', id),
+                id,
+                'food_service',
+                'unknown',
+                'unknown',
+                false,
+                current_timestamp,
+                current_timestamp
+              from areas
+              where not exists (
+                select 1 from vacancies where vacancies.area_id = areas.id
+              );
+
+  - changeSet:
+      id: 011-link-analyses-to-vacancies
+      author: codex
+      changes:
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: vacancy_id
+                  type: varchar(40)
+        - sql:
+            dbms: postgresql
+            sql: |
+              update analyses
+              set vacancy_id = vacancies.id
+              from vacancies
+              where analyses.area_id = vacancies.area_id
+                and analyses.vacancy_id is null;
+        - addNotNullConstraint:
+            tableName: analyses
+            columnName: vacancy_id
+            columnDataType: varchar(40)
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: vacancy_id
+            referencedTableName: vacancies
+            referencedColumnNames: id
+            constraintName: fk_analyses_vacancy
+        - createIndex:
+            tableName: analyses
+            indexName: idx_analyses_vacancy_id
+            columns:
+              - column:
+                  name: vacancy_id
+
+  - changeSet:
+      id: 012-remove-analysis-area-reference
+      author: codex
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: analyses
+            constraintName: fk_analyses_area
+        - dropColumn:
+            tableName: analyses
+            columnName: area_id

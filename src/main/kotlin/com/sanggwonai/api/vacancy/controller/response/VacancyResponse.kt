@@ -1,0 +1,46 @@
+package com.sanggwonai.api.vacancy.controller.response
+
+import java.math.BigDecimal
+import java.time.Instant
+
+data class VacancyResponse(
+    val id: String,
+    val areaId: String,
+    val floatingPopulationAnnualTotal: Long?,
+    val residentPopulationAnnualTotal: Long?,
+    val workerPopulationAnnualTotal: Long?,
+    val floatingPopulationQuarterlyAverage: BigDecimal?,
+    val residentPopulationQuarterlyAverage: BigDecimal?,
+    val workerPopulationQuarterlyAverage: BigDecimal?,
+    val restaurantCount250m: Int?,
+    val cafeCount250m: Int?,
+    val industryGrowthRate250m: BigDecimal?,
+    val restaurantCount500m: Int?,
+    val cafeCount500m: Int?,
+    val industryGrowthRate500m: BigDecimal?,
+    val restaurantCount1000m: Int?,
+    val cafeCount1000m: Int?,
+    val industryGrowthRate1000m: BigDecimal?,
+    val category: String?,
+    val businessMiddleCategoryName: String?,
+    val businessSubCategoryName: String?,
+    val multiUseFacility: Boolean?,
+    val facilityTotalSize: BigDecimal?,
+    val locationArea: BigDecimal?,
+    val eveningPopulationRatio: BigDecimal?,
+    val lateNightPopulationRatio: BigDecimal?,
+    val morningPopulationRatio: BigDecimal?,
+    val weekendPopulationRatio: BigDecimal?,
+    val age2030PopulationRatio: BigDecimal?,
+    val age40PlusPopulationRatio: BigDecimal?,
+    val femalePopulationRatio: BigDecimal?,
+    val residentToFloatingRatio: BigDecimal?,
+    val workerToFloatingRatio: BigDecimal?,
+    val officialLandPrice: BigDecimal?,
+    val closureRate: BigDecimal?,
+    val openingRate: BigDecimal?,
+    val averageSalesPerStore: BigDecimal?,
+    val timeBasedSalesRatio: BigDecimal?,
+    val createdAt: Instant,
+    val updatedAt: Instant
+)

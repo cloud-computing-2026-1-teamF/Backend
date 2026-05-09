@@ -209,6 +209,7 @@ class AnalysisController(
     private fun toResponse(data: CreateAnalysisData): CreateAnalysisResponse {
         return CreateAnalysisResponse(
             id = data.id,
+            vacancyId = data.vacancyId,
             status = data.status,
             progress = data.progress,
             createdAt = data.createdAt,
@@ -227,6 +228,7 @@ class AnalysisController(
     private fun toResponse(data: AnalysisPollingData): AnalysisPollingResponse {
         return AnalysisPollingResponse(
             id = data.id,
+            vacancyId = data.vacancyId,
             status = data.status,
             progress = data.progress,
             step = toResponse(data.step),

@@ -52,6 +52,11 @@ enum class ErrorType(
         code = ErrorCode.VALIDATION_FAILED,
         message = "유효하지 않은 지역이에요"
     ),
+    VACANCY_NOT_FOUND(
+        status = HttpStatus.NOT_FOUND,
+        code = ErrorCode.NOT_FOUND,
+        message = "공실을 찾을 수 없어요"
+    ),
     ANALYSIS_NOT_FOUND(
         status = HttpStatus.NOT_FOUND,
         code = ErrorCode.NOT_FOUND,

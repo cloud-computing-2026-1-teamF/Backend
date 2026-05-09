@@ -4,6 +4,7 @@ import java.time.Instant
 
 data class AnalysisPollingData(
     val id: String,
+    val vacancyId: String,
     val status: String,
     val progress: Int,
     val step: AnalysisStepDto?,
