@@ -15,3 +15,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-007-vacancy-explorer-indexes.yaml
   - include:
       file: db/changelog/db.changelog-008-vacancy-dummy-rows.yaml
+  - include:
+      file: db/changelog/db.changelog-009-seoul-dummy-vacancies.yaml
