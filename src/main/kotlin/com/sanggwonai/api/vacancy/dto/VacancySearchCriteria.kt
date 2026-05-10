@@ -2,6 +2,7 @@ package com.sanggwonai.api.vacancy.dto
 
 data class VacancySearchCriteria(
     val areaId: String,
+    val categoryId: String,
     val latitude: Double,
     val longitude: Double,
     val radiusM: Int,
@@ -9,4 +10,3 @@ data class VacancySearchCriteria(
     val depositMax: Long?,
     val maintenanceFeeMax: Long?
 )
-

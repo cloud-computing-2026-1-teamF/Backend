@@ -25,8 +25,10 @@ import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
 import com.sanggwonai.api.vacancy.dto.RankedVacancy
 import com.sanggwonai.api.vacancy.dto.VacancySearchCriteria
+import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
+import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
-import com.sanggwonai.api.vacancy.repository.VacancyRepository
+import com.sanggwonai.api.vacancy.service.VacancyDataset
 import com.sanggwonai.api.vacancy.service.VacancyRankingService
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -44,8 +46,8 @@ import java.util.concurrent.Executors
 class AnalysisService(
     private val analysisRepository: AnalysisRepository,
     private val recommendationRepository: AnalysisVacancyRecommendationRepository,
-    private val vacancyRepository: VacancyRepository,
     private val vacancyRankingService: VacancyRankingService,
+    private val vacancyDataset: VacancyDataset,
     private val areaRepository: AreaRepository,
     private val businessTypeRepository: BusinessTypeRepository,
     private val userRepository: UserRepository,
@@ -72,6 +74,7 @@ class AnalysisService(
         val rankedVacancies = vacancyRankingService.findTop(
             VacancySearchCriteria(
                 areaId = request.areaId,
+                categoryId = request.businessType,
                 latitude = searchPoint.latitude,
                 longitude = searchPoint.longitude,
                 radiusM = radiusM,
@@ -298,39 +301,52 @@ class AnalysisService(
         if (rows.isEmpty()) {
             return legacyRecommendation(analysis)
         }
-        val vacanciesById = vacancyRepository.findAllById(rows.map { it.vacancyId })
+        val snapshot = vacancyDataset.snapshot()
+        val vacanciesById = snapshot.vacancies
+            .filter { vacancy -> vacancy.id in rows.map { it.vacancyId }.toSet() }
             .associateBy { it.id }
         return rows.mapNotNull { row ->
-            vacanciesById[row.vacancyId]?.let { vacancy -> toRecommendationDto(row, vacancy) }
+            vacanciesById[row.vacancyId]?.let { vacancy ->
+                val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
+                toRecommendationDto(
+                    row = row,
+                    vacancy = vacancy,
+                    common = snapshot.commonByProperty[vacancy.id],
+                    spatial = snapshot.spatialFor(vacancy.id, score),
+                    categoryName = snapshot.categoryName(analysis.businessTypeKey)
+                )
+            }
         }
     }
 
     private fun legacyRecommendation(analysis: AnalysisEntity): List<AnalysisRecommendationDto> {
-        val vacancy = vacancyRepository.findById(analysis.vacancyId).orElse(null) ?: return emptyList()
+        val snapshot = vacancyDataset.snapshot()
+        val vacancy = snapshot.vacancies.firstOrNull { it.id == analysis.vacancyId } ?: return emptyList()
+        val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
         val latitude = vacancy.latitude ?: analysis.centerLat
         val longitude = vacancy.longitude ?: analysis.centerLng
         return listOf(
             AnalysisRecommendationDto(
                 rank = 1,
                 vacancyId = vacancy.id,
-                score = vacancy.survivalScore ?: BigDecimal("0.00"),
+                score = score?.scorePercent() ?: BigDecimal("0.00"),
                 distanceM = 0,
-                areaId = vacancy.areaId,
+                areaId = snapshot.commonByProperty[vacancy.id]?.areaCode ?: vacancy.dong ?: "",
                 latitude = latitude,
                 longitude = longitude,
                 monthlyRent = vacancy.monthlyRent,
                 deposit = vacancy.deposit,
                 maintenanceFee = vacancy.maintenanceFee,
-                facilityTotalSize = vacancy.facilityTotalSize,
-                locationArea = vacancy.locationArea,
-                category = vacancy.category,
-                businessMiddleCategoryName = vacancy.businessMiddleCategoryName,
-                businessSubCategoryName = vacancy.businessSubCategoryName,
-                floatingPopulationAnnualTotal = vacancy.floatingPopulationAnnualTotal,
-                restaurantCount500m = vacancy.restaurantCount500m,
-                cafeCount500m = vacancy.cafeCount500m,
-                industryGrowthRate500m = vacancy.industryGrowthRate500m,
-                averageSalesPerStore = vacancy.averageSalesPerStore
+                facilityTotalSize = snapshot.commonByProperty[vacancy.id]?.facilityTotalSize,
+                locationArea = vacancy.dedicatedArea ?: snapshot.commonByProperty[vacancy.id]?.locationArea,
+                category = snapshot.categoryName(analysis.businessTypeKey),
+                businessMiddleCategoryName = vacancy.majorBusinessCategory,
+                businessSubCategoryName = vacancy.middleBusinessCategory,
+                floatingPopulationAnnualTotal = snapshot.commonByProperty[vacancy.id]?.floatingPopulationAnnualDensity?.toLong(),
+                restaurantCount500m = snapshot.commonByProperty[vacancy.id]?.restaurantCount500m,
+                cafeCount500m = snapshot.commonByProperty[vacancy.id]?.cafeCount500m,
+                industryGrowthRate500m = snapshot.spatialFor(vacancy.id, score)?.industryGrowthRate500m,
+                averageSalesPerStore = snapshot.commonByProperty[vacancy.id]?.averageSalesPerStore
             )
         )
     }
@@ -340,19 +356,28 @@ class AnalysisService(
             rank = ranked.rank,
             vacancy = ranked.vacancy,
             score = ranked.score,
-            distanceM = ranked.distanceM
+            distanceM = ranked.distanceM,
+            common = ranked.common,
+            spatial = ranked.spatial,
+            categoryName = ranked.categoryName
         )
     }
 
     private fun toRecommendationDto(
         row: AnalysisVacancyRecommendationEntity,
-        vacancy: VacancyEntity
+        vacancy: VacancyEntity,
+        common: VacancyCommonFeatureEntity?,
+        spatial: VacancyCategorySpatialEntity?,
+        categoryName: String?
     ): AnalysisRecommendationDto {
         return toRecommendationDto(
             rank = row.rank,
             vacancy = vacancy,
             score = row.score,
-            distanceM = row.distanceM
+            distanceM = row.distanceM,
+            common = common,
+            spatial = spatial,
+            categoryName = categoryName
         )
     }
 
@@ -360,29 +385,32 @@ class AnalysisService(
         rank: Int,
         vacancy: VacancyEntity,
         score: BigDecimal,
-        distanceM: Int
+        distanceM: Int,
+        common: VacancyCommonFeatureEntity?,
+        spatial: VacancyCategorySpatialEntity?,
+        categoryName: String?
     ): AnalysisRecommendationDto {
         return AnalysisRecommendationDto(
             rank = rank,
             vacancyId = vacancy.id,
             score = score,
             distanceM = distanceM,
-            areaId = vacancy.areaId,
+            areaId = common?.areaCode ?: vacancy.dong ?: "",
             latitude = vacancy.latitude ?: BigDecimal.ZERO,
             longitude = vacancy.longitude ?: BigDecimal.ZERO,
             monthlyRent = vacancy.monthlyRent,
             deposit = vacancy.deposit,
             maintenanceFee = vacancy.maintenanceFee,
-            facilityTotalSize = vacancy.facilityTotalSize,
-            locationArea = vacancy.locationArea,
-            category = vacancy.category,
-            businessMiddleCategoryName = vacancy.businessMiddleCategoryName,
-            businessSubCategoryName = vacancy.businessSubCategoryName,
-            floatingPopulationAnnualTotal = vacancy.floatingPopulationAnnualTotal,
-            restaurantCount500m = vacancy.restaurantCount500m,
-            cafeCount500m = vacancy.cafeCount500m,
-            industryGrowthRate500m = vacancy.industryGrowthRate500m,
-            averageSalesPerStore = vacancy.averageSalesPerStore
+            facilityTotalSize = common?.facilityTotalSize,
+            locationArea = vacancy.dedicatedArea ?: common?.locationArea,
+            category = categoryName,
+            businessMiddleCategoryName = vacancy.majorBusinessCategory,
+            businessSubCategoryName = vacancy.middleBusinessCategory,
+            floatingPopulationAnnualTotal = common?.floatingPopulationAnnualDensity?.toLong(),
+            restaurantCount500m = common?.restaurantCount500m,
+            cafeCount500m = common?.cafeCount500m,
+            industryGrowthRate500m = spatial?.industryGrowthRate500m,
+            averageSalesPerStore = common?.averageSalesPerStore
         )
     }
 

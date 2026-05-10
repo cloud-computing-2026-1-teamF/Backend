@@ -5,12 +5,12 @@ import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.vacancy.dto.VacancyDto
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
+import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
+import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
+import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
-import com.sanggwonai.api.vacancy.repository.VacancyRepository
-import jakarta.persistence.criteria.Predicate
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -19,86 +19,237 @@ import java.util.Locale
 
 @Service
 class VacancyService(
-    private val vacancyRepository: VacancyRepository
+    private val vacancyDataset: VacancyDataset
 ) {
     @Transactional(readOnly = true)
     fun list(areaId: String?): List<VacancyDto> {
-        val vacancies = if (areaId.isNullOrBlank()) {
-            vacancyRepository.findAllByOrderByIdAsc()
-        } else {
-            vacancyRepository.findAllByAreaIdOrderByIdAsc(areaId)
-        }
-        return vacancies.map(::toDto)
+        val snapshot = vacancyDataset.snapshot()
+        return snapshot.vacancies
+            .asSequence()
+            .map { toSearchRow(it, snapshot, categoryId = null) }
+            .filter { row -> areaId.isNullOrBlank() || row.dto.areaId == areaId }
+            .sortedBy { it.dto.id }
+            .map { it.dto }
+            .toList()
     }
 
     @Transactional(readOnly = true)
     fun search(criteria: VacancyExplorerCriteria): VacancyExplorerResult {
-        val specification = buildSpecification(criteria)
-        val pageRequest = PageRequest.of(
-            criteria.page.coerceAtLeast(0),
-            criteria.size.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE),
-            criteria.sort.toSort()
-        )
-        val page = vacancyRepository.findAll(specification, pageRequest)
-        val matchedVacancies = vacancyRepository.findAll(specification)
+        val snapshot = vacancyDataset.snapshot()
+        val categoryId = criteria.categoryId?.trim()?.takeIf { it.isNotEmpty() }
+        val matchedRows = snapshot.vacancies
+            .asSequence()
+            .map { toSearchRow(it, snapshot, categoryId) }
+            .filter { row -> matches(row, criteria, categoryId) }
+            .toList()
+        val sortedRows = sortRows(matchedRows, criteria.sort)
+        val pageSize = criteria.size.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
+        val pageNumber = criteria.page.coerceAtLeast(0)
+        val offset = pageNumber * pageSize
+        val pageRows = if (offset >= sortedRows.size) emptyList() else sortedRows.drop(offset).take(pageSize)
 
         return VacancyExplorerResult(
-            items = page.content.map(::toDto),
-            total = page.totalElements,
-            page = page.number,
-            size = page.size,
-            totalPages = page.totalPages,
-            summary = summarize(matchedVacancies)
+            items = pageRows.map { it.dto },
+            total = sortedRows.size.toLong(),
+            page = pageNumber,
+            size = pageSize,
+            totalPages = totalPages(sortedRows.size, pageSize),
+            summary = summarize(matchedRows)
         )
     }
 
     @Transactional(readOnly = true)
     fun get(id: String): VacancyDto {
-        val vacancy = vacancyRepository.findById(id)
-            .orElseThrow { ApiException.of(ErrorType.VACANCY_NOT_FOUND) }
-        return toDto(vacancy)
+        val snapshot = vacancyDataset.snapshot()
+        val vacancy = snapshot.vacancies.firstOrNull { it.id == id }
+            ?: throw ApiException.of(ErrorType.VACANCY_NOT_FOUND)
+        return toSearchRow(vacancy, snapshot, categoryId = null).dto
     }
 
-    private fun buildSpecification(criteria: VacancyExplorerCriteria): Specification<VacancyEntity> {
-        return Specification { root, _, criteriaBuilder ->
-            val predicates = mutableListOf<Predicate>()
+    internal fun toDto(
+        entity: VacancyEntity,
+        common: VacancyCommonFeatureEntity?,
+        score: VacancyCategoryScoreEntity?,
+        spatial: VacancyCategorySpatialEntity?,
+        categoryName: String?
+    ): VacancyDto {
+        return VacancyDto(
+            id = entity.id,
+            areaId = common?.areaCode ?: entity.dong ?: entity.district ?: entity.id,
+            areaName = common?.areaName,
+            categoryId = score?.id?.categoryId ?: spatial?.id?.categoryId,
+            category = categoryName,
+            recommended = score?.recommended,
+            monthlyRent = entity.monthlyRent,
+            deposit = entity.deposit,
+            maintenanceFee = entity.maintenanceFee,
+            premium = entity.premium,
+            salePrice = entity.salePrice,
+            latitude = entity.latitude,
+            longitude = entity.longitude,
+            survivalScore = score?.scorePercent(),
+            listingId = entity.listingId,
+            listingNumber = entity.listingNumber,
+            roadAddress = entity.roadAddress,
+            lotAddress = entity.lotAddress,
+            postalCode = entity.postalCode,
+            buildingName = entity.buildingName,
+            province = entity.province,
+            district = entity.district,
+            dong = entity.dong,
+            detailAddress = entity.detailAddress,
+            transactionType = entity.transactionType,
+            dedicatedArea = entity.dedicatedArea,
+            supplyArea = entity.supplyArea,
+            floor = entity.floor,
+            totalFloors = entity.totalFloors,
+            basementFloors = entity.basementFloors,
+            buildingType = entity.buildingType,
+            buildingUse = entity.buildingUse,
+            buildingGrade = entity.buildingGrade,
+            approvalDate = entity.approvalDate,
+            direction = entity.direction,
+            elevatorAvailable = entity.elevatorAvailable,
+            elevatorCount = entity.elevatorCount,
+            heatingType = entity.heatingType,
+            restroomType = entity.restroomType,
+            restroomCount = entity.restroomCount,
+            parkingAvailable = entity.parkingAvailable,
+            parkingCount = entity.parkingCount,
+            terrace = entity.terrace,
+            rooftop = entity.rooftop,
+            interior = entity.interior,
+            storage = entity.storage,
+            airConditioner = entity.airConditioner,
+            heater = entity.heater,
+            lateNightOperationAvailable = entity.lateNightOperationAvailable,
+            priceNegotiable = entity.priceNegotiable,
+            rentAdjustable = entity.rentAdjustable,
+            rentFreePeriodAvailable = entity.rentFreePeriodAvailable,
+            subway = entity.subway,
+            brokerageFee = entity.brokerageFee,
+            brokerageRate = entity.brokerageRate,
+            viewCount = entity.viewCount,
+            favoriteCount = entity.favoriteCount,
+            majorBusinessCategory = entity.majorBusinessCategory,
+            middleBusinessCategory = entity.middleBusinessCategory,
+            floatingPopulationAnnualTotal = common?.floatingPopulationAnnualDensity?.toLong(),
+            residentPopulationAnnualTotal = common?.residentPopulationAnnualDensity?.toLong(),
+            workerPopulationAnnualTotal = common?.workerPopulationAnnualDensity?.toLong(),
+            floatingPopulationQuarterlyAverage = common?.floatingPopulationQuarterlyDensity,
+            residentPopulationQuarterlyAverage = common?.residentPopulationQuarterlyDensity,
+            workerPopulationQuarterlyAverage = common?.workerPopulationQuarterlyDensity,
+            restaurantCount250m = common?.restaurantCount250m,
+            cafeCount250m = common?.cafeCount250m,
+            industryGrowthRate250m = spatial?.industryGrowthRate250m,
+            restaurantCount500m = common?.restaurantCount500m,
+            cafeCount500m = common?.cafeCount500m,
+            industryGrowthRate500m = spatial?.industryGrowthRate500m,
+            restaurantCount1000m = common?.restaurantCount1000m,
+            cafeCount1000m = common?.cafeCount1000m,
+            industryGrowthRate1000m = spatial?.industryGrowthRate1000m,
+            sameCategoryRestaurantCount250m = spatial?.sameCategoryRestaurantCount250m,
+            sameCategoryRestaurantCount500m = spatial?.sameCategoryRestaurantCount500m,
+            sameCategoryRestaurantCount1000m = spatial?.sameCategoryRestaurantCount1000m,
+            businessMiddleCategoryName = entity.majorBusinessCategory,
+            businessSubCategoryName = entity.middleBusinessCategory,
+            multiUseFacility = common?.multiUseFacility,
+            facilityTotalSize = common?.facilityTotalSize,
+            locationArea = entity.dedicatedArea ?: common?.locationArea,
+            eveningPopulationRatio = common?.eveningPopulationRatio,
+            lateNightPopulationRatio = common?.lateNightPopulationRatio,
+            morningPopulationRatio = common?.morningPopulationRatio,
+            weekendPopulationRatio = common?.weekendPopulationRatio,
+            age2030PopulationRatio = common?.age2030PopulationRatio,
+            age40PlusPopulationRatio = common?.age40PlusPopulationRatio,
+            femalePopulationRatio = common?.femalePopulationRatio,
+            residentToFloatingRatio = common?.residentToFloatingRatio,
+            workerToFloatingRatio = common?.workerToFloatingRatio,
+            officialLandPrice = common?.officialLandPrice,
+            closureRate = common?.closureRate,
+            openingRate = common?.openingRate,
+            averageSalesPerStore = common?.averageSalesPerStore,
+            timeBasedSalesRatio = common?.eveningSalesRatio,
+            lateNightSalesRatio = common?.lateNightSalesRatio,
+            weekendSalesRatio = common?.weekendSalesRatio,
+            age2030SalesRatio = common?.age2030SalesRatio,
+            femaleSalesRatio = common?.femaleSalesRatio,
+            totalSpending = common?.totalSpending,
+            foodSpending = common?.foodSpending,
+            spendingPerStore = common?.spendingPerStore,
+            commercialTurnoverType = common?.commercialTurnoverType,
+            commercialGrowthType = common?.commercialGrowthType,
+            createdAt = entity.registeredAt.orEmpty(),
+            updatedAt = entity.modifiedAt ?: entity.registeredAt.orEmpty()
+        )
+    }
 
-            criteria.areaId?.trim()?.takeIf { it.isNotEmpty() }?.let {
-                predicates += criteriaBuilder.equal(root.get<String>("areaId"), it)
-            }
-            criteria.q?.trim()?.lowercase(Locale.KOREA)?.takeIf { it.isNotEmpty() }?.let {
-                val keyword = "%$it%"
-                predicates += criteriaBuilder.or(
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get<String>("id")), keyword),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get<String>("category")), keyword),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get<String>("businessMiddleCategoryName")), keyword),
-                    criteriaBuilder.like(criteriaBuilder.lower(root.get<String>("businessSubCategoryName")), keyword)
-                )
-            }
-            criteria.rentMax?.let {
-                predicates += criteriaBuilder.lessThanOrEqualTo(root.get<Long>("monthlyRent"), it)
-            }
-            criteria.depositMax?.let {
-                predicates += criteriaBuilder.lessThanOrEqualTo(root.get<Long>("deposit"), it)
-            }
-            criteria.maintenanceFeeMax?.let {
-                predicates += criteriaBuilder.lessThanOrEqualTo(root.get<Long>("maintenanceFee"), it)
-            }
-            criteria.scoreMin?.let {
-                predicates += criteriaBuilder.greaterThanOrEqualTo(root.get<BigDecimal>("survivalScore"), it)
-            }
-            criteria.areaMin?.let {
-                predicates += criteriaBuilder.greaterThanOrEqualTo(root.get<BigDecimal>("locationArea"), it)
-            }
-            criteria.areaMax?.let {
-                predicates += criteriaBuilder.lessThanOrEqualTo(root.get<BigDecimal>("locationArea"), it)
-            }
+    private fun toSearchRow(
+        vacancy: VacancyEntity,
+        snapshot: VacancyDatasetSnapshot,
+        categoryId: String?
+    ): VacancySearchRow {
+        val common = snapshot.commonByProperty[vacancy.id]
+        val score = snapshot.scoreFor(vacancy.id, categoryId)
+        val spatial = snapshot.spatialFor(vacancy.id, score)
+        val categoryName = snapshot.categoryName(score?.id?.categoryId)
+        val dto = toDto(vacancy, common, score, spatial, categoryName)
+        return VacancySearchRow(dto = dto, searchText = searchText(dto))
+    }
 
-            criteriaBuilder.and(*predicates.toTypedArray())
+    private fun matches(row: VacancySearchRow, criteria: VacancyExplorerCriteria, categoryId: String?): Boolean {
+        val dto = row.dto
+        if (!criteria.areaId.isNullOrBlank() && dto.areaId != criteria.areaId) return false
+        if (categoryId != null && dto.categoryId != categoryId) return false
+        criteria.q?.trim()?.lowercase(Locale.KOREA)?.takeIf { it.isNotEmpty() }?.let {
+            if (!row.searchText.contains(it)) return false
+        }
+        criteria.rentMax?.let { if (dto.monthlyRent == null || dto.monthlyRent > it) return false }
+        criteria.depositMax?.let { if (dto.deposit == null || dto.deposit > it) return false }
+        criteria.maintenanceFeeMax?.let {
+            if (dto.maintenanceFee == null || dto.maintenanceFee > it) return false
+        }
+        criteria.scoreMin?.let { if (dto.survivalScore == null || dto.survivalScore < it) return false }
+        criteria.areaMin?.let { if (dto.locationArea == null || dto.locationArea < it) return false }
+        criteria.areaMax?.let { if (dto.locationArea == null || dto.locationArea > it) return false }
+        return true
+    }
+
+    private fun sortRows(rows: List<VacancySearchRow>, sort: VacancyExplorerSort): List<VacancySearchRow> {
+        return when (sort) {
+            VacancyExplorerSort.ScoreDesc -> rows.sortedWith(
+                compareByDescending<VacancySearchRow> { it.dto.survivalScore ?: BigDecimal.ZERO }
+                    .thenBy { it.dto.id }
+            )
+            VacancyExplorerSort.RentAsc -> rows.sortedWith(
+                compareBy<VacancySearchRow> { it.dto.monthlyRent ?: Long.MAX_VALUE }
+                    .thenByDescending { it.dto.survivalScore ?: BigDecimal.ZERO }
+                    .thenBy { it.dto.id }
+            )
+            VacancyExplorerSort.RentDesc -> rows.sortedWith(
+                compareByDescending<VacancySearchRow> { it.dto.monthlyRent ?: Long.MIN_VALUE }
+                    .thenByDescending { it.dto.survivalScore ?: BigDecimal.ZERO }
+                    .thenBy { it.dto.id }
+            )
+            VacancyExplorerSort.DepositAsc -> rows.sortedWith(
+                compareBy<VacancySearchRow> { it.dto.deposit ?: Long.MAX_VALUE }
+                    .thenByDescending { it.dto.survivalScore ?: BigDecimal.ZERO }
+                    .thenBy { it.dto.id }
+            )
+            VacancyExplorerSort.AreaDesc -> rows.sortedWith(
+                compareByDescending<VacancySearchRow> { it.dto.locationArea ?: BigDecimal.ZERO }
+                    .thenByDescending { it.dto.survivalScore ?: BigDecimal.ZERO }
+                    .thenBy { it.dto.id }
+            )
+            VacancyExplorerSort.UpdatedDesc -> rows.sortedWith(
+                compareByDescending<VacancySearchRow> { it.dto.updatedAt }
+                    .thenBy { it.dto.id }
+            )
         }
     }
 
-    private fun summarize(vacancies: List<VacancyEntity>): VacancyExplorerSummary {
+    private fun summarize(rows: List<VacancySearchRow>): VacancyExplorerSummary {
+        val vacancies = rows.map { it.dto }
         return VacancyExplorerSummary(
             total = vacancies.size.toLong(),
             averageScore = averageDecimal(vacancies.mapNotNull { it.survivalScore }),
@@ -123,59 +274,43 @@ class VacancyService(
         return sum.divide(BigDecimal.valueOf(values.size.toLong()), SUMMARY_SCALE, RoundingMode.HALF_UP)
     }
 
-    private fun toDto(entity: VacancyEntity): VacancyDto {
-        return VacancyDto(
-            id = entity.id,
-            areaId = entity.areaId,
-            monthlyRent = entity.monthlyRent,
-            deposit = entity.deposit,
-            maintenanceFee = entity.maintenanceFee,
-            latitude = entity.latitude,
-            longitude = entity.longitude,
-            survivalScore = entity.survivalScore,
-            floatingPopulationAnnualTotal = entity.floatingPopulationAnnualTotal,
-            residentPopulationAnnualTotal = entity.residentPopulationAnnualTotal,
-            workerPopulationAnnualTotal = entity.workerPopulationAnnualTotal,
-            floatingPopulationQuarterlyAverage = entity.floatingPopulationQuarterlyAverage,
-            residentPopulationQuarterlyAverage = entity.residentPopulationQuarterlyAverage,
-            workerPopulationQuarterlyAverage = entity.workerPopulationQuarterlyAverage,
-            restaurantCount250m = entity.restaurantCount250m,
-            cafeCount250m = entity.cafeCount250m,
-            industryGrowthRate250m = entity.industryGrowthRate250m,
-            restaurantCount500m = entity.restaurantCount500m,
-            cafeCount500m = entity.cafeCount500m,
-            industryGrowthRate500m = entity.industryGrowthRate500m,
-            restaurantCount1000m = entity.restaurantCount1000m,
-            cafeCount1000m = entity.cafeCount1000m,
-            industryGrowthRate1000m = entity.industryGrowthRate1000m,
-            category = entity.category,
-            businessMiddleCategoryName = entity.businessMiddleCategoryName,
-            businessSubCategoryName = entity.businessSubCategoryName,
-            multiUseFacility = entity.multiUseFacility,
-            facilityTotalSize = entity.facilityTotalSize,
-            locationArea = entity.locationArea,
-            eveningPopulationRatio = entity.eveningPopulationRatio,
-            lateNightPopulationRatio = entity.lateNightPopulationRatio,
-            morningPopulationRatio = entity.morningPopulationRatio,
-            weekendPopulationRatio = entity.weekendPopulationRatio,
-            age2030PopulationRatio = entity.age2030PopulationRatio,
-            age40PlusPopulationRatio = entity.age40PlusPopulationRatio,
-            femalePopulationRatio = entity.femalePopulationRatio,
-            residentToFloatingRatio = entity.residentToFloatingRatio,
-            workerToFloatingRatio = entity.workerToFloatingRatio,
-            officialLandPrice = entity.officialLandPrice,
-            closureRate = entity.closureRate,
-            openingRate = entity.openingRate,
-            averageSalesPerStore = entity.averageSalesPerStore,
-            timeBasedSalesRatio = entity.timeBasedSalesRatio,
-            createdAt = entity.createdAt,
-            updatedAt = entity.updatedAt
-        )
+    private fun totalPages(total: Int, size: Int): Int {
+        if (total == 0) return 0
+        return ((total - 1) / size) + 1
+    }
+
+    private fun searchText(dto: VacancyDto): String {
+        return listOfNotNull(
+            dto.id,
+            dto.areaId,
+            dto.areaName,
+            dto.category,
+            dto.roadAddress,
+            dto.lotAddress,
+            dto.buildingName,
+            dto.province,
+            dto.district,
+            dto.dong,
+            dto.detailAddress,
+            dto.transactionType,
+            dto.buildingType,
+            dto.buildingUse,
+            dto.majorBusinessCategory,
+            dto.middleBusinessCategory,
+            dto.businessMiddleCategoryName,
+            dto.businessSubCategoryName,
+            dto.subway
+        ).joinToString(" ").lowercase(Locale.KOREA)
     }
 
     companion object {
         private const val MIN_PAGE_SIZE = 1
-        private const val MAX_PAGE_SIZE = 100
+        private const val MAX_PAGE_SIZE = 600
         private const val SUMMARY_SCALE = 2
     }
 }
+
+private data class VacancySearchRow(
+    val dto: VacancyDto,
+    val searchText: String
+)
