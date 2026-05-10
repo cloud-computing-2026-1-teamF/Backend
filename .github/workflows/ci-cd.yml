@@ -94,6 +94,10 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
+          # ECS Fargate 1.4.0가 OCI image index(manifest list) resolve 시 가끔 not-found race 발생.
+          # provenance/sbom attestation을 끄면 single-platform manifest로 푸시되어 안전.
+          provenance: false
+          sbom: false
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:latest
