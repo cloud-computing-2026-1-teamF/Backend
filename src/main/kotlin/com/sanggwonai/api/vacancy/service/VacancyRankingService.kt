@@ -52,7 +52,10 @@ class VacancyRankingService(
         snapshot: VacancyDatasetSnapshot
     ): VacancyDistanceCandidate? {
         val common = snapshot.commonByProperty[id] ?: return null
-        if (common.areaCode != criteria.areaId) return null
+        // Spatial filter (radius) is the source of truth — see findTop. Two different
+        // area_id encodings exist for the same dong (e.g. 11140660 vs 11440540 for
+        // 서교동), so a strict area_id match drops vacancies that sit well within
+        // the user's radius. Distance + budget are enough.
         if (!fitsBudget(criteria)) return null
 
         val scoreEntity = snapshot.scoreFor(id, criteria.categoryId) ?: return null
