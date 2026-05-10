@@ -15,10 +15,8 @@ env:
   JAVA_VERSION: "25"
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
   ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || 'sanggwonai-dev-cluster' }}
-  AUTH_ECR_REPOSITORY: ${{ vars.AUTH_ECR_REPOSITORY || 'sanggwonai-dev-auth' }}
-  BUSINESS_ECR_REPOSITORY: ${{ vars.BUSINESS_ECR_REPOSITORY || 'sanggwonai-dev-business' }}
-  AUTH_ECS_SERVICE_NAME: ${{ vars.AUTH_ECS_SERVICE_NAME || 'auth' }}
-  BUSINESS_ECS_SERVICE_NAME: ${{ vars.BUSINESS_ECS_SERVICE_NAME || 'business' }}
+  APP_ECR_REPOSITORY: ${{ vars.APP_ECR_REPOSITORY || 'sanggwonai-dev-app' }}
+  APP_ECS_SERVICE_NAME: ${{ vars.APP_ECS_SERVICE_NAME || 'app' }}
 
 jobs:
   build:
@@ -90,32 +88,25 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push service images
+      - name: Build and push service image
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ env.AUTH_ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ steps.ecr.outputs.registry }}/${{ env.AUTH_ECR_REPOSITORY }}:latest
-            ${{ steps.ecr.outputs.registry }}/${{ env.BUSINESS_ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ steps.ecr.outputs.registry }}/${{ env.BUSINESS_ECR_REPOSITORY }}:latest
+            ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:latest
 
-      - name: Force ECS deployments
+      - name: Force ECS deployment
         run: |
           set -euo pipefail
 
           aws ecs update-service \
             --cluster "${ECS_CLUSTER_NAME}" \
-            --service "${AUTH_ECS_SERVICE_NAME}" \
-            --force-new-deployment
-
-          aws ecs update-service \
-            --cluster "${ECS_CLUSTER_NAME}" \
-            --service "${BUSINESS_ECS_SERVICE_NAME}" \
+            --service "${APP_ECS_SERVICE_NAME}" \
             --force-new-deployment
 
           aws ecs wait services-stable \
             --cluster "${ECS_CLUSTER_NAME}" \
-            --services "${AUTH_ECS_SERVICE_NAME}" "${BUSINESS_ECS_SERVICE_NAME}"
+            --services "${APP_ECS_SERVICE_NAME}"
