@@ -5,144 +5,173 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.math.BigDecimal
-import java.time.Instant
 
 @Entity
 @Table(name = "vacancies")
 class VacancyEntity(
     @Id
-    @Column(nullable = false, length = 40)
+    @Column(name = "property_id", nullable = false, length = 40)
     val id: String,
 
-    @Column(name = "area_id", nullable = false, length = 20)
-    val areaId: String,
+    @Column(name = "id", length = 40)
+    val listingId: String?,
 
-    @Column(name = "monthly_rent")
-    val monthlyRent: Long?,
+    @Column(name = "매물번호", length = 40)
+    val listingNumber: String?,
 
-    @Column
-    val deposit: Long?,
+    @Column(name = "도로명주소", length = 255)
+    val roadAddress: String?,
 
-    @Column(name = "maintenance_fee")
-    val maintenanceFee: Long?,
+    @Column(name = "지번주소", length = 255)
+    val lotAddress: String?,
 
-    @Column(name = "latitude", precision = 9, scale = 6)
+    @Column(name = "우편번호", length = 20)
+    val postalCode: String?,
+
+    @Column(name = "건물명", length = 200)
+    val buildingName: String?,
+
+    @Column(name = "시도", length = 50)
+    val province: String?,
+
+    @Column(name = "구", length = 80)
+    val district: String?,
+
+    @Column(name = "동", length = 80)
+    val dong: String?,
+
+    @Column(name = "상세주소", length = 255)
+    val detailAddress: String?,
+
+    @Column(name = "위도", precision = 10, scale = 7)
     val latitude: BigDecimal?,
 
-    @Column(name = "longitude", precision = 9, scale = 6)
+    @Column(name = "경도", precision = 10, scale = 7)
     val longitude: BigDecimal?,
 
-    @Column(name = "survival_score", precision = 5, scale = 2)
-    val survivalScore: BigDecimal?,
+    @Column(name = "거래유형", length = 40)
+    val transactionType: String?,
 
-    @Column(name = "floating_population_annual_total")
-    val floatingPopulationAnnualTotal: Long?,
+    @Column(name = "보증금_만원")
+    val deposit: Long?,
 
-    @Column(name = "resident_population_annual_total")
-    val residentPopulationAnnualTotal: Long?,
+    @Column(name = "월세_만원")
+    val monthlyRent: Long?,
 
-    @Column(name = "worker_population_annual_total")
-    val workerPopulationAnnualTotal: Long?,
+    @Column(name = "권리금_만원")
+    val premium: Long?,
 
-    @Column(name = "floating_population_quarterly_average", precision = 18, scale = 2)
-    val floatingPopulationQuarterlyAverage: BigDecimal?,
+    @Column(name = "매매가_만원")
+    val salePrice: Long?,
 
-    @Column(name = "resident_population_quarterly_average", precision = 18, scale = 2)
-    val residentPopulationQuarterlyAverage: BigDecimal?,
+    @Column(name = "관리비_만원")
+    val maintenanceFee: Long?,
 
-    @Column(name = "worker_population_quarterly_average", precision = 18, scale = 2)
-    val workerPopulationQuarterlyAverage: BigDecimal?,
+    @Column(name = "전용면적_제곱미터", precision = 14, scale = 2)
+    val dedicatedArea: BigDecimal?,
 
-    @Column(name = "restaurant_count_250m")
-    val restaurantCount250m: Int?,
+    @Column(name = "공급면적_제곱미터", precision = 14, scale = 2)
+    val supplyArea: BigDecimal?,
 
-    @Column(name = "cafe_count_250m")
-    val cafeCount250m: Int?,
+    @Column(name = "층", length = 40)
+    val floor: String?,
 
-    @Column(name = "industry_growth_rate_250m", precision = 10, scale = 4)
-    val industryGrowthRate250m: BigDecimal?,
+    @Column(name = "건물총층수", length = 40)
+    val totalFloors: String?,
 
-    @Column(name = "restaurant_count_500m")
-    val restaurantCount500m: Int?,
+    @Column(name = "지하층수", length = 40)
+    val basementFloors: String?,
 
-    @Column(name = "cafe_count_500m")
-    val cafeCount500m: Int?,
+    @Column(name = "건물유형", length = 80)
+    val buildingType: String?,
 
-    @Column(name = "industry_growth_rate_500m", precision = 10, scale = 4)
-    val industryGrowthRate500m: BigDecimal?,
+    @Column(name = "건물용도", length = 120)
+    val buildingUse: String?,
 
-    @Column(name = "restaurant_count_1000m")
-    val restaurantCount1000m: Int?,
+    @Column(name = "건물등급", length = 40)
+    val buildingGrade: String?,
 
-    @Column(name = "cafe_count_1000m")
-    val cafeCount1000m: Int?,
+    @Column(name = "사용승인일")
+    val approvalDate: String?,
 
-    @Column(name = "industry_growth_rate_1000m", precision = 10, scale = 4)
-    val industryGrowthRate1000m: BigDecimal?,
+    @Column(name = "방향", length = 40)
+    val direction: String?,
 
-    @Column(length = 100)
-    val category: String?,
+    @Column(name = "엘리베이터여부")
+    val elevatorAvailable: Boolean?,
 
-    @Column(name = "business_middle_category_name", length = 150)
-    val businessMiddleCategoryName: String?,
+    @Column(name = "엘리베이터수")
+    val elevatorCount: Int?,
 
-    @Column(name = "business_sub_category_name", length = 150)
-    val businessSubCategoryName: String?,
+    @Column(name = "난방방식", length = 80)
+    val heatingType: String?,
 
-    @Column(name = "multi_use_facility")
-    val multiUseFacility: Boolean?,
+    @Column(name = "화장실유형", length = 80)
+    val restroomType: String?,
 
-    @Column(name = "facility_total_size", precision = 14, scale = 2)
-    val facilityTotalSize: BigDecimal?,
+    @Column(name = "화장실수", precision = 8, scale = 2)
+    val restroomCount: BigDecimal?,
 
-    @Column(name = "location_area", precision = 14, scale = 2)
-    val locationArea: BigDecimal?,
+    @Column(name = "주차여부")
+    val parkingAvailable: Boolean?,
 
-    @Column(name = "evening_population_ratio", precision = 10, scale = 4)
-    val eveningPopulationRatio: BigDecimal?,
+    @Column(name = "주차면수", precision = 8, scale = 2)
+    val parkingCount: BigDecimal?,
 
-    @Column(name = "late_night_population_ratio", precision = 10, scale = 4)
-    val lateNightPopulationRatio: BigDecimal?,
+    @Column(name = "테라스")
+    val terrace: Boolean?,
 
-    @Column(name = "morning_population_ratio", precision = 10, scale = 4)
-    val morningPopulationRatio: BigDecimal?,
+    @Column(name = "루프탑")
+    val rooftop: Boolean?,
 
-    @Column(name = "weekend_population_ratio", precision = 10, scale = 4)
-    val weekendPopulationRatio: BigDecimal?,
+    @Column(name = "인테리어")
+    val interior: Boolean?,
 
-    @Column(name = "age_20_30_population_ratio", precision = 10, scale = 4)
-    val age2030PopulationRatio: BigDecimal?,
+    @Column(name = "창고")
+    val storage: Boolean?,
 
-    @Column(name = "age_40_plus_population_ratio", precision = 10, scale = 4)
-    val age40PlusPopulationRatio: BigDecimal?,
+    @Column(name = "에어컨")
+    val airConditioner: Boolean?,
 
-    @Column(name = "female_population_ratio", precision = 10, scale = 4)
-    val femalePopulationRatio: BigDecimal?,
+    @Column(name = "난방기")
+    val heater: Boolean?,
 
-    @Column(name = "resident_to_floating_ratio", precision = 10, scale = 4)
-    val residentToFloatingRatio: BigDecimal?,
+    @Column(name = "심야영업가능")
+    val lateNightOperationAvailable: Boolean?,
 
-    @Column(name = "worker_to_floating_ratio", precision = 10, scale = 4)
-    val workerToFloatingRatio: BigDecimal?,
+    @Column(name = "가격협의")
+    val priceNegotiable: Boolean?,
 
-    @Column(name = "official_land_price", precision = 18, scale = 2)
-    val officialLandPrice: BigDecimal?,
+    @Column(name = "임대료조정가능")
+    val rentAdjustable: Boolean?,
 
-    @Column(name = "closure_rate", precision = 10, scale = 4)
-    val closureRate: BigDecimal?,
+    @Column(name = "무상임대기간")
+    val rentFreePeriodAvailable: Boolean?,
 
-    @Column(name = "opening_rate", precision = 10, scale = 4)
-    val openingRate: BigDecimal?,
+    @Column(name = "지하철", length = 255)
+    val subway: String?,
 
-    @Column(name = "average_sales_per_store", precision = 18, scale = 2)
-    val averageSalesPerStore: BigDecimal?,
+    @Column(name = "중개수수료_원")
+    val brokerageFee: Long?,
 
-    @Column(name = "time_based_sales_ratio", precision = 10, scale = 4)
-    val timeBasedSalesRatio: BigDecimal?,
+    @Column(name = "수수료율", precision = 12, scale = 6)
+    val brokerageRate: BigDecimal?,
 
-    @Column(name = "created_at", nullable = false)
-    val createdAt: Instant,
+    @Column(name = "조회수")
+    val viewCount: Int?,
 
-    @Column(name = "updated_at", nullable = false)
-    val updatedAt: Instant
+    @Column(name = "찜")
+    val favoriteCount: Int?,
+
+    @Column(name = "등록일")
+    val registeredAt: String?,
+
+    @Column(name = "수정일")
+    val modifiedAt: String?,
+
+    @Column(name = "업종대분류", length = 120)
+    val majorBusinessCategory: String?,
+
+    @Column(name = "업종중분류", length = 120)
+    val middleBusinessCategory: String?
 )
