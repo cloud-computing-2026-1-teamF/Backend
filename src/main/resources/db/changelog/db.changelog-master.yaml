@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-008-vacancy-dummy-rows.yaml
   - include:
       file: db/changelog/db.changelog-009-seoul-dummy-vacancies.yaml
+  - include:
+      file: db/changelog/db.changelog-010-vacancy-processed-dataset.yaml

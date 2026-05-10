@@ -1,0 +1,736 @@
+databaseChangeLog:
+  - changeSet:
+      id: 030-rebuild-vacancy-schema-for-processed-csv
+      author: codex
+      validCheckSum: 9:df88c2eae92b220a6bf2ede4f6b54561
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              delete from analysis_vacancy_recommendations;
+              delete from analyses;
+              alter table if exists analysis_vacancy_recommendations drop constraint if exists fk_analysis_recommendations_vacancy;
+              alter table if exists analyses drop constraint if exists fk_analyses_vacancy;
+              alter table if exists analyses drop constraint if exists fk_analyses_business_type;
+              drop table if exists vacancy_category_scores cascade;
+              drop table if exists vacancy_category_spatial cascade;
+              drop table if exists vacancy_common_features cascade;
+              drop table if exists categories cascade;
+              drop table if exists vacancies cascade;
+        - createTable:
+            tableName: categories
+            columns:
+              - column:
+                  name: category_id
+                  type: "varchar(40)"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: 카테고리명
+                  type: "varchar(100)"
+        - createTable:
+            tableName: vacancies
+            columns:
+              - column:
+                  name: property_id
+                  type: "varchar(40)"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: id
+                  type: "varchar(40)"
+              - column:
+                  name: 매물번호
+                  type: "varchar(40)"
+              - column:
+                  name: 도로명주소
+                  type: "varchar(255)"
+              - column:
+                  name: 지번주소
+                  type: "varchar(255)"
+              - column:
+                  name: 우편번호
+                  type: "varchar(20)"
+              - column:
+                  name: 건물명
+                  type: "varchar(200)"
+              - column:
+                  name: 시도
+                  type: "varchar(50)"
+              - column:
+                  name: 구
+                  type: "varchar(80)"
+              - column:
+                  name: 동
+                  type: "varchar(80)"
+              - column:
+                  name: 상세주소
+                  type: "varchar(255)"
+              - column:
+                  name: 위도
+                  type: "decimal(10,7)"
+              - column:
+                  name: 경도
+                  type: "decimal(10,7)"
+              - column:
+                  name: 거래유형
+                  type: "varchar(40)"
+              - column:
+                  name: 보증금_만원
+                  type: "bigint"
+              - column:
+                  name: 월세_만원
+                  type: "bigint"
+              - column:
+                  name: 권리금_만원
+                  type: "bigint"
+              - column:
+                  name: 매매가_만원
+                  type: "bigint"
+              - column:
+                  name: 관리비_만원
+                  type: "bigint"
+              - column:
+                  name: 전용면적_제곱미터
+                  type: "decimal(14,2)"
+              - column:
+                  name: 공급면적_제곱미터
+                  type: "decimal(14,2)"
+              - column:
+                  name: 층
+                  type: "varchar(40)"
+              - column:
+                  name: 건물총층수
+                  type: "varchar(40)"
+              - column:
+                  name: 지하층수
+                  type: "varchar(40)"
+              - column:
+                  name: 건물유형
+                  type: "varchar(80)"
+              - column:
+                  name: 건물용도
+                  type: "varchar(120)"
+              - column:
+                  name: 건물등급
+                  type: "varchar(40)"
+              - column:
+                  name: 사용승인일
+                  type: "varchar(80)"
+              - column:
+                  name: 방향
+                  type: "varchar(40)"
+              - column:
+                  name: 엘리베이터여부
+                  type: "boolean"
+              - column:
+                  name: 엘리베이터수
+                  type: "int"
+              - column:
+                  name: 난방방식
+                  type: "varchar(80)"
+              - column:
+                  name: 화장실유형
+                  type: "varchar(80)"
+              - column:
+                  name: 화장실수
+                  type: "decimal(8,2)"
+              - column:
+                  name: 주차여부
+                  type: "boolean"
+              - column:
+                  name: 주차면수
+                  type: "decimal(8,2)"
+              - column:
+                  name: 테라스
+                  type: "boolean"
+              - column:
+                  name: 루프탑
+                  type: "boolean"
+              - column:
+                  name: 인테리어
+                  type: "boolean"
+              - column:
+                  name: 창고
+                  type: "boolean"
+              - column:
+                  name: 에어컨
+                  type: "boolean"
+              - column:
+                  name: 난방기
+                  type: "boolean"
+              - column:
+                  name: 심야영업가능
+                  type: "boolean"
+              - column:
+                  name: 가격협의
+                  type: "boolean"
+              - column:
+                  name: 임대료조정가능
+                  type: "boolean"
+              - column:
+                  name: 무상임대기간
+                  type: "boolean"
+              - column:
+                  name: 지하철
+                  type: "varchar(255)"
+              - column:
+                  name: 중개수수료_원
+                  type: "bigint"
+              - column:
+                  name: 수수료율
+                  type: "decimal(12,6)"
+              - column:
+                  name: 조회수
+                  type: "int"
+              - column:
+                  name: 찜
+                  type: "int"
+              - column:
+                  name: 등록일
+                  type: "varchar(80)"
+              - column:
+                  name: 수정일
+                  type: "varchar(80)"
+              - column:
+                  name: 업종대분류
+                  type: "varchar(120)"
+              - column:
+                  name: 업종중분류
+                  type: "varchar(120)"
+        - createTable:
+            tableName: vacancy_common_features
+            columns:
+              - column:
+                  name: property_id
+                  type: "varchar(40)"
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: 시설총규모
+                  type: "decimal(20,6)"
+              - column:
+                  name: 소재지면적
+                  type: "decimal(20,6)"
+              - column:
+                  name: 다중이용업소여부
+                  type: "smallint"
+              - column:
+                  name: 최종_유동인구_밀도_명_per_km2_2022_연간합계
+                  type: "decimal(20,6)"
+              - column:
+                  name: 최종_유동인구_밀도_명_per_km2_2022_분기평균
+                  type: "decimal(20,6)"
+              - column:
+                  name: 최종_상주인구_밀도_명_per_km2_2022_연간합계
+                  type: "decimal(20,6)"
+              - column:
+                  name: 최종_상주인구_밀도_명_per_km2_2022_분기평균
+                  type: "decimal(20,6)"
+              - column:
+                  name: 최종_직장인구_밀도_명_per_km2_2022_연간합계
+                  type: "decimal(20,6)"
+              - column:
+                  name: 최종_직장인구_밀도_명_per_km2_2022_분기평균
+                  type: "decimal(20,6)"
+              - column:
+                  name: 저녁_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 심야_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 아침_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 주말_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 연령_2030_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 연령_40이상_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 여성_유동인구_밀도_명_per_km2
+                  type: "decimal(20,6)"
+              - column:
+                  name: 저녁_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 심야_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 아침_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 주말_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 연령_2030_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 연령_40plus_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 여성_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 상주_유동_비
+                  type: "decimal(20,6)"
+              - column:
+                  name: 직장_유동_비
+                  type: "decimal(20,6)"
+              - column:
+                  name: 연령_40이상_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 식당수_250m
+                  type: "int"
+              - column:
+                  name: 식당수_500m
+                  type: "int"
+              - column:
+                  name: 식당수_1000m
+                  type: "int"
+              - column:
+                  name: 카페수_250m
+                  type: "int"
+              - column:
+                  name: 카페수_500m
+                  type: "int"
+              - column:
+                  name: 카페수_1000m
+                  type: "int"
+              - column:
+                  name: 동네_점포수
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_폐업률
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_개업율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_총매출
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_매출건수
+                  type: "decimal(20,6)"
+              - column:
+                  name: 가게당_평균매출
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_저녁매출_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_심야매출_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_주말매출_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_2030매출_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 동네_여성매출_비율
+                  type: "decimal(20,6)"
+              - column:
+                  name: 공시지가
+                  type: "decimal(20,6)"
+              - column:
+                  name: 지출_총금액
+                  type: "decimal(20,6)"
+              - column:
+                  name: 유흥_지출_총금액
+                  type: "decimal(20,6)"
+              - column:
+                  name: 교육_지출_총금액
+                  type: "decimal(20,6)"
+              - column:
+                  name: 음식_지출_총금액
+                  type: "decimal(20,6)"
+              - column:
+                  name: 점포당_지출
+                  type: "decimal(20,6)"
+              - column:
+                  name: 점포당_유흥
+                  type: "decimal(20,6)"
+              - column:
+                  name: 점포당_교육
+                  type: "decimal(20,6)"
+              - column:
+                  name: 점포당_음식
+                  type: "decimal(20,6)"
+              - column:
+                  name: 상권_교체활발형
+                  type: "decimal(20,6)"
+              - column:
+                  name: 상권_성장형
+                  type: "decimal(20,6)"
+              - column:
+                  name: 상권매칭여부
+                  type: "boolean"
+              - column:
+                  name: 상권배후지매칭여부
+                  type: "boolean"
+              - column:
+                  name: 행정동매칭여부
+                  type: "boolean"
+              - column:
+                  name: 행정동_행정동_코드
+                  type: "varchar(40)"
+              - column:
+                  name: 행정동_행정동_명
+                  type: "varchar(200)"
+        - createTable:
+            tableName: vacancy_category_spatial
+            columns:
+              - column:
+                  name: property_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: 동종_식당수_250m
+                  type: "int"
+              - column:
+                  name: 동종_식당수_500m
+                  type: "int"
+              - column:
+                  name: 동종_식당수_1000m
+                  type: "int"
+              - column:
+                  name: 업종성장률_250m
+                  type: "decimal(12,8)"
+              - column:
+                  name: 업종성장률_500m
+                  type: "decimal(12,8)"
+              - column:
+                  name: 업종성장률_1000m
+                  type: "decimal(12,8)"
+        - addPrimaryKey:
+            tableName: vacancy_category_spatial
+            columnNames: property_id, category_id
+            constraintName: pk_vacancy_category_spatial
+        - createTable:
+            tableName: vacancy_category_scores
+            columns:
+              - column:
+                  name: property_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: 생존점수
+                  type: "decimal(8,6)"
+              - column:
+                  name: 추천여부
+                  type: "smallint"
+        - addPrimaryKey:
+            tableName: vacancy_category_scores
+            columnNames: property_id, category_id
+            constraintName: pk_vacancy_category_scores
+
+  - changeSet:
+      id: 030a-normalize-vacancy-date-columns-for-csv-load
+      author: codex
+      changes:
+        - modifyDataType:
+            tableName: vacancies
+            columnName: 사용승인일
+            newDataType: "varchar(80)"
+        - modifyDataType:
+            tableName: vacancies
+            columnName: 등록일
+            newDataType: "varchar(80)"
+        - modifyDataType:
+            tableName: vacancies
+            columnName: 수정일
+            newDataType: "varchar(80)"
+
+  - changeSet:
+      id: 031-load-processed-vacancy-csv-data
+      author: codex
+      changes:
+        - loadData:
+            tableName: categories
+            file: db/data/vacancy_dataset/categories.csv
+            encoding: UTF-8
+            separator: ","
+            quotchar: '"'
+            columns:
+              - column: { name: category_id, type: STRING }
+              - column: { name: 카테고리명, type: STRING }
+        - loadData:
+            tableName: vacancies
+            file: db/data/vacancy_dataset/properties.csv
+            encoding: UTF-8
+            separator: ","
+            quotchar: '"'
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: id, type: STRING }
+              - column: { name: 매물번호, type: STRING }
+              - column: { name: 도로명주소, type: STRING }
+              - column: { name: 지번주소, type: STRING }
+              - column: { name: 우편번호, type: STRING }
+              - column: { name: 건물명, type: STRING }
+              - column: { name: 시도, type: STRING }
+              - column: { name: 구, type: STRING }
+              - column: { name: 동, type: STRING }
+              - column: { name: 상세주소, type: STRING }
+              - column: { name: 위도, type: NUMERIC }
+              - column: { name: 경도, type: NUMERIC }
+              - column: { name: 거래유형, type: STRING }
+              - column: { name: 보증금_만원, type: NUMERIC }
+              - column: { name: 월세_만원, type: NUMERIC }
+              - column: { name: 권리금_만원, type: NUMERIC }
+              - column: { name: 매매가_만원, type: NUMERIC }
+              - column: { name: 관리비_만원, type: NUMERIC }
+              - column: { name: 전용면적_제곱미터, type: NUMERIC }
+              - column: { name: 공급면적_제곱미터, type: NUMERIC }
+              - column: { name: 층, type: STRING }
+              - column: { name: 건물총층수, type: STRING }
+              - column: { name: 지하층수, type: STRING }
+              - column: { name: 건물유형, type: STRING }
+              - column: { name: 건물용도, type: STRING }
+              - column: { name: 건물등급, type: STRING }
+              - column: { name: 사용승인일, type: STRING }
+              - column: { name: 방향, type: STRING }
+              - column: { name: 엘리베이터여부, type: BOOLEAN }
+              - column: { name: 엘리베이터수, type: NUMERIC }
+              - column: { name: 난방방식, type: STRING }
+              - column: { name: 화장실유형, type: STRING }
+              - column: { name: 화장실수, type: NUMERIC }
+              - column: { name: 주차여부, type: BOOLEAN }
+              - column: { name: 주차면수, type: NUMERIC }
+              - column: { name: 테라스, type: BOOLEAN }
+              - column: { name: 루프탑, type: BOOLEAN }
+              - column: { name: 인테리어, type: BOOLEAN }
+              - column: { name: 창고, type: BOOLEAN }
+              - column: { name: 에어컨, type: BOOLEAN }
+              - column: { name: 난방기, type: BOOLEAN }
+              - column: { name: 심야영업가능, type: BOOLEAN }
+              - column: { name: 가격협의, type: BOOLEAN }
+              - column: { name: 임대료조정가능, type: BOOLEAN }
+              - column: { name: 무상임대기간, type: BOOLEAN }
+              - column: { name: 지하철, type: STRING }
+              - column: { name: 중개수수료_원, type: NUMERIC }
+              - column: { name: 수수료율, type: NUMERIC }
+              - column: { name: 조회수, type: NUMERIC }
+              - column: { name: 찜, type: NUMERIC }
+              - column: { name: 등록일, type: STRING }
+              - column: { name: 수정일, type: STRING }
+              - column: { name: 업종대분류, type: STRING }
+              - column: { name: 업종중분류, type: STRING }
+        - loadData:
+            tableName: vacancy_common_features
+            file: db/data/vacancy_dataset/common_features.csv
+            encoding: UTF-8
+            separator: ","
+            quotchar: '"'
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: 시설총규모, type: NUMERIC }
+              - column: { name: 소재지면적, type: NUMERIC }
+              - column: { name: 다중이용업소여부, type: NUMERIC }
+              - column: { name: 최종_유동인구_밀도_명_per_km2_2022_연간합계, type: NUMERIC }
+              - column: { name: 최종_유동인구_밀도_명_per_km2_2022_분기평균, type: NUMERIC }
+              - column: { name: 최종_상주인구_밀도_명_per_km2_2022_연간합계, type: NUMERIC }
+              - column: { name: 최종_상주인구_밀도_명_per_km2_2022_분기평균, type: NUMERIC }
+              - column: { name: 최종_직장인구_밀도_명_per_km2_2022_연간합계, type: NUMERIC }
+              - column: { name: 최종_직장인구_밀도_명_per_km2_2022_분기평균, type: NUMERIC }
+              - column: { name: 저녁_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 심야_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 아침_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 주말_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 연령_2030_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 연령_40이상_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 여성_유동인구_밀도_명_per_km2, type: NUMERIC }
+              - column: { name: 저녁_비율, type: NUMERIC }
+              - column: { name: 심야_비율, type: NUMERIC }
+              - column: { name: 아침_비율, type: NUMERIC }
+              - column: { name: 주말_비율, type: NUMERIC }
+              - column: { name: 연령_2030_비율, type: NUMERIC }
+              - column: { name: 연령_40plus_비율, type: NUMERIC }
+              - column: { name: 여성_비율, type: NUMERIC }
+              - column: { name: 상주_유동_비, type: NUMERIC }
+              - column: { name: 직장_유동_비, type: NUMERIC }
+              - column: { name: 연령_40이상_비율, type: NUMERIC }
+              - column: { name: 식당수_250m, type: NUMERIC }
+              - column: { name: 식당수_500m, type: NUMERIC }
+              - column: { name: 식당수_1000m, type: NUMERIC }
+              - column: { name: 카페수_250m, type: NUMERIC }
+              - column: { name: 카페수_500m, type: NUMERIC }
+              - column: { name: 카페수_1000m, type: NUMERIC }
+              - column: { name: 동네_점포수, type: NUMERIC }
+              - column: { name: 동네_폐업률, type: NUMERIC }
+              - column: { name: 동네_개업율, type: NUMERIC }
+              - column: { name: 동네_총매출, type: NUMERIC }
+              - column: { name: 동네_매출건수, type: NUMERIC }
+              - column: { name: 가게당_평균매출, type: NUMERIC }
+              - column: { name: 동네_저녁매출_비율, type: NUMERIC }
+              - column: { name: 동네_심야매출_비율, type: NUMERIC }
+              - column: { name: 동네_주말매출_비율, type: NUMERIC }
+              - column: { name: 동네_2030매출_비율, type: NUMERIC }
+              - column: { name: 동네_여성매출_비율, type: NUMERIC }
+              - column: { name: 공시지가, type: NUMERIC }
+              - column: { name: 지출_총금액, type: NUMERIC }
+              - column: { name: 유흥_지출_총금액, type: NUMERIC }
+              - column: { name: 교육_지출_총금액, type: NUMERIC }
+              - column: { name: 음식_지출_총금액, type: NUMERIC }
+              - column: { name: 점포당_지출, type: NUMERIC }
+              - column: { name: 점포당_유흥, type: NUMERIC }
+              - column: { name: 점포당_교육, type: NUMERIC }
+              - column: { name: 점포당_음식, type: NUMERIC }
+              - column: { name: 상권_교체활발형, type: NUMERIC }
+              - column: { name: 상권_성장형, type: NUMERIC }
+              - column: { name: 상권매칭여부, type: BOOLEAN }
+              - column: { name: 상권배후지매칭여부, type: BOOLEAN }
+              - column: { name: 행정동매칭여부, type: BOOLEAN }
+              - column: { name: 행정동_행정동_코드, type: STRING }
+              - column: { name: 행정동_행정동_명, type: STRING }
+        - loadData:
+            tableName: vacancy_category_spatial
+            file: db/data/vacancy_dataset/category_spatial.csv
+            encoding: UTF-8
+            separator: ","
+            quotchar: '"'
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: category_id, type: STRING }
+              - column: { name: 동종_식당수_250m, type: NUMERIC }
+              - column: { name: 동종_식당수_500m, type: NUMERIC }
+              - column: { name: 동종_식당수_1000m, type: NUMERIC }
+              - column: { name: 업종성장률_250m, type: NUMERIC }
+              - column: { name: 업종성장률_500m, type: NUMERIC }
+              - column: { name: 업종성장률_1000m, type: NUMERIC }
+        - loadData:
+            tableName: vacancy_category_scores
+            file: db/data/vacancy_dataset/scores.csv
+            encoding: UTF-8
+            separator: ","
+            quotchar: '"'
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: category_id, type: STRING }
+              - column: { name: 생존점수, type: NUMERIC }
+              - column: { name: 추천여부, type: NUMERIC }
+
+  - changeSet:
+      id: 032-index-and-link-processed-vacancy-data
+      author: codex
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_common_features
+            baseColumnNames: property_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_vacancy_common_features_property
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_category_spatial
+            baseColumnNames: property_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_vacancy_category_spatial_property
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_category_spatial
+            baseColumnNames: category_id
+            referencedTableName: categories
+            referencedColumnNames: category_id
+            constraintName: fk_vacancy_category_spatial_category
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_category_scores
+            baseColumnNames: property_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_vacancy_category_scores_property
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_category_scores
+            baseColumnNames: category_id
+            referencedTableName: categories
+            referencedColumnNames: category_id
+            constraintName: fk_vacancy_category_scores_category
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: business_type_key
+            referencedTableName: categories
+            referencedColumnNames: category_id
+            constraintName: fk_analyses_category
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: vacancy_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_analyses_vacancy
+        - addForeignKeyConstraint:
+            baseTableName: analysis_vacancy_recommendations
+            baseColumnNames: vacancy_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_analysis_recommendations_vacancy
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_location
+            columns:
+              - column: { name: 위도 }
+              - column: { name: 경도 }
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_rent_filter
+            columns:
+              - column: { name: 월세_만원 }
+              - column: { name: 보증금_만원 }
+              - column: { name: 관리비_만원 }
+        - createIndex:
+            tableName: vacancy_common_features
+            indexName: idx_vacancy_common_area_code
+            columns:
+              - column: { name: 행정동_행정동_코드 }
+        - createIndex:
+            tableName: vacancy_category_scores
+            indexName: idx_vacancy_scores_category_score
+            columns:
+              - column: { name: category_id }
+              - column: { name: 생존점수 }
+        - sql:
+            dbms: postgresql
+            sql: |
+              insert into areas (id, name, region, full_name, center_lat, center_lng)
+              select
+                cf.행정동_행정동_코드,
+                regexp_replace(cf.행정동_행정동_명, '^.* ', ''),
+                regexp_replace(cf.행정동_행정동_명, ' [^ ]+$', ''),
+                cf.행정동_행정동_명,
+                avg(v.위도)::decimal(9,6),
+                avg(v.경도)::decimal(9,6)
+              from vacancy_common_features cf
+              join vacancies v on v.property_id = cf.property_id
+              where cf.행정동_행정동_코드 is not null
+                and cf.행정동_행정동_명 is not null
+                and v.위도 is not null
+                and v.경도 is not null
+              group by cf.행정동_행정동_코드, cf.행정동_행정동_명
+              on conflict (id) do update set
+                name = excluded.name,
+                region = excluded.region,
+                full_name = excluded.full_name,
+                center_lat = excluded.center_lat,
+                center_lng = excluded.center_lng;
