@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-add-vacancy-explorer-indexes
+      author: codex
+      changes:
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_explorer_area_score
+            columns:
+              - column:
+                  name: area_id
+              - column:
+                  name: survival_score
+                  descending: true
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_explorer_rent
+            columns:
+              - column:
+                  name: monthly_rent
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_explorer_deposit
+            columns:
+              - column:
+                  name: deposit
+        - createIndex:
+            tableName: vacancies
+            indexName: idx_vacancies_explorer_area_size
+            columns:
+              - column:
+                  name: location_area
+

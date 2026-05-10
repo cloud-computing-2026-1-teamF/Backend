@@ -2,10 +2,11 @@ package com.sanggwonai.api.vacancy.repository
 
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
-interface VacancyRepository : JpaRepository<VacancyEntity, String> {
+interface VacancyRepository : JpaRepository<VacancyEntity, String>, JpaSpecificationExecutor<VacancyEntity> {
     fun findFirstByAreaIdOrderByIdAsc(areaId: String): VacancyEntity?
 
     fun findAllByAreaIdOrderByIdAsc(areaId: String): List<VacancyEntity>

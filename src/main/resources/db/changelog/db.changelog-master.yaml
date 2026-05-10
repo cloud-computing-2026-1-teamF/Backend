@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-005-analysis-recommendations.yaml
   - include:
       file: db/changelog/db.changelog-006-vacancy-display-labels.yaml
+  - include:
+      file: db/changelog/db.changelog-007-vacancy-explorer-indexes.yaml

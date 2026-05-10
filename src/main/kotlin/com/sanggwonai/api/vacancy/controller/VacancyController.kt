@@ -2,7 +2,13 @@ package com.sanggwonai.api.vacancy.controller
 
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
 import com.sanggwonai.api.vacancy.dto.VacancyDto
+import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
+import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
+import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
+import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -12,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.math.BigDecimal
 
 @RestController
 @RequestMapping("/v1/vacancies")
@@ -31,6 +38,40 @@ class VacancyController(
         return ResponseEntity.ok(ApiResponse(data))
     }
 
+    @GetMapping("/search")
+    @Operation(
+        summary = "공실 탐색 조건 검색함",
+        description = "공실 탐색 화면에서 쓰는 검색/필터/정렬/요약 데이터를 반환함."
+    )
+    fun search(
+        @RequestParam(name = "areaId", required = false) areaId: String?,
+        @RequestParam(name = "q", required = false) q: String?,
+        @RequestParam(name = "rentMax", required = false) rentMax: Long?,
+        @RequestParam(name = "depositMax", required = false) depositMax: Long?,
+        @RequestParam(name = "maintenanceFeeMax", required = false) maintenanceFeeMax: Long?,
+        @RequestParam(name = "scoreMin", required = false) scoreMin: BigDecimal?,
+        @RequestParam(name = "areaMin", required = false) areaMin: BigDecimal?,
+        @RequestParam(name = "areaMax", required = false) areaMax: BigDecimal?,
+        @RequestParam(name = "page", required = false) page: Int?,
+        @RequestParam(name = "size", required = false) size: Int?,
+        @RequestParam(name = "sort", required = false) sort: String?
+    ): ResponseEntity<ApiResponse<VacancySearchResponse>> {
+        val criteria = VacancyExplorerCriteria(
+            areaId = areaId,
+            q = q,
+            rentMax = rentMax,
+            depositMax = depositMax,
+            maintenanceFeeMax = maintenanceFeeMax,
+            scoreMin = scoreMin,
+            areaMin = areaMin,
+            areaMax = areaMax,
+            page = page ?: DEFAULT_PAGE,
+            size = size ?: DEFAULT_PAGE_SIZE,
+            sort = VacancyExplorerSort.from(sort)
+        )
+        return ResponseEntity.ok(ApiResponse(toSearchResponse(vacancyFacade.search(criteria))))
+    }
+
     @GetMapping("/{id}")
     @Operation(
         summary = "공실 상세 조회함",
@@ -40,6 +81,30 @@ class VacancyController(
         @PathVariable id: String
     ): ResponseEntity<ApiResponse<VacancyResponse>> {
         return ResponseEntity.ok(ApiResponse(toResponse(vacancyFacade.get(id))))
+    }
+
+    private fun toSearchResponse(data: VacancyExplorerResult): VacancySearchResponse {
+        return VacancySearchResponse(
+            items = data.items.map(::toResponse),
+            total = data.total,
+            page = data.page,
+            size = data.size,
+            totalPages = data.totalPages,
+            summary = toSummaryResponse(data.summary)
+        )
+    }
+
+    private fun toSummaryResponse(data: VacancyExplorerSummary): VacancySearchSummaryResponse {
+        return VacancySearchSummaryResponse(
+            total = data.total,
+            averageScore = data.averageScore,
+            averageRent = data.averageRent,
+            averageDeposit = data.averageDeposit,
+            averageMaintenanceFee = data.averageMaintenanceFee,
+            minRent = data.minRent,
+            maxRent = data.maxRent,
+            areaCount = data.areaCount
+        )
     }
 
     private fun toResponse(data: VacancyDto): VacancyResponse {
@@ -90,5 +155,10 @@ class VacancyController(
             createdAt = data.createdAt,
             updatedAt = data.updatedAt
         )
+    }
+
+    companion object {
+        private const val DEFAULT_PAGE = 0
+        private const val DEFAULT_PAGE_SIZE = 20
     }
 }
