@@ -38,8 +38,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import java.util.concurrent.Executors
 
 @Service
@@ -284,16 +282,14 @@ class AnalysisService(
     }
 
     private fun validateDailyLimit(userId: String, tier: UserTier) {
-        if (tier != UserTier.FREE) {
-            return
-        }
-        val today = LocalDate.now(clock)
-        val from = today.atStartOfDay().toInstant(ZoneOffset.UTC)
-        val to = today.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)
-        val count = analysisRepository.countCreatedByUserInRange(userId, from, to)
-        if (count >= 20) {
-            throw ApiException.of(ErrorType.ANALYSIS_RATE_LIMIT_EXCEEDED)
-        }
+        // Daily limit temporarily disabled for every tier — FREE was the only
+        // gated case, and the rest of the product is still in demo/eval mode
+        // without billing, so the cap was preventing test users from poking at
+        // the flow. Re-enable by restoring the FREE-specific 20/day check below
+        // (or moving the threshold into AnalysisProperties) once subscriptions
+        // ship.
+        @Suppress("UNUSED_VARIABLE")
+        val _unused = userId to tier
     }
 
     private fun loadRecommendations(analysis: AnalysisEntity): List<AnalysisRecommendationDto> {
