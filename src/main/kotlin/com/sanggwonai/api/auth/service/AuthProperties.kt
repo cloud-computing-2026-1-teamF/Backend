@@ -6,5 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class AuthProperties(
     val jwtSecret: String,
     val accessTokenExpirySeconds: Long,
-    val refreshTokenExpiryDays: Long
+    val refreshTokenExpiryDays: Long,
+    val kakaoClientId: String,
+    val kakaoRedirectUri: String
 )
