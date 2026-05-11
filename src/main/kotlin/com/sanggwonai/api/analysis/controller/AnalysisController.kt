@@ -291,6 +291,8 @@ class AnalysisController(
             facilityTotalSize = data.facilityTotalSize,
             locationArea = data.locationArea,
             category = data.category,
+            roadAddress = data.roadAddress,
+            lotAddress = data.lotAddress,
             businessMiddleCategoryName = data.businessMiddleCategoryName,
             businessSubCategoryName = data.businessSubCategoryName,
             floatingPopulationAnnualTotal = data.floatingPopulationAnnualTotal,
