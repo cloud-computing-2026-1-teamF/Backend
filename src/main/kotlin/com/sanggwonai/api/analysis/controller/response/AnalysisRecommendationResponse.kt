@@ -17,6 +17,8 @@ data class AnalysisRecommendationResponse(
     val facilityTotalSize: BigDecimal?,
     val locationArea: BigDecimal?,
     val category: String?,
+    val roadAddress: String?,
+    val lotAddress: String?,
     val businessMiddleCategoryName: String?,
     val businessSubCategoryName: String?,
     val floatingPopulationAnnualTotal: Long?,
