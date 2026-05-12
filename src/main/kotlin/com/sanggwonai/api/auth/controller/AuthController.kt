@@ -76,6 +76,17 @@ class AuthController(
             .body(ApiResponse(toResponse(data)))
     }
 
+    @PostMapping("/logout")
+    @Operation(
+        summary = "로그아웃 수행함",
+        description = "현재 세션의 refresh token 쿠키를 즉시 만료시킨다. Access token 은 클라이언트가 자체적으로 폐기한다."
+    )
+    fun logout(): ResponseEntity<ApiResponse<LogoutResponse>> {
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, buildExpiredRefreshCookie().toString())
+            .body(ApiResponse(LogoutResponse(ok = true)))
+    }
+
     @PostMapping("/refresh")
     @Operation(
         summary = "Access 토큰 재발급함",
@@ -161,7 +172,19 @@ class AuthController(
             .build()
     }
 
+    private fun buildExpiredRefreshCookie(): ResponseCookie {
+        return ResponseCookie.from(REFRESH_COOKIE, "")
+            .httpOnly(true)
+            .secure(false)
+            .path("/")
+            .sameSite("Lax")
+            .maxAge(0)
+            .build()
+    }
+
     companion object {
         private const val REFRESH_COOKIE = "refresh_token"
     }
 }
+
+data class LogoutResponse(val ok: Boolean)
