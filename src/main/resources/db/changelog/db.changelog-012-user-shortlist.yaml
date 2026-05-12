@@ -1,0 +1,39 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-create-user-vacancy-shortlist
+      author: codex
+      changes:
+        - createTable:
+            tableName: user_vacancy_shortlist
+            columns:
+              - column:
+                  name: id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: vacancy_id
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: user_vacancy_shortlist
+            columnNames: user_id, vacancy_id
+            constraintName: uq_user_vacancy_shortlist_user_vacancy
+        - createIndex:
+            tableName: user_vacancy_shortlist
+            indexName: idx_user_vacancy_shortlist_user
+            columns:
+              - column:
+                  name: user_id
