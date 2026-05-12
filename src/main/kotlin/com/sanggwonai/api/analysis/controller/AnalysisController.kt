@@ -230,7 +230,16 @@ class AnalysisController(
             step = toResponse(data.step),
             createdAt = data.createdAt,
             completedAt = data.completedAt,
-            error = toResponse(data.error)
+            error = toResponse(data.error),
+            businessTypeKey = data.businessTypeKey,
+            centerLat = data.centerLat,
+            centerLng = data.centerLng,
+            radiusM = data.radiusM,
+            budgetDepositMax = data.budgetDepositMax,
+            budgetRentMax = data.budgetRentMax,
+            budgetMaintenanceFeeMax = data.budgetMaintenanceFeeMax,
+            topScore = data.topScore,
+            recommendationCount = data.recommendationCount
         )
     }
 
