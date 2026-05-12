@@ -146,6 +146,59 @@ class AuthService(
         return LoginData(user = userMapper.toDto(user), tokens = tokens)
     }
 
+    @Transactional
+    fun naverLogin(code: String, state: String): LoginData {
+        val tokenResponse = restTemplate.postForObject(
+            "https://nid.naver.com/oauth2.0/token",
+            org.springframework.http.HttpEntity(
+                "grant_type=authorization_code&client_id=${authProperties.naverClientId}&client_secret=${authProperties.naverClientSecret}&redirect_uri=${authProperties.naverRedirectUri}&code=$code&state=$state",
+                org.springframework.http.HttpHeaders().apply {
+                    contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+                }
+            ),
+            Map::class.java
+        ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+
+        val naverAccessToken = tokenResponse["access_token"] as String
+
+        val userResponse = restTemplate.exchange(
+            "https://openapi.naver.com/v1/nid/me",
+            org.springframework.http.HttpMethod.GET,
+            org.springframework.http.HttpEntity<Void>(
+                org.springframework.http.HttpHeaders().apply {
+                    setBearerAuth(naverAccessToken)
+                }
+            ),
+            Map::class.java
+        ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+
+        @Suppress("UNCHECKED_CAST")
+        val naverProfile = userResponse["response"] as? Map<String, Any>
+            ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+
+        val naverId = naverProfile["id"].toString()
+        val email = naverProfile["email"] as? String
+        val name = (naverProfile["name"] as? String) ?: (naverProfile["nickname"] as? String) ?: "네이버유저"
+
+        val now = Instant.now(clock)
+        val user = userRepository.findByNaverId(naverId).orElseGet {
+            userRepository.save(
+                UserEntity(
+                    id = IdGenerator.next("usr"),
+                    email = email ?: "$naverId@naver.local",
+                    passwordHash = null,
+                    name = name,
+                    tier = UserTier.FREE,
+                    oauthProvider = AuthProvider.NAVER,
+                    naverId = naverId,
+                    createdAt = now
+                )
+            )
+        }
+        val tokens = issueTokens(user)
+        return LoginData(user = userMapper.toDto(user), tokens = tokens)
+    }
+
     private fun issueTokens(user: UserEntity): TokenBundleDto {
         val now = Instant.now(clock)
         val refreshToken = IdGenerator.next("rt")

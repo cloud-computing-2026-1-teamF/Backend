@@ -26,4 +26,6 @@ class AuthFacade(
     fun refresh(refreshToken: String): RefreshData = authService.refresh(refreshToken)
 
     fun kakaoLogin(code: String): LoginData = authService.kakaoLogin(code)
+
+    fun naverLogin(code: String, state: String): LoginData = authService.naverLogin(code, state)
 }
