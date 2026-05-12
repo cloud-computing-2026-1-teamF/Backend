@@ -7,6 +7,6 @@ data class AuthProperties(
     val jwtSecret: String,
     val accessTokenExpirySeconds: Long,
     val refreshTokenExpiryDays: Long,
-    val kakaoClientId: String,
-    val kakaoRedirectUri: String
+    val kakaoClientId: String = "",
+    val kakaoRedirectUri: String = "http://localhost:5174/auth/kakao/callback"
 )
