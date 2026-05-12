@@ -102,14 +102,17 @@ class AuthService(
     fun kakaoLogin(code: String): LoginData {
         log.info("kakaoLogin: clientId=${authProperties.kakaoClientId.take(4)}**** redirectUri=${authProperties.kakaoRedirectUri}")
         val tokenResponse = try {
+            val formParams = org.springframework.util.LinkedMultiValueMap<String, String>().apply {
+                add("grant_type", "authorization_code")
+                add("client_id", authProperties.kakaoClientId)
+                add("redirect_uri", authProperties.kakaoRedirectUri)
+                add("code", code)
+            }
             restTemplate.postForObject(
                 "https://kauth.kakao.com/oauth/token",
-                org.springframework.http.HttpEntity(
-                    "grant_type=authorization_code&client_id=${authProperties.kakaoClientId}&redirect_uri=${authProperties.kakaoRedirectUri}&code=$code",
-                    org.springframework.http.HttpHeaders().apply {
-                        contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
-                    }
-                ),
+                org.springframework.http.HttpEntity(formParams, org.springframework.http.HttpHeaders().apply {
+                    contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+                }),
                 Map::class.java
             ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         } catch (e: HttpClientErrorException) {
