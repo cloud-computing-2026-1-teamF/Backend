@@ -156,10 +156,33 @@ class AnalysisService(
     @Transactional(readOnly = true)
     fun list(authContext: AuthContext, limit: Int?): List<AnalysisPollingData> {
         val pageSize = limit?.coerceIn(1, 50) ?: 20
-        return analysisRepository.findByUserIdOrderByCreatedAtDesc(
+        val analyses = analysisRepository.findByUserIdOrderByCreatedAtDesc(
             authContext.userId,
             PageRequest.of(0, pageSize)
-        ).map(analysisMapper::toPollingData)
+        )
+        if (analyses.isEmpty()) return emptyList()
+
+        // Bulk-fetch recommendations once for all analyses on this page to avoid
+        // an N+1. Group by analysisId, derive top-score + count per analysis.
+        val recommendationsByAnalysis = recommendationRepository
+            .findByAnalysisIdIn(analyses.map { it.id })
+            .groupBy { it.analysisId }
+
+        return analyses.map { entity ->
+            val recs = recommendationsByAnalysis[entity.id] ?: emptyList()
+            val base = analysisMapper.toPollingData(entity)
+            base.copy(
+                businessTypeKey = entity.businessTypeKey,
+                centerLat = entity.centerLat,
+                centerLng = entity.centerLng,
+                radiusM = entity.radiusM,
+                budgetDepositMax = entity.budgetDepositMax,
+                budgetRentMax = entity.budgetRentMax,
+                budgetMaintenanceFeeMax = entity.budgetMaintenanceFeeMax,
+                topScore = recs.maxOfOrNull { it.score },
+                recommendationCount = recs.size
+            )
+        }
     }
 
     @Transactional
