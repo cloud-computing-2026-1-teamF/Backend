@@ -25,6 +25,9 @@ class AnalysisEntity(
     @Column(name = "vacancy_id", nullable = false, length = 40)
     val vacancyId: String,
 
+    @Column(name = "transaction_type", length = 40)
+    val transactionType: String?,
+
     @Column(name = "budget_deposit_max")
     var budgetDepositMax: Long?,
 
@@ -33,6 +36,12 @@ class AnalysisEntity(
 
     @Column(name = "budget_maintenance_fee_max")
     var budgetMaintenanceFeeMax: Long?,
+
+    @Column(name = "budget_premium_max")
+    var budgetPremiumMax: Long?,
+
+    @Column(name = "budget_sale_price_max")
+    var budgetSalePriceMax: Long?,
 
     @Column(name = "center_lat", nullable = false, precision = 9, scale = 6)
     val centerLat: BigDecimal,

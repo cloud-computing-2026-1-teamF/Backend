@@ -25,6 +25,7 @@ import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
 import com.sanggwonai.api.vacancy.dto.RankedVacancy
 import com.sanggwonai.api.vacancy.dto.VacancySearchCriteria
+import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
@@ -69,6 +70,7 @@ class AnalysisService(
             .orElseThrow { ApiException.of(ErrorType.INVALID_AREA) }
         val searchPoint = request.resolveSearchPoint(area)
         val radiusM = request.radiusM ?: DEFAULT_RADIUS_M
+        val transactionType = request.transactionType?.trim()?.takeIf { it.isNotEmpty() }
         val rankedVacancies = vacancyRankingService.findTop(
             VacancySearchCriteria(
                 areaId = request.areaId,
@@ -76,9 +78,12 @@ class AnalysisService(
                 latitude = searchPoint.latitude,
                 longitude = searchPoint.longitude,
                 radiusM = radiusM,
+                transactionType = transactionType,
                 rentMax = request.budget?.rentMax,
                 depositMax = request.budget?.depositMax,
-                maintenanceFeeMax = request.budget?.maintenanceFeeMax
+                maintenanceFeeMax = request.budget?.maintenanceFeeMax,
+                premiumMax = request.budget?.premiumMax,
+                salePriceMax = request.budget?.salePriceMax
             )
         )
         if (rankedVacancies.isEmpty()) {
@@ -99,9 +104,12 @@ class AnalysisService(
                 userId = authContext.userId,
                 businessTypeKey = request.businessType,
                 vacancyId = topVacancy.id,
+                transactionType = transactionType,
                 budgetDepositMax = request.budget?.depositMax,
                 budgetRentMax = request.budget?.rentMax,
                 budgetMaintenanceFeeMax = request.budget?.maintenanceFeeMax,
+                budgetPremiumMax = request.budget?.premiumMax,
+                budgetSalePriceMax = request.budget?.salePriceMax,
                 centerLat = searchPoint.latitude.toCoordinate(),
                 centerLng = searchPoint.longitude.toCoordinate(),
                 radiusM = radiusM,
@@ -173,12 +181,15 @@ class AnalysisService(
             val base = analysisMapper.toPollingData(entity)
             base.copy(
                 businessTypeKey = entity.businessTypeKey,
+                transactionType = entity.transactionType,
                 centerLat = entity.centerLat,
                 centerLng = entity.centerLng,
                 radiusM = entity.radiusM,
                 budgetDepositMax = entity.budgetDepositMax,
                 budgetRentMax = entity.budgetRentMax,
                 budgetMaintenanceFeeMax = entity.budgetMaintenanceFeeMax,
+                budgetPremiumMax = entity.budgetPremiumMax,
+                budgetSalePriceMax = entity.budgetSalePriceMax,
                 topScore = recs.maxOfOrNull { it.score },
                 recommendationCount = recs.size
             )
@@ -330,8 +341,10 @@ class AnalysisService(
                 toRecommendationDto(
                     row = row,
                     vacancy = vacancy,
+                    recommended = score?.recommended,
                     common = snapshot.commonByProperty[vacancy.id],
                     spatial = snapshot.spatialFor(vacancy.id, score),
+                    accessibility = snapshot.accessibilityByProperty[vacancy.id],
                     categoryName = snapshot.categoryName(analysis.businessTypeKey)
                 )
             }
@@ -344,30 +357,41 @@ class AnalysisService(
         val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
         val latitude = vacancy.latitude ?: analysis.centerLat
         val longitude = vacancy.longitude ?: analysis.centerLng
+        val common = snapshot.commonByProperty[vacancy.id]
+        val spatial = snapshot.spatialFor(vacancy.id, score)
+        val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         return listOf(
             AnalysisRecommendationDto(
                 rank = 1,
                 vacancyId = vacancy.id,
+                recommended = score?.recommended,
                 score = score?.scorePercent() ?: BigDecimal("0.00"),
                 distanceM = 0,
-                areaId = snapshot.commonByProperty[vacancy.id]?.areaCode ?: vacancy.dong ?: "",
+                areaId = common?.areaCode ?: vacancy.dong ?: "",
                 latitude = latitude,
                 longitude = longitude,
                 monthlyRent = vacancy.monthlyRent,
                 deposit = vacancy.deposit,
                 maintenanceFee = vacancy.maintenanceFee,
-                facilityTotalSize = snapshot.commonByProperty[vacancy.id]?.facilityTotalSize,
-                locationArea = vacancy.dedicatedArea ?: snapshot.commonByProperty[vacancy.id]?.locationArea,
+                premium = vacancy.premium,
+                salePrice = vacancy.salePrice,
+                transactionType = vacancy.transactionType,
+                facilityTotalSize = common?.facilityTotalSize,
+                locationArea = vacancy.dedicatedArea ?: common?.locationArea,
                 category = snapshot.categoryName(analysis.businessTypeKey),
                 roadAddress = vacancy.roadAddress,
                 lotAddress = vacancy.lotAddress,
                 businessMiddleCategoryName = vacancy.majorBusinessCategory,
                 businessSubCategoryName = vacancy.middleBusinessCategory,
-                floatingPopulationAnnualTotal = snapshot.commonByProperty[vacancy.id]?.floatingPopulationAnnualDensity?.toLong(),
-                restaurantCount500m = snapshot.commonByProperty[vacancy.id]?.restaurantCount500m,
-                cafeCount500m = snapshot.commonByProperty[vacancy.id]?.cafeCount500m,
-                industryGrowthRate500m = snapshot.spatialFor(vacancy.id, score)?.industryGrowthRate500m,
-                averageSalesPerStore = snapshot.commonByProperty[vacancy.id]?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP)
+                floatingPopulationAnnualTotal = common?.floatingPopulationAnnualDensity?.toLong(),
+                restaurantCount500m = common?.restaurantCount500m,
+                cafeCount500m = common?.cafeCount500m,
+                industryGrowthRate500m = spatial?.industryGrowthRate500m,
+                averageSalesPerStore = common?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP),
+                busStopInfo = accessibility?.busStopInfo,
+                subwayStationInfo = accessibility?.subwayStationInfo,
+                parkingInfo = accessibility?.parkingInfo,
+                hourlyFloatingPopulation = accessibility?.hourlyFoottraffic()
             )
         )
     }
@@ -376,10 +400,12 @@ class AnalysisService(
         return toRecommendationDto(
             rank = ranked.rank,
             vacancy = ranked.vacancy,
+            recommended = ranked.recommended,
             score = ranked.score,
             distanceM = ranked.distanceM,
             common = ranked.common,
             spatial = ranked.spatial,
+            accessibility = vacancyDataset.snapshot().accessibilityByProperty[ranked.vacancy.id],
             categoryName = ranked.categoryName
         )
     }
@@ -387,17 +413,21 @@ class AnalysisService(
     private fun toRecommendationDto(
         row: AnalysisVacancyRecommendationEntity,
         vacancy: VacancyEntity,
+        recommended: Boolean?,
         common: VacancyCommonFeatureEntity?,
         spatial: VacancyCategorySpatialEntity?,
+        accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?
     ): AnalysisRecommendationDto {
         return toRecommendationDto(
             rank = row.rank,
             vacancy = vacancy,
+            recommended = recommended,
             score = row.score,
             distanceM = row.distanceM,
             common = common,
             spatial = spatial,
+            accessibility = accessibility,
             categoryName = categoryName
         )
     }
@@ -405,15 +435,18 @@ class AnalysisService(
     private fun toRecommendationDto(
         rank: Int,
         vacancy: VacancyEntity,
+        recommended: Boolean?,
         score: BigDecimal,
         distanceM: Int,
         common: VacancyCommonFeatureEntity?,
         spatial: VacancyCategorySpatialEntity?,
+        accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?
     ): AnalysisRecommendationDto {
         return AnalysisRecommendationDto(
             rank = rank,
             vacancyId = vacancy.id,
+            recommended = recommended,
             score = score,
             distanceM = distanceM,
             areaId = common?.areaCode ?: vacancy.dong ?: "",
@@ -422,6 +455,9 @@ class AnalysisService(
             monthlyRent = vacancy.monthlyRent,
             deposit = vacancy.deposit,
             maintenanceFee = vacancy.maintenanceFee,
+            premium = vacancy.premium,
+            salePrice = vacancy.salePrice,
+            transactionType = vacancy.transactionType,
             facilityTotalSize = common?.facilityTotalSize,
             locationArea = vacancy.dedicatedArea ?: common?.locationArea,
             category = categoryName,
@@ -433,7 +469,11 @@ class AnalysisService(
             restaurantCount500m = common?.restaurantCount500m,
             cafeCount500m = common?.cafeCount500m,
             industryGrowthRate500m = spatial?.industryGrowthRate500m,
-            averageSalesPerStore = common?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP)
+            averageSalesPerStore = common?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP),
+            busStopInfo = accessibility?.busStopInfo,
+            subwayStationInfo = accessibility?.subwayStationInfo,
+            parkingInfo = accessibility?.parkingInfo,
+            hourlyFloatingPopulation = accessibility?.hourlyFoottraffic()
         )
     }
 

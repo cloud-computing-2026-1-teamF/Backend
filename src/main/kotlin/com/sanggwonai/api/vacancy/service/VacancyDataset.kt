@@ -6,6 +6,8 @@ import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
+import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
+import com.sanggwonai.api.vacancy.repository.VacancyAccessibilityFoottrafficRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategoryScoreRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategorySpatialRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCommonFeatureRepository
@@ -19,6 +21,7 @@ class VacancyDataset(
     private val commonFeatureRepository: VacancyCommonFeatureRepository,
     private val categoryScoreRepository: VacancyCategoryScoreRepository,
     private val categorySpatialRepository: VacancyCategorySpatialRepository,
+    private val accessibilityFoottrafficRepository: VacancyAccessibilityFoottrafficRepository,
     private val businessTypeRepository: BusinessTypeRepository
 ) {
     @Volatile
@@ -47,6 +50,7 @@ class VacancyDataset(
         return VacancyDatasetSnapshot(
             vacancies = vacancyRepository.findAllByOrderByIdAsc(),
             commonByProperty = commonFeatureRepository.findAll().associateBy { it.propertyId },
+            accessibilityByProperty = accessibilityFoottrafficRepository.findAll().associateBy { it.propertyId },
             scoreByKey = scores.associateBy { it.id },
             bestScoreByProperty = bestScoresByProperty,
             spatialByKey = spatialsByKey,
@@ -59,6 +63,7 @@ class VacancyDataset(
 data class VacancyDatasetSnapshot(
     val vacancies: List<VacancyEntity>,
     val commonByProperty: Map<String, VacancyCommonFeatureEntity>,
+    val accessibilityByProperty: Map<String, VacancyAccessibilityFoottrafficEntity>,
     val scoreByKey: Map<VacancyCategoryKey, VacancyCategoryScoreEntity>,
     val bestScoreByProperty: Map<String, VacancyCategoryScoreEntity>,
     val spatialByKey: Map<VacancyCategoryKey, VacancyCategorySpatialEntity>,

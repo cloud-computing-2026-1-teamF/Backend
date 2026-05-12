@@ -17,6 +17,9 @@ data class CreateAnalysisRequest(
     @param:JsonAlias("areaId")
     val areaId: String,
 
+    @param:JsonAlias("transactionType")
+    val transactionType: String?,
+
     @field:Valid
     val budget: AnalysisBudgetRequest?,
 

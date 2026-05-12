@@ -17,12 +17,15 @@ data class AnalysisPollingData(
     // The single-analysis polling endpoint leaves them null because callers
     // there only care about status/progress.
     val businessTypeKey: String? = null,
+    val transactionType: String? = null,
     val centerLat: BigDecimal? = null,
     val centerLng: BigDecimal? = null,
     val radiusM: Int? = null,
     val budgetDepositMax: Long? = null,
     val budgetRentMax: Long? = null,
     val budgetMaintenanceFeeMax: Long? = null,
+    val budgetPremiumMax: Long? = null,
+    val budgetSalePriceMax: Long? = null,
     val topScore: BigDecimal? = null,
     val recommendationCount: Int? = null
 )

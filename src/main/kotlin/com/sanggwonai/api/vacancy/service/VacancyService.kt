@@ -11,11 +11,17 @@ import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
+import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @Service
 class VacancyService(
@@ -71,7 +77,8 @@ class VacancyService(
         common: VacancyCommonFeatureEntity?,
         score: VacancyCategoryScoreEntity?,
         spatial: VacancyCategorySpatialEntity?,
-        categoryName: String?
+        categoryName: String?,
+        accessibility: VacancyAccessibilityFoottrafficEntity?
     ): VacancyDto {
         return VacancyDto(
             id = entity.id,
@@ -127,6 +134,10 @@ class VacancyService(
             rentAdjustable = entity.rentAdjustable,
             rentFreePeriodAvailable = entity.rentFreePeriodAvailable,
             subway = entity.subway,
+            busStopInfo = accessibility?.busStopInfo,
+            subwayStationInfo = accessibility?.subwayStationInfo,
+            parkingInfo = accessibility?.parkingInfo,
+            hourlyFloatingPopulation = accessibility?.hourlyFoottraffic(),
             brokerageFee = entity.brokerageFee,
             brokerageRate = entity.brokerageRate,
             viewCount = entity.viewCount,
@@ -193,7 +204,8 @@ class VacancyService(
         val score = snapshot.scoreFor(vacancy.id, categoryId)
         val spatial = snapshot.spatialFor(vacancy.id, score)
         val categoryName = snapshot.categoryName(score?.id?.categoryId)
-        val dto = toDto(vacancy, common, score, spatial, categoryName)
+        val accessibility = snapshot.accessibilityByProperty[vacancy.id]
+        val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility)
         return VacancySearchRow(dto = dto, searchText = searchText(dto))
     }
 
@@ -201,6 +213,15 @@ class VacancyService(
         val dto = row.dto
         if (!criteria.areaId.isNullOrBlank() && dto.areaId != criteria.areaId) return false
         if (categoryId != null && dto.categoryId != categoryId) return false
+        criteria.transactionType?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            if (!it.equals(dto.transactionType, ignoreCase = true)) return false
+        }
+        if (criteria.latitude != null && criteria.longitude != null && criteria.radiusM != null) {
+            val vacancyLat = dto.latitude?.toDouble() ?: return false
+            val vacancyLng = dto.longitude?.toDouble() ?: return false
+            val radiusM = criteria.radiusM.coerceIn(MIN_RADIUS_M, MAX_RADIUS_M)
+            if (distanceMeters(criteria.latitude, criteria.longitude, vacancyLat, vacancyLng) > radiusM) return false
+        }
         criteria.q?.trim()?.lowercase(Locale.KOREA)?.takeIf { it.isNotEmpty() }?.let {
             if (!row.searchText.contains(it)) return false
         }
@@ -209,6 +230,8 @@ class VacancyService(
         criteria.maintenanceFeeMax?.let {
             if (dto.maintenanceFee == null || dto.maintenanceFee > it) return false
         }
+        criteria.premiumMax?.let { if (dto.premium == null || dto.premium > it) return false }
+        criteria.salePriceMax?.let { if (dto.salePrice == null || dto.salePrice > it) return false }
         criteria.scoreMin?.let { if (dto.survivalScore == null || dto.survivalScore < it) return false }
         criteria.areaMin?.let { if (dto.locationArea == null || dto.locationArea < it) return false }
         criteria.areaMax?.let { if (dto.locationArea == null || dto.locationArea > it) return false }
@@ -303,9 +326,23 @@ class VacancyService(
         ).joinToString(" ").lowercase(Locale.KOREA)
     }
 
+    private fun distanceMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Int {
+        val earthRadiusM = 6_371_000.0
+        val latRad1 = Math.toRadians(lat1)
+        val latRad2 = Math.toRadians(lat2)
+        val deltaLat = Math.toRadians(lat2 - lat1)
+        val deltaLng = Math.toRadians(lng2 - lng1)
+        val a = sin(deltaLat / 2).pow(2) +
+            cos(latRad1) * cos(latRad2) * sin(deltaLng / 2).pow(2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return (earthRadiusM * c).toInt()
+    }
+
     companion object {
         private const val MIN_PAGE_SIZE = 1
         private const val MAX_PAGE_SIZE = 600
+        private const val MIN_RADIUS_M = 1
+        private const val MAX_RADIUS_M = 5000
         private const val SUMMARY_SCALE = 2
     }
 }

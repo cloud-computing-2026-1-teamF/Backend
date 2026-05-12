@@ -232,12 +232,15 @@ class AnalysisController(
             completedAt = data.completedAt,
             error = toResponse(data.error),
             businessTypeKey = data.businessTypeKey,
+            transactionType = data.transactionType,
             centerLat = data.centerLat,
             centerLng = data.centerLng,
             radiusM = data.radiusM,
             budgetDepositMax = data.budgetDepositMax,
             budgetRentMax = data.budgetRentMax,
             budgetMaintenanceFeeMax = data.budgetMaintenanceFeeMax,
+            budgetPremiumMax = data.budgetPremiumMax,
+            budgetSalePriceMax = data.budgetSalePriceMax,
             topScore = data.topScore,
             recommendationCount = data.recommendationCount
         )
@@ -289,6 +292,7 @@ class AnalysisController(
         return AnalysisRecommendationResponse(
             rank = data.rank,
             vacancyId = data.vacancyId,
+            recommended = data.recommended,
             score = data.score,
             distanceM = data.distanceM,
             areaId = data.areaId,
@@ -297,6 +301,9 @@ class AnalysisController(
             monthlyRent = data.monthlyRent,
             deposit = data.deposit,
             maintenanceFee = data.maintenanceFee,
+            premium = data.premium,
+            salePrice = data.salePrice,
+            transactionType = data.transactionType,
             facilityTotalSize = data.facilityTotalSize,
             locationArea = data.locationArea,
             category = data.category,
@@ -308,7 +315,11 @@ class AnalysisController(
             restaurantCount500m = data.restaurantCount500m,
             cafeCount500m = data.cafeCount500m,
             industryGrowthRate500m = data.industryGrowthRate500m,
-            averageSalesPerStore = data.averageSalesPerStore
+            averageSalesPerStore = data.averageSalesPerStore,
+            busStopInfo = data.busStopInfo,
+            subwayStationInfo = data.subwayStationInfo,
+            parkingInfo = data.parkingInfo,
+            hourlyFloatingPopulation = data.hourlyFloatingPopulation
         )
     }
 }

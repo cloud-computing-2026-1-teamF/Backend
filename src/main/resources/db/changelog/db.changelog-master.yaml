@@ -23,3 +23,9 @@ databaseChangeLog:
       file: db/changelog/db.changelog-011-social-login.yaml
   - include:
       file: db/changelog/db.changelog-012-user-shortlist.yaml
+  - include:
+      file: db/changelog/db.changelog-013-vacancy-condition-and-scale-fixes.yaml
+  - include:
+      file: db/changelog/db.changelog-014-vacancy-accessibility-foottraffic.yaml
+  - include:
+      file: db/changelog/db.changelog-015-social-login-constraints.yaml

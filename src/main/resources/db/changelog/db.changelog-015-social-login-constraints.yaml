@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 034-add-social-provider-unique-constraints
+      author: codex
+      changes:
+        - addUniqueConstraint:
+            tableName: users
+            columnNames: kakao_id
+            constraintName: uk_users_kakao_id
+        - addUniqueConstraint:
+            tableName: users
+            columnNames: naver_id
+            constraintName: uk_users_naver_id

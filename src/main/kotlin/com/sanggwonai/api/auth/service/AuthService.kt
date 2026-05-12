@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 import java.time.Clock
 import java.time.Instant
@@ -47,11 +48,12 @@ class AuthService(
 
     @Transactional
     fun login(request: LoginRequest): LoginData {
-        val user = userRepository.findByEmail(request.email)
+        val user = userRepository.findByEmail(normalizeEmail(request.email))
             .orElseThrow {
                 ApiException.of(ErrorType.INVALID_CREDENTIALS)
             }
-        if (user.oauthProvider != AuthProvider.EMAIL || !passwordEncoder.matches(request.password, user.passwordHash)) {
+        val passwordHash = user.passwordHash ?: throw ApiException.of(ErrorType.INVALID_CREDENTIALS)
+        if (!passwordEncoder.matches(request.password, passwordHash)) {
             throw ApiException.of(ErrorType.INVALID_CREDENTIALS)
         }
         val tokens = issueTokens(user)
@@ -60,14 +62,15 @@ class AuthService(
 
     @Transactional
     fun signup(request: SignupRequest): LoginData {
-        if (userRepository.existsByEmail(request.email)) {
+        val email = normalizeEmail(request.email)
+        if (userRepository.existsByEmail(email)) {
             throw ApiException.of(ErrorType.EMAIL_CONFLICT)
         }
         val now = Instant.now(clock)
         val user = userRepository.save(
             UserEntity(
                 id = IdGenerator.next("usr"),
-                email = request.email.lowercase(),
+                email = email,
                 passwordHash = passwordEncoder.encode(request.password)
                     ?: throw ApiException.of(ErrorType.PASSWORD_ENCODING_FAILED),
                 name = request.name,
@@ -118,71 +121,93 @@ class AuthService(
         } catch (e: HttpClientErrorException) {
             log.error("kakaoLogin: token exchange failed status=${e.statusCode} body=${e.responseBodyAsString}")
             throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: RestClientException) {
+            log.error("kakaoLogin: token exchange failed", e)
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         }
 
         val kakaoAccessToken = tokenResponse["access_token"] as String
 
-        val userResponse = restTemplate.exchange(
-            "https://kapi.kakao.com/v2/user/me",
-            org.springframework.http.HttpMethod.GET,
-            org.springframework.http.HttpEntity<Void>(
-                org.springframework.http.HttpHeaders().apply {
-                    setBearerAuth(kakaoAccessToken)
-                }
-            ),
-            Map::class.java
-        ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        val userResponse = try {
+            restTemplate.exchange(
+                "https://kapi.kakao.com/v2/user/me",
+                org.springframework.http.HttpMethod.GET,
+                org.springframework.http.HttpEntity<Void>(
+                    org.springframework.http.HttpHeaders().apply {
+                        setBearerAuth(kakaoAccessToken)
+                    }
+                ),
+                Map::class.java
+            ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: RestClientException) {
+            log.error("kakaoLogin: profile fetch failed", e)
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        }
 
         val kakaoId = userResponse["id"].toString()
         @Suppress("UNCHECKED_CAST")
         val kakaoAccount = userResponse["kakao_account"] as? Map<String, Any>
         val email = kakaoAccount?.get("email") as? String
-        val nickname = ((kakaoAccount?.get("profile") as? Map<String, Any>)?.get("nickname") as? String) ?: "카카오유저"
+        @Suppress("UNCHECKED_CAST")
+        val kakaoProfile = kakaoAccount?.get("profile") as? Map<String, Any>
+        val nickname = (kakaoProfile?.get("nickname") as? String) ?: "카카오유저"
 
         val now = Instant.now(clock)
-        val user = userRepository.findByKakaoId(kakaoId).orElseGet {
-            userRepository.save(
-                UserEntity(
-                    id = IdGenerator.next("usr"),
-                    email = email ?: "$kakaoId@kakao.local",
-                    passwordHash = null,
-                    name = nickname,
-                    tier = UserTier.FREE,
-                    oauthProvider = AuthProvider.KAKAO,
-                    kakaoId = kakaoId,
-                    createdAt = now
-                )
-            )
-        }
+        val user = findOrCreateSocialUser(
+            provider = AuthProvider.KAKAO,
+            providerId = kakaoId,
+            email = email,
+            fallbackEmail = "$kakaoId@kakao.local",
+            displayName = nickname,
+            now = now
+        )
         val tokens = issueTokens(user)
         return LoginData(user = userMapper.toDto(user), tokens = tokens)
     }
 
     @Transactional
     fun naverLogin(code: String, state: String): LoginData {
-        val tokenResponse = restTemplate.postForObject(
-            "https://nid.naver.com/oauth2.0/token",
-            org.springframework.http.HttpEntity(
-                "grant_type=authorization_code&client_id=${authProperties.naverClientId}&client_secret=${authProperties.naverClientSecret}&redirect_uri=${authProperties.naverRedirectUri}&code=$code&state=$state",
-                org.springframework.http.HttpHeaders().apply {
+        val tokenResponse = try {
+            val formParams = org.springframework.util.LinkedMultiValueMap<String, String>().apply {
+                add("grant_type", "authorization_code")
+                add("client_id", authProperties.naverClientId)
+                add("client_secret", authProperties.naverClientSecret)
+                add("redirect_uri", authProperties.naverRedirectUri)
+                add("code", code)
+                add("state", state)
+            }
+            restTemplate.postForObject(
+                "https://nid.naver.com/oauth2.0/token",
+                org.springframework.http.HttpEntity(formParams, org.springframework.http.HttpHeaders().apply {
                     contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
-                }
-            ),
-            Map::class.java
-        ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+                }),
+                Map::class.java
+            ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: HttpClientErrorException) {
+            log.error("naverLogin: token exchange failed status=${e.statusCode} body=${e.responseBodyAsString}")
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: RestClientException) {
+            log.error("naverLogin: token exchange failed", e)
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        }
 
         val naverAccessToken = tokenResponse["access_token"] as String
 
-        val userResponse = restTemplate.exchange(
-            "https://openapi.naver.com/v1/nid/me",
-            org.springframework.http.HttpMethod.GET,
-            org.springframework.http.HttpEntity<Void>(
-                org.springframework.http.HttpHeaders().apply {
-                    setBearerAuth(naverAccessToken)
-                }
-            ),
-            Map::class.java
-        ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        val userResponse = try {
+            restTemplate.exchange(
+                "https://openapi.naver.com/v1/nid/me",
+                org.springframework.http.HttpMethod.GET,
+                org.springframework.http.HttpEntity<Void>(
+                    org.springframework.http.HttpHeaders().apply {
+                        setBearerAuth(naverAccessToken)
+                    }
+                ),
+                Map::class.java
+            ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: RestClientException) {
+            log.error("naverLogin: profile fetch failed", e)
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        }
 
         @Suppress("UNCHECKED_CAST")
         val naverProfile = userResponse["response"] as? Map<String, Any>
@@ -193,23 +218,69 @@ class AuthService(
         val name = (naverProfile["name"] as? String) ?: (naverProfile["nickname"] as? String) ?: "네이버유저"
 
         val now = Instant.now(clock)
-        val user = userRepository.findByNaverId(naverId).orElseGet {
-            userRepository.save(
-                UserEntity(
-                    id = IdGenerator.next("usr"),
-                    email = email ?: "$naverId@naver.local",
-                    passwordHash = null,
-                    name = name,
-                    tier = UserTier.FREE,
-                    oauthProvider = AuthProvider.NAVER,
-                    naverId = naverId,
-                    createdAt = now
-                )
-            )
-        }
+        val user = findOrCreateSocialUser(
+            provider = AuthProvider.NAVER,
+            providerId = naverId,
+            email = email,
+            fallbackEmail = "$naverId@naver.local",
+            displayName = name,
+            now = now
+        )
         val tokens = issueTokens(user)
         return LoginData(user = userMapper.toDto(user), tokens = tokens)
     }
+
+    private fun findOrCreateSocialUser(
+        provider: AuthProvider,
+        providerId: String,
+        email: String?,
+        fallbackEmail: String,
+        displayName: String,
+        now: Instant
+    ): UserEntity {
+        val byProvider = when (provider) {
+            AuthProvider.KAKAO -> userRepository.findByKakaoId(providerId)
+            AuthProvider.NAVER -> userRepository.findByNaverId(providerId)
+            AuthProvider.EMAIL -> throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        }
+        if (byProvider.isPresent) return byProvider.get()
+
+        val normalizedEmail = email?.let(::normalizeEmail)?.takeIf { it.isNotBlank() }
+        if (normalizedEmail != null) {
+            val byEmail = userRepository.findByEmail(normalizedEmail)
+            if (byEmail.isPresent) {
+                val user = byEmail.get()
+                when (provider) {
+                    AuthProvider.KAKAO -> {
+                        if (user.kakaoId != null && user.kakaoId != providerId) throw ApiException.of(ErrorType.EMAIL_CONFLICT)
+                        user.kakaoId = providerId
+                    }
+                    AuthProvider.NAVER -> {
+                        if (user.naverId != null && user.naverId != providerId) throw ApiException.of(ErrorType.EMAIL_CONFLICT)
+                        user.naverId = providerId
+                    }
+                    AuthProvider.EMAIL -> Unit
+                }
+                return user
+            }
+        }
+
+        return userRepository.save(
+            UserEntity(
+                id = IdGenerator.next("usr"),
+                email = normalizedEmail ?: fallbackEmail,
+                passwordHash = null,
+                name = displayName,
+                tier = UserTier.FREE,
+                oauthProvider = provider,
+                kakaoId = if (provider == AuthProvider.KAKAO) providerId else null,
+                naverId = if (provider == AuthProvider.NAVER) providerId else null,
+                createdAt = now
+            )
+        )
+    }
+
+    private fun normalizeEmail(email: String): String = email.trim().lowercase()
 
     private fun issueTokens(user: UserEntity): TokenBundleDto {
         val now = Instant.now(clock)

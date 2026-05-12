@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 031-add-analysis-transaction-budget-columns
+      author: codex
+      changes:
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: transaction_type
+                  type: varchar(40)
+              - column:
+                  name: budget_premium_max
+                  type: bigint
+              - column:
+                  name: budget_sale_price_max
+                  type: bigint
+
+  - changeSet:
+      id: 032-fix-processed-vacancy-money-scale
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              update vacancies
+              set "보증금_만원" = case when "보증금_만원" is null then null else "보증금_만원" / 10 end,
+                  "월세_만원" = case when "월세_만원" is null then null else "월세_만원" / 10 end,
+                  "권리금_만원" = case when "권리금_만원" is null then null else "권리금_만원" / 10 end,
+                  "매매가_만원" = case when "매매가_만원" is null then null else "매매가_만원" / 10 end,
+                  "관리비_만원" = case when "관리비_만원" is null then null else "관리비_만원" / 10 end;

@@ -39,6 +39,7 @@ class VacancyRankingService(
                     spatial = candidate.spatial,
                     categoryId = candidate.scoreEntity.id.categoryId,
                     categoryName = snapshot.categoryName(candidate.scoreEntity.id.categoryId),
+                    recommended = candidate.scoreEntity.recommended,
                     rank = index + 1,
                     score = candidate.score,
                     distanceM = candidate.distanceM
@@ -56,6 +57,11 @@ class VacancyRankingService(
         // area_id encodings exist for the same dong (e.g. 11140660 vs 11440540 for
         // 서교동), so a strict area_id match drops vacancies that sit well within
         // the user's radius. Distance + budget are enough.
+        if (!criteria.transactionType.isNullOrBlank() &&
+            !criteria.transactionType.equals(transactionType, ignoreCase = true)
+        ) {
+            return null
+        }
         if (!fitsBudget(criteria)) return null
 
         val scoreEntity = snapshot.scoreFor(id, criteria.categoryId) ?: return null
@@ -76,11 +82,15 @@ class VacancyRankingService(
         val rent = monthlyRent
         val depositAmount = deposit
         val maintenance = maintenanceFee
+        val premiumAmount = premium
+        val saleAmount = salePrice
         criteria.rentMax?.let { if (rent == null || rent > it) return false }
         criteria.depositMax?.let { if (depositAmount == null || depositAmount > it) return false }
         criteria.maintenanceFeeMax?.let {
             if (maintenance == null || maintenance > it) return false
         }
+        criteria.premiumMax?.let { if (premiumAmount == null || premiumAmount > it) return false }
+        criteria.salePriceMax?.let { if (saleAmount == null || saleAmount > it) return false }
         return true
     }
 

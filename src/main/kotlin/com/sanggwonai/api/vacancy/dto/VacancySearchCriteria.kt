@@ -6,7 +6,10 @@ data class VacancySearchCriteria(
     val latitude: Double,
     val longitude: Double,
     val radiusM: Int,
+    val transactionType: String?,
     val rentMax: Long?,
     val depositMax: Long?,
-    val maintenanceFeeMax: Long?
+    val maintenanceFeeMax: Long?,
+    val premiumMax: Long?,
+    val salePriceMax: Long?
 )

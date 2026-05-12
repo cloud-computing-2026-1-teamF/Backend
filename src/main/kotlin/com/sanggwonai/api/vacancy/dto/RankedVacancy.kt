@@ -11,6 +11,7 @@ data class RankedVacancy(
     val spatial: VacancyCategorySpatialEntity?,
     val categoryId: String?,
     val categoryName: String?,
+    val recommended: Boolean?,
     val rank: Int,
     val score: BigDecimal,
     val distanceM: Int

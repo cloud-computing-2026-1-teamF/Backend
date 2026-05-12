@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: 033-create-vacancy-accessibility-foottraffic
+      author: codex
+      changes:
+        - createTable:
+            tableName: vacancy_accessibility_foottraffic
+            columns:
+              - column:
+                  name: property_id
+                  type: varchar(40)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: bus_stop_info, type: text }
+              - column: { name: subway_station_info, type: text }
+              - column: { name: parking_info, type: text }
+              - column: { name: foottraffic_00, type: "decimal(20,6)" }
+              - column: { name: foottraffic_01, type: "decimal(20,6)" }
+              - column: { name: foottraffic_02, type: "decimal(20,6)" }
+              - column: { name: foottraffic_03, type: "decimal(20,6)" }
+              - column: { name: foottraffic_04, type: "decimal(20,6)" }
+              - column: { name: foottraffic_05, type: "decimal(20,6)" }
+              - column: { name: foottraffic_06, type: "decimal(20,6)" }
+              - column: { name: foottraffic_07, type: "decimal(20,6)" }
+              - column: { name: foottraffic_08, type: "decimal(20,6)" }
+              - column: { name: foottraffic_09, type: "decimal(20,6)" }
+              - column: { name: foottraffic_10, type: "decimal(20,6)" }
+              - column: { name: foottraffic_11, type: "decimal(20,6)" }
+              - column: { name: foottraffic_12, type: "decimal(20,6)" }
+              - column: { name: foottraffic_13, type: "decimal(20,6)" }
+              - column: { name: foottraffic_14, type: "decimal(20,6)" }
+              - column: { name: foottraffic_15, type: "decimal(20,6)" }
+              - column: { name: foottraffic_16, type: "decimal(20,6)" }
+              - column: { name: foottraffic_17, type: "decimal(20,6)" }
+              - column: { name: foottraffic_18, type: "decimal(20,6)" }
+              - column: { name: foottraffic_19, type: "decimal(20,6)" }
+              - column: { name: foottraffic_20, type: "decimal(20,6)" }
+              - column: { name: foottraffic_21, type: "decimal(20,6)" }
+              - column: { name: foottraffic_22, type: "decimal(20,6)" }
+              - column: { name: foottraffic_23, type: "decimal(20,6)" }
+        - loadData:
+            tableName: vacancy_accessibility_foottraffic
+            file: db/data/vacancy_dataset/accessibility_foottraffic.csv
+            separator: ","
+            encoding: UTF-8
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: bus_stop_info, type: STRING }
+              - column: { name: subway_station_info, type: STRING }
+              - column: { name: parking_info, type: STRING }
+              - column: { name: foottraffic_00, type: NUMERIC }
+              - column: { name: foottraffic_01, type: NUMERIC }
+              - column: { name: foottraffic_02, type: NUMERIC }
+              - column: { name: foottraffic_03, type: NUMERIC }
+              - column: { name: foottraffic_04, type: NUMERIC }
+              - column: { name: foottraffic_05, type: NUMERIC }
+              - column: { name: foottraffic_06, type: NUMERIC }
+              - column: { name: foottraffic_07, type: NUMERIC }
+              - column: { name: foottraffic_08, type: NUMERIC }
+              - column: { name: foottraffic_09, type: NUMERIC }
+              - column: { name: foottraffic_10, type: NUMERIC }
+              - column: { name: foottraffic_11, type: NUMERIC }
+              - column: { name: foottraffic_12, type: NUMERIC }
+              - column: { name: foottraffic_13, type: NUMERIC }
+              - column: { name: foottraffic_14, type: NUMERIC }
+              - column: { name: foottraffic_15, type: NUMERIC }
+              - column: { name: foottraffic_16, type: NUMERIC }
+              - column: { name: foottraffic_17, type: NUMERIC }
+              - column: { name: foottraffic_18, type: NUMERIC }
+              - column: { name: foottraffic_19, type: NUMERIC }
+              - column: { name: foottraffic_20, type: NUMERIC }
+              - column: { name: foottraffic_21, type: NUMERIC }
+              - column: { name: foottraffic_22, type: NUMERIC }
+              - column: { name: foottraffic_23, type: NUMERIC }
+        - addForeignKeyConstraint:
+            baseTableName: vacancy_accessibility_foottraffic
+            baseColumnNames: property_id
+            referencedTableName: vacancies
+            referencedColumnNames: property_id
+            constraintName: fk_vacancy_accessibility_property
+            onDelete: CASCADE

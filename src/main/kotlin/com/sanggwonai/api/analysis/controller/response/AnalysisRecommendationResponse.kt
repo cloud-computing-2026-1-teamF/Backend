@@ -6,6 +6,7 @@ import java.time.Instant
 data class AnalysisRecommendationResponse(
     val rank: Int,
     val vacancyId: String,
+    val recommended: Boolean?,
     val score: BigDecimal,
     val distanceM: Int,
     val areaId: String,
@@ -14,6 +15,9 @@ data class AnalysisRecommendationResponse(
     val monthlyRent: Long?,
     val deposit: Long?,
     val maintenanceFee: Long?,
+    val premium: Long?,
+    val salePrice: Long?,
+    val transactionType: String?,
     val facilityTotalSize: BigDecimal?,
     val locationArea: BigDecimal?,
     val category: String?,
@@ -25,7 +29,11 @@ data class AnalysisRecommendationResponse(
     val restaurantCount500m: Int?,
     val cafeCount500m: Int?,
     val industryGrowthRate500m: BigDecimal?,
-    val averageSalesPerStore: BigDecimal?
+    val averageSalesPerStore: BigDecimal?,
+    val busStopInfo: String?,
+    val subwayStationInfo: String?,
+    val parkingInfo: String?,
+    val hourlyFloatingPopulation: List<BigDecimal>?
 )
 
 data class AnalysisRecommendationsResponse(
@@ -36,4 +44,3 @@ data class AnalysisRecommendationsResponse(
     val recommendations: List<AnalysisRecommendationResponse>,
     val updatedAt: Instant
 )
-
