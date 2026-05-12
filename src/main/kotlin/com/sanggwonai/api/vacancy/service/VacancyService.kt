@@ -168,7 +168,7 @@ class VacancyService(
             officialLandPrice = common?.officialLandPrice,
             closureRate = common?.closureRate,
             openingRate = common?.openingRate,
-            averageSalesPerStore = common?.averageSalesPerStore,
+            averageSalesPerStore = common?.averageSalesPerStore?.divide(java.math.BigDecimal(3), 2, java.math.RoundingMode.HALF_UP),
             timeBasedSalesRatio = common?.eveningSalesRatio,
             lateNightSalesRatio = common?.lateNightSalesRatio,
             weekendSalesRatio = common?.weekendSalesRatio,

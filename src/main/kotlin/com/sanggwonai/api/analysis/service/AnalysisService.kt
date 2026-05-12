@@ -367,7 +367,7 @@ class AnalysisService(
                 restaurantCount500m = snapshot.commonByProperty[vacancy.id]?.restaurantCount500m,
                 cafeCount500m = snapshot.commonByProperty[vacancy.id]?.cafeCount500m,
                 industryGrowthRate500m = snapshot.spatialFor(vacancy.id, score)?.industryGrowthRate500m,
-                averageSalesPerStore = snapshot.commonByProperty[vacancy.id]?.averageSalesPerStore
+                averageSalesPerStore = snapshot.commonByProperty[vacancy.id]?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP)
             )
         )
     }
@@ -433,7 +433,7 @@ class AnalysisService(
             restaurantCount500m = common?.restaurantCount500m,
             cafeCount500m = common?.cafeCount500m,
             industryGrowthRate500m = spatial?.industryGrowthRate500m,
-            averageSalesPerStore = common?.averageSalesPerStore
+            averageSalesPerStore = common?.averageSalesPerStore?.divide(BigDecimal(3), 2, RoundingMode.HALF_UP)
         )
     }
 
