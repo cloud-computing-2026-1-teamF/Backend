@@ -116,7 +116,7 @@ class AuthService(
                 Map::class.java
             ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         } catch (e: HttpClientErrorException) {
-            log.error("kakaoLogin: Kakao token exchange failed status=${e.statusCode} body=${e.responseBodyAsString}")
+            log.error("kakaoLogin: Kakao token exchange failed status=${e.statusCode} headers=${e.responseHeaders} body=${e.responseBodyAsString}")
             throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         }
 
