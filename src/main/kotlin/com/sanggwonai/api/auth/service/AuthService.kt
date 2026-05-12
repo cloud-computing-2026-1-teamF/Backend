@@ -17,8 +17,10 @@ import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
 import com.sanggwonai.api.auth.entity.AuthProvider
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 import java.time.Clock
 import java.time.Instant
@@ -34,6 +36,7 @@ class AuthService(
     private val clock: Clock,
     private val restTemplate: RestTemplate
 ) {
+    private val log = LoggerFactory.getLogger(AuthService::class.java)
 
     @Transactional(readOnly = true)
     fun me(authContext: AuthContext): MeData {
@@ -97,16 +100,22 @@ class AuthService(
 
     @Transactional
     fun kakaoLogin(code: String): LoginData {
-        val tokenResponse = restTemplate.postForObject(
-            "https://kauth.kakao.com/oauth/token",
-            org.springframework.http.HttpEntity(
-                "grant_type=authorization_code&client_id=${authProperties.kakaoClientId}&redirect_uri=${authProperties.kakaoRedirectUri}&code=$code",
-                org.springframework.http.HttpHeaders().apply {
-                    contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
-                }
-            ),
-            Map::class.java
-        ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        log.info("kakaoLogin: clientId=${authProperties.kakaoClientId.take(4)}**** redirectUri=${authProperties.kakaoRedirectUri}")
+        val tokenResponse = try {
+            restTemplate.postForObject(
+                "https://kauth.kakao.com/oauth/token",
+                org.springframework.http.HttpEntity(
+                    "grant_type=authorization_code&client_id=${authProperties.kakaoClientId}&redirect_uri=${authProperties.kakaoRedirectUri}&code=$code",
+                    org.springframework.http.HttpHeaders().apply {
+                        contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+                    }
+                ),
+                Map::class.java
+            ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        } catch (e: HttpClientErrorException) {
+            log.error("kakaoLogin: Kakao token exchange failed status=${e.statusCode} body=${e.responseBodyAsString}")
+            throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+        }
 
         val kakaoAccessToken = tokenResponse["access_token"] as String
 
