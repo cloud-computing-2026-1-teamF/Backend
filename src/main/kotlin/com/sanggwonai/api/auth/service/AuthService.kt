@@ -100,7 +100,6 @@ class AuthService(
 
     @Transactional
     fun kakaoLogin(code: String): LoginData {
-        log.info("kakaoLogin: clientId=${authProperties.kakaoClientId.take(4)}**** redirectUri=${authProperties.kakaoRedirectUri}")
         val tokenResponse = try {
             val formParams = org.springframework.util.LinkedMultiValueMap<String, String>().apply {
                 add("grant_type", "authorization_code")
@@ -117,7 +116,7 @@ class AuthService(
                 Map::class.java
             ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         } catch (e: HttpClientErrorException) {
-            log.error("kakaoLogin: Kakao token exchange failed status=${e.statusCode} headers=${e.responseHeaders} body=${e.responseBodyAsString}")
+            log.error("kakaoLogin: token exchange failed status=${e.statusCode} body=${e.responseBodyAsString}")
             throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
         }
 
