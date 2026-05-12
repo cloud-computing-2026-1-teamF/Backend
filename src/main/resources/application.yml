@@ -29,6 +29,9 @@ app:
     jwt-secret: ${APP_JWT_SECRET:replace-this-with-a-long-secret-for-prod}
     access-token-expiry-seconds: 900
     refresh-token-expiry-days: 30
+    kakao-client-id: ${KAKAO_CLIENT_ID:}
+    kakao-redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5174/auth/kakao/callback}
+
   analysis:
     estimated-seconds: 4
 

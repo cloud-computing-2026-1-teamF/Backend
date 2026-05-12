@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-add-provider-to-users
+      author: claude
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: provider
+                  type: varchar(20)
+                  defaultValue: EMAIL
+                  constraints:
+                    nullable: false
+              - column:
+                  name: kakao_id
+                  type: varchar(50)
+              - column:
+                  name: naver_id
+                  type: varchar(50)
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: password_hash
+            columnDataType: varchar(255)

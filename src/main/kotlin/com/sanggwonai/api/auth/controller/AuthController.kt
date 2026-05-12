@@ -90,6 +90,19 @@ class AuthController(
         return ResponseEntity.ok(ApiResponse(toResponse(authFacade.refresh(refreshToken))))
     }
 
+    @PostMapping("/kakao")
+    @Operation(
+        summary = "카카오 로그인 수행함",
+        description = "카카오 인가 코드로 로그인하고 사용자 정보와 토큰 묶음을 반환함."
+    )
+    fun kakaoLogin(@RequestBody body: Map<String, String>): ResponseEntity<ApiResponse<LoginResponse>> {
+        val code = body["code"] ?: throw ApiException.of(ErrorType.VALIDATION_FAILED)
+        val data = authFacade.kakaoLogin(code)
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
+            .body(ApiResponse(toResponse(data)))
+    }
+
     private fun toResponse(data: MeData): MeResponse = MeResponse(user = toResponse(data.user))
 
     private fun toResponse(data: LoginData): LoginResponse {

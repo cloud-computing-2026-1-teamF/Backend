@@ -24,4 +24,6 @@ class AuthFacade(
     fun signup(request: SignupRequest): LoginData = authService.signup(request)
 
     fun refresh(refreshToken: String): RefreshData = authService.refresh(refreshToken)
+
+    fun kakaoLogin(code: String): LoginData = authService.kakaoLogin(code)
 }

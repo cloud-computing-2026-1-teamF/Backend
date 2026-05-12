@@ -19,3 +19,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-009-seoul-dummy-vacancies.yaml
   - include:
       file: db/changelog/db.changelog-010-vacancy-processed-dataset.yaml
+  - include:
+      file: db/changelog/db.changelog-011-social-login.yaml

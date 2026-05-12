@@ -91,5 +91,10 @@ enum class ErrorType(
         status = HttpStatus.INTERNAL_SERVER_ERROR,
         code = ErrorCode.UPSTREAM_UNAVAILABLE,
         message = "서버 오류가 발생했어요"
+    ),
+    SOCIAL_LOGIN_FAILED(
+        status = HttpStatus.UNAUTHORIZED,
+        code = ErrorCode.AUTH_REQUIRED,
+        message = "소셜 로그인에 실패했어요"
     )
 }

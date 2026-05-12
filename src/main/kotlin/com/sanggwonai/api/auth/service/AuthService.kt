@@ -15,9 +15,11 @@ import com.sanggwonai.api.auth.repository.UserRepository
 import com.sanggwonai.api.common.error.ApiException
 import com.sanggwonai.api.common.error.ErrorType
 import com.sanggwonai.api.common.util.IdGenerator
+import com.sanggwonai.api.auth.entity.AuthProvider
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.client.RestTemplate
 import java.time.Clock
 import java.time.Instant
 
@@ -29,7 +31,8 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtTokenProvider: JwtTokenProvider,
     private val authProperties: AuthProperties,
-    private val clock: Clock
+    private val clock: Clock,
+    private val restTemplate: RestTemplate
 ) {
 
     @Transactional(readOnly = true)
@@ -45,7 +48,7 @@ class AuthService(
             .orElseThrow {
                 ApiException.of(ErrorType.INVALID_CREDENTIALS)
             }
-        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+        if (user.oauthProvider != AuthProvider.EMAIL || !passwordEncoder.matches(request.password, user.passwordHash)) {
             throw ApiException.of(ErrorType.INVALID_CREDENTIALS)
         }
         val tokens = issueTokens(user)
@@ -66,6 +69,7 @@ class AuthService(
                     ?: throw ApiException.of(ErrorType.PASSWORD_ENCODING_FAILED),
                 name = request.name,
                 tier = UserTier.FREE,
+                oauthProvider = AuthProvider.EMAIL,
                 createdAt = now
             )
         )
@@ -89,6 +93,57 @@ class AuthService(
             accessToken = accessToken,
             expiresIn = authProperties.accessTokenExpirySeconds
         )
+    }
+
+    @Transactional
+    fun kakaoLogin(code: String): LoginData {
+        val tokenResponse = restTemplate.postForObject(
+            "https://kauth.kakao.com/oauth/token",
+            org.springframework.http.HttpEntity(
+                "grant_type=authorization_code&client_id=${authProperties.kakaoClientId}&redirect_uri=${authProperties.kakaoRedirectUri}&code=$code",
+                org.springframework.http.HttpHeaders().apply {
+                    contentType = org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED
+                }
+            ),
+            Map::class.java
+        ) ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+
+        val kakaoAccessToken = tokenResponse["access_token"] as String
+
+        val userResponse = restTemplate.exchange(
+            "https://kapi.kakao.com/v2/user/me",
+            org.springframework.http.HttpMethod.GET,
+            org.springframework.http.HttpEntity<Void>(
+                org.springframework.http.HttpHeaders().apply {
+                    setBearerAuth(kakaoAccessToken)
+                }
+            ),
+            Map::class.java
+        ).body ?: throw ApiException.of(ErrorType.SOCIAL_LOGIN_FAILED)
+
+        val kakaoId = userResponse["id"].toString()
+        @Suppress("UNCHECKED_CAST")
+        val kakaoAccount = userResponse["kakao_account"] as? Map<String, Any>
+        val email = kakaoAccount?.get("email") as? String
+        val nickname = ((kakaoAccount?.get("profile") as? Map<String, Any>)?.get("nickname") as? String) ?: "카카오유저"
+
+        val now = Instant.now(clock)
+        val user = userRepository.findByKakaoId(kakaoId).orElseGet {
+            userRepository.save(
+                UserEntity(
+                    id = IdGenerator.next("usr"),
+                    email = email ?: "$kakaoId@kakao.local",
+                    passwordHash = null,
+                    name = nickname,
+                    tier = UserTier.FREE,
+                    oauthProvider = AuthProvider.KAKAO,
+                    kakaoId = kakaoId,
+                    createdAt = now
+                )
+            )
+        }
+        val tokens = issueTokens(user)
+        return LoginData(user = userMapper.toDto(user), tokens = tokens)
     }
 
     private fun issueTokens(user: UserEntity): TokenBundleDto {
