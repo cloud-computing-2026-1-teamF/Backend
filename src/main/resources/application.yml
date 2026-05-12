@@ -30,6 +30,7 @@ app:
     access-token-expiry-seconds: 900
     refresh-token-expiry-days: 30
     kakao-client-id: ${KAKAO_CLIENT_ID:replace-this-with-your-kakao-client-id}
+    kakao-client-secret: ${KAKAO_CLIENT_SECRET:}
     kakao-redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5174/auth/kakao/callback}
     naver-client-id: ${NAVER_CLIENT_ID:replace-this-with-your-naver-client-id}
     naver-client-secret: ${NAVER_CLIENT_SECRET:replace-this-with-your-naver-client-secret}

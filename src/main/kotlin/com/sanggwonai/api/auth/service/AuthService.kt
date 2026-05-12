@@ -105,6 +105,7 @@ class AuthService(
             val formParams = org.springframework.util.LinkedMultiValueMap<String, String>().apply {
                 add("grant_type", "authorization_code")
                 add("client_id", authProperties.kakaoClientId)
+                if (authProperties.kakaoClientSecret.isNotBlank()) add("client_secret", authProperties.kakaoClientSecret)
                 add("redirect_uri", authProperties.kakaoRedirectUri)
                 add("code", code)
             }

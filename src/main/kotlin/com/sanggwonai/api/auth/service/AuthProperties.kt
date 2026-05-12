@@ -8,6 +8,7 @@ data class AuthProperties(
     val accessTokenExpirySeconds: Long,
     val refreshTokenExpiryDays: Long,
     val kakaoClientId: String = "",
+    val kakaoClientSecret: String = "",
     val kakaoRedirectUri: String = "http://localhost:5174/auth/kakao/callback",
     val naverClientId: String = "",
     val naverClientSecret: String = "",
