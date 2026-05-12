@@ -103,6 +103,20 @@ class AuthController(
             .body(ApiResponse(toResponse(data)))
     }
 
+    @PostMapping("/naver")
+    @Operation(
+        summary = "네이버 로그인 수행함",
+        description = "네이버 인가 코드로 로그인하고 사용자 정보와 토큰 묶음을 반환함."
+    )
+    fun naverLogin(@RequestBody body: Map<String, String>): ResponseEntity<ApiResponse<LoginResponse>> {
+        val code = body["code"] ?: throw ApiException.of(ErrorType.VALIDATION_FAILED)
+        val state = body["state"] ?: throw ApiException.of(ErrorType.VALIDATION_FAILED)
+        val data = authFacade.naverLogin(code, state)
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(data.tokens.refreshToken).toString())
+            .body(ApiResponse(toResponse(data)))
+    }
+
     private fun toResponse(data: MeData): MeResponse = MeResponse(user = toResponse(data.user))
 
     private fun toResponse(data: LoginData): LoginResponse {

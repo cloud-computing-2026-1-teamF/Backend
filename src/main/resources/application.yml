@@ -29,8 +29,11 @@ app:
     jwt-secret: ${APP_JWT_SECRET:replace-this-with-a-long-secret-for-prod}
     access-token-expiry-seconds: 900
     refresh-token-expiry-days: 30
-    kakao-client-id: ${KAKAO_CLIENT_ID:}
+    kakao-client-id: ${KAKAO_CLIENT_ID:replace-this-with-your-kakao-client-id}
     kakao-redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5174/auth/kakao/callback}
+    naver-client-id: ${NAVER_CLIENT_ID:replace-this-with-your-naver-client-id}
+    naver-client-secret: ${NAVER_CLIENT_SECRET:replace-this-with-your-naver-client-secret}
+    naver-redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:5174/auth/naver/callback}
 
   analysis:
     estimated-seconds: 4
