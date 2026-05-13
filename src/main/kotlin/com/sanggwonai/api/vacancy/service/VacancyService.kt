@@ -7,6 +7,8 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
+import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
+import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
@@ -70,6 +72,44 @@ class VacancyService(
         val vacancy = snapshot.vacancyById[id]
             ?: throw ApiException.of(ErrorType.VACANCY_NOT_FOUND)
         return toSearchRow(vacancy, snapshot, categoryId = null).dto
+    }
+
+    @Transactional(readOnly = true)
+    fun metricReference(categoryId: String?, vacancyId: String?): VacancyMetricReference {
+        val snapshot = vacancyDataset.snapshot()
+        val normalizedCategoryId = categoryId?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedVacancyId = vacancyId?.trim()?.takeIf { it.isNotEmpty() }
+        val candidates = snapshot.vacancies.mapNotNull { vacancy ->
+            val common = snapshot.commonByProperty[vacancy.id] ?: return@mapNotNull null
+            val score = snapshot.scoreFor(vacancy.id, normalizedCategoryId) ?: return@mapNotNull null
+            val spatial = snapshot.spatialFor(vacancy.id, score)
+            VacancyMetricCandidate(
+                vacancyId = vacancy.id,
+                footTrafficDaily = common.floatingPopulationAnnualDensity?.divide(DAYS_PER_YEAR, METRIC_SCALE, RoundingMode.HALF_UP),
+                competition500m = BigDecimal.valueOf(
+                    (spatial?.sameCategoryRestaurantCount500m ?: ((common.restaurantCount500m ?: 0) + (common.cafeCount500m ?: 0))).toLong()
+                ),
+                averageSalesMonthly = common.averageSalesPerStore?.divide(MONTHLY_SALES_MANWON_DIVISOR, METRIC_SCALE, RoundingMode.HALF_UP)
+            )
+        }
+        val selected = normalizedVacancyId?.let { id -> candidates.firstOrNull { it.vacancyId == id } }
+        return VacancyMetricReference(
+            categoryId = normalizedCategoryId,
+            vacancyId = normalizedVacancyId,
+            peerCount = candidates.size,
+            footTrafficDaily = metricDistribution(
+                values = candidates.mapNotNull { it.footTrafficDaily },
+                selected = selected?.footTrafficDaily
+            ),
+            competition500m = metricDistribution(
+                values = candidates.mapNotNull { it.competition500m },
+                selected = selected?.competition500m
+            ),
+            averageSalesMonthly = metricDistribution(
+                values = candidates.mapNotNull { it.averageSalesMonthly },
+                selected = selected?.averageSalesMonthly
+            )
+        )
     }
 
     internal fun toDto(
@@ -297,6 +337,54 @@ class VacancyService(
         return sum.divide(BigDecimal.valueOf(values.size.toLong()), SUMMARY_SCALE, RoundingMode.HALF_UP)
     }
 
+    private fun metricDistribution(values: List<BigDecimal>, selected: BigDecimal?): VacancyMetricDistribution {
+        if (values.isEmpty()) {
+            return VacancyMetricDistribution(
+                selected = selected,
+                average = null,
+                median = null,
+                min = null,
+                max = null,
+                p10 = null,
+                p25 = null,
+                p75 = null,
+                p90 = null,
+                percentile = null
+            )
+        }
+        val sorted = values.sorted()
+        return VacancyMetricDistribution(
+            selected = selected,
+            average = averageDecimal(sorted),
+            median = percentileValue(sorted, BigDecimal("0.50")),
+            min = sorted.first(),
+            max = sorted.last(),
+            p10 = percentileValue(sorted, BigDecimal("0.10")),
+            p25 = percentileValue(sorted, BigDecimal("0.25")),
+            p75 = percentileValue(sorted, BigDecimal("0.75")),
+            p90 = percentileValue(sorted, BigDecimal("0.90")),
+            percentile = selected?.let { percentileRank(sorted, it) }
+        )
+    }
+
+    private fun percentileValue(sorted: List<BigDecimal>, percentile: BigDecimal): BigDecimal {
+        if (sorted.size == 1) return sorted.first()
+        val index = percentile
+            .multiply(BigDecimal.valueOf((sorted.size - 1).toLong()))
+            .setScale(0, RoundingMode.HALF_UP)
+            .toInt()
+            .coerceIn(0, sorted.lastIndex)
+        return sorted[index]
+    }
+
+    private fun percentileRank(sorted: List<BigDecimal>, selected: BigDecimal): BigDecimal {
+        if (sorted.isEmpty()) return BigDecimal.ZERO
+        val lessOrEqual = sorted.count { it <= selected }
+        return BigDecimal.valueOf(lessOrEqual.toLong())
+            .multiply(BigDecimal("100"))
+            .divide(BigDecimal.valueOf(sorted.size.toLong()), 1, RoundingMode.HALF_UP)
+    }
+
     private fun totalPages(total: Int, size: Int): Int {
         if (total == 0) return 0
         return ((total - 1) / size) + 1
@@ -344,10 +432,20 @@ class VacancyService(
         private const val MIN_RADIUS_M = 1
         private const val MAX_RADIUS_M = 5000
         private const val SUMMARY_SCALE = 2
+        private const val METRIC_SCALE = 2
+        private val DAYS_PER_YEAR = BigDecimal("365")
+        private val MONTHLY_SALES_MANWON_DIVISOR = BigDecimal("30000")
     }
 }
 
 private data class VacancySearchRow(
     val dto: VacancyDto,
     val searchText: String
+)
+
+private data class VacancyMetricCandidate(
+    val vacancyId: String,
+    val footTrafficDaily: BigDecimal?,
+    val competition500m: BigDecimal,
+    val averageSalesMonthly: BigDecimal?
 )

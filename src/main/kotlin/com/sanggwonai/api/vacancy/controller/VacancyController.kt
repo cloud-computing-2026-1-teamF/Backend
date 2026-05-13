@@ -1,9 +1,13 @@
 package com.sanggwonai.api.vacancy.controller
 
 import com.sanggwonai.api.common.api.ApiResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyMetricDistributionResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyMetricReferenceResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
+import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
+import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyDto
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
@@ -86,6 +90,18 @@ class VacancyController(
         return ResponseEntity.ok(ApiResponse(toSearchResponse(vacancyFacade.search(criteria))))
     }
 
+    @GetMapping("/metric-reference")
+    @Operation(
+        summary = "공실 주요 지표 기준값 조회함",
+        description = "선택 공실이 동일 업종 공실 분포에서 어느 위치인지 표시하기 위한 평균/백분위 기준값을 반환함."
+    )
+    fun metricReference(
+        @RequestParam(name = "categoryId", required = false) categoryId: String?,
+        @RequestParam(name = "vacancyId", required = false) vacancyId: String?
+    ): ResponseEntity<ApiResponse<VacancyMetricReferenceResponse>> {
+        return ResponseEntity.ok(ApiResponse(toMetricReferenceResponse(vacancyFacade.metricReference(categoryId, vacancyId))))
+    }
+
     @GetMapping("/{id}")
     @Operation(
         summary = "공실 상세 조회함",
@@ -118,6 +134,32 @@ class VacancyController(
             minRent = data.minRent,
             maxRent = data.maxRent,
             areaCount = data.areaCount
+        )
+    }
+
+    private fun toMetricReferenceResponse(data: VacancyMetricReference): VacancyMetricReferenceResponse {
+        return VacancyMetricReferenceResponse(
+            categoryId = data.categoryId,
+            vacancyId = data.vacancyId,
+            peerCount = data.peerCount,
+            footTrafficDaily = toMetricDistributionResponse(data.footTrafficDaily),
+            competition500m = toMetricDistributionResponse(data.competition500m),
+            averageSalesMonthly = toMetricDistributionResponse(data.averageSalesMonthly)
+        )
+    }
+
+    private fun toMetricDistributionResponse(data: VacancyMetricDistribution): VacancyMetricDistributionResponse {
+        return VacancyMetricDistributionResponse(
+            selected = data.selected,
+            average = data.average,
+            median = data.median,
+            min = data.min,
+            max = data.max,
+            p10 = data.p10,
+            p25 = data.p25,
+            p75 = data.p75,
+            p90 = data.p90,
+            percentile = data.percentile
         )
     }
 

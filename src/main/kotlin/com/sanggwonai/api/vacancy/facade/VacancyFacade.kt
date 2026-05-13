@@ -13,4 +13,7 @@ class VacancyFacade(
     fun search(criteria: VacancyExplorerCriteria) = vacancyService.search(criteria)
 
     fun get(id: String) = vacancyService.get(id)
+
+    fun metricReference(categoryId: String?, vacancyId: String?) =
+        vacancyService.metricReference(categoryId, vacancyId)
 }
