@@ -9,6 +9,7 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
+import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
@@ -36,8 +37,9 @@ class VacancyService(
         val snapshot = vacancyDataset.snapshot()
         return snapshot.vacancies
             .asSequence()
-            .map { toSearchRow(it, snapshot, categoryId = null) }
+            .mapNotNull { toSearchRow(it, snapshot, categoryId = null, scoreMode = VacancyScoreMode.Best) }
             .filter { row -> areaId.isNullOrBlank() || row.dto.areaId == areaId }
+            .let { dedupeRows(it.toList()).asSequence() }
             .sortedBy { it.dto.id }
             .map { it.dto }
             .toList()
@@ -47,11 +49,11 @@ class VacancyService(
     fun search(criteria: VacancyExplorerCriteria): VacancyExplorerResult {
         val snapshot = vacancyDataset.snapshot()
         val categoryId = criteria.categoryId?.trim()?.takeIf { it.isNotEmpty() }
-        val matchedRows = snapshot.vacancies
+        val matchedRows = dedupeRows(snapshot.vacancies
             .asSequence()
-            .map { toSearchRow(it, snapshot, categoryId) }
+            .mapNotNull { toSearchRow(it, snapshot, categoryId, criteria.scoreMode) }
             .filter { row -> matches(row, criteria, categoryId) }
-            .toList()
+            .toList())
         val sortedRows = sortRows(matchedRows, criteria.sort)
         val pageSize = criteria.size.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
         val pageNumber = criteria.page.coerceAtLeast(0)
@@ -73,7 +75,7 @@ class VacancyService(
         val snapshot = vacancyDataset.snapshot()
         val vacancy = snapshot.vacancyById[id]
             ?: throw ApiException.of(ErrorType.VACANCY_NOT_FOUND)
-        return toSearchRow(vacancy, snapshot, categoryId = null).dto
+        return toSearchRow(vacancy, snapshot, categoryId = null, scoreMode = VacancyScoreMode.Best)!!.dto
     }
 
     @Transactional(readOnly = true)
@@ -225,12 +227,17 @@ class VacancyService(
     private fun toSearchRow(
         vacancy: VacancyEntity,
         snapshot: VacancyDatasetSnapshot,
-        categoryId: String?
-    ): VacancySearchRow {
+        categoryId: String?,
+        scoreMode: VacancyScoreMode
+    ): VacancySearchRow? {
         val common = snapshot.commonByProperty[vacancy.id]
-        val score = snapshot.scoreFor(vacancy.id, categoryId)
+        val score = when (scoreMode) {
+            VacancyScoreMode.Best -> snapshot.bestScoreFor(vacancy.id)
+            VacancyScoreMode.Category -> categoryId?.let { snapshot.categoryScoreFor(vacancy.id, it) }
+                ?: snapshot.bestScoreFor(vacancy.id)
+        } ?: return null
         val spatial = snapshot.spatialFor(vacancy.id, score)
-        val categoryName = snapshot.categoryName(score?.id?.categoryId)
+        val categoryName = snapshot.categoryName(score.id.categoryId)
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility)
         return VacancySearchRow(dto = dto, searchText = searchText(dto))
@@ -296,6 +303,30 @@ class VacancyService(
                     .thenBy { it.dto.id }
             )
         }
+    }
+
+    private fun dedupeRows(rows: List<VacancySearchRow>): List<VacancySearchRow> {
+        val byKey = linkedMapOf<String, VacancySearchRow>()
+        rows.forEach { row ->
+            val key = row.dto.deduplicationKey()
+            val existing = byKey[key]
+            if (existing == null || isBetterDuplicate(row, existing)) {
+                byKey[key] = row
+            }
+        }
+        return byKey.values.toList()
+    }
+
+    private fun isBetterDuplicate(candidate: VacancySearchRow, existing: VacancySearchRow): Boolean {
+        val candidateScore = candidate.dto.survivalScore ?: BigDecimal.ZERO
+        val existingScore = existing.dto.survivalScore ?: BigDecimal.ZERO
+        val scoreCompare = candidateScore.compareTo(existingScore)
+        if (scoreCompare != 0) return scoreCompare > 0
+
+        val updatedCompare = candidate.dto.updatedAt.compareTo(existing.dto.updatedAt)
+        if (updatedCompare != 0) return updatedCompare > 0
+
+        return candidate.dto.id < existing.dto.id
     }
 
     private fun summarize(rows: List<VacancySearchRow>): VacancyExplorerSummary {

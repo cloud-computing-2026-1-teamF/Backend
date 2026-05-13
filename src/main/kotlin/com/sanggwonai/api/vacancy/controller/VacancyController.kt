@@ -13,6 +13,7 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
+import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -50,6 +51,7 @@ class VacancyController(
     fun search(
         @RequestParam(name = "areaId", required = false) areaId: String?,
         @RequestParam(name = "categoryId", required = false) categoryId: String?,
+        @RequestParam(name = "scoreMode", required = false) scoreMode: String?,
         @RequestParam(name = "transactionType", required = false) transactionType: String?,
         @RequestParam(name = "q", required = false) q: String?,
         @RequestParam(name = "latitude", required = false) latitude: Double?,
@@ -70,6 +72,7 @@ class VacancyController(
         val criteria = VacancyExplorerCriteria(
             areaId = areaId,
             categoryId = categoryId,
+            scoreMode = VacancyScoreMode.from(scoreMode),
             transactionType = transactionType,
             q = q,
             latitude = latitude,

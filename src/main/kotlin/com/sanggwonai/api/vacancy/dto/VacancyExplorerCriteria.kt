@@ -5,6 +5,7 @@ import java.math.BigDecimal
 data class VacancyExplorerCriteria(
     val areaId: String?,
     val categoryId: String?,
+    val scoreMode: VacancyScoreMode,
     val transactionType: String?,
     val q: String?,
     val latitude: Double?,
@@ -36,6 +37,19 @@ enum class VacancyExplorerSort(
     companion object {
         fun from(value: String?): VacancyExplorerSort {
             return entries.firstOrNull { it.wireValue.equals(value, ignoreCase = true) } ?: ScoreDesc
+        }
+    }
+}
+
+enum class VacancyScoreMode(
+    val wireValue: String
+) {
+    Best(wireValue = "best"),
+    Category(wireValue = "category");
+
+    companion object {
+        fun from(value: String?): VacancyScoreMode {
+            return entries.firstOrNull { it.wireValue.equals(value, ignoreCase = true) } ?: Best
         }
     }
 }

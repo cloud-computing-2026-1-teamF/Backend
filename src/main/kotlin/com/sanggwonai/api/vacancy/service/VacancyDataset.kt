@@ -14,6 +14,7 @@ import com.sanggwonai.api.vacancy.repository.VacancyCommonFeatureRepository
 import com.sanggwonai.api.vacancy.repository.VacancyRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 
 @Component
 class VacancyDataset(
@@ -39,10 +40,7 @@ class VacancyDataset(
         val scores = categoryScoreRepository.findAll()
         val bestScoresByProperty = scores
             .groupBy { it.id.propertyId }
-            .mapValues { (_, propertyScores) ->
-                propertyScores.maxWith(compareBy<VacancyCategoryScoreEntity> { it.survivalScore ?: java.math.BigDecimal.ZERO }
-                    .thenBy { it.recommendedValue?.toInt() ?: 0 })
-            }
+            .mapValues { (_, propertyScores) -> bestScore(propertyScores) }
 
         val spatials = categorySpatialRepository.findAll()
         val spatialsByKey = spatials.associateBy { it.id }
@@ -60,6 +58,14 @@ class VacancyDataset(
                 .associate { it.businessKey to it.label }
         )
     }
+
+    private fun bestScore(scores: List<VacancyCategoryScoreEntity>): VacancyCategoryScoreEntity {
+        return scores.minWith(
+            compareByDescending<VacancyCategoryScoreEntity> { it.survivalScore ?: BigDecimal.ZERO }
+                .thenByDescending { it.recommendedValue?.toInt() ?: 0 }
+                .thenBy { it.id.categoryId }
+        )
+    }
 }
 
 data class VacancyDatasetSnapshot(
@@ -72,9 +78,12 @@ data class VacancyDatasetSnapshot(
     val spatialByKey: Map<VacancyCategoryKey, VacancyCategorySpatialEntity>,
     val categoryNameById: Map<String, String>
 ) {
-    fun scoreFor(propertyId: String, categoryId: String?): VacancyCategoryScoreEntity? {
-        return categoryId?.let { scoreByKey[VacancyCategoryKey(propertyId, it)] }
-            ?: bestScoreByProperty[propertyId]
+    fun bestScoreFor(propertyId: String): VacancyCategoryScoreEntity? {
+        return bestScoreByProperty[propertyId]
+    }
+
+    fun categoryScoreFor(propertyId: String, categoryId: String): VacancyCategoryScoreEntity? {
+        return scoreByKey[VacancyCategoryKey(propertyId, categoryId)]
     }
 
     fun spatialFor(propertyId: String, score: VacancyCategoryScoreEntity?): VacancyCategorySpatialEntity? {

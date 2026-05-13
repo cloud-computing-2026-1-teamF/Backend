@@ -27,10 +27,11 @@ class VacancyRankingService(
     @Transactional(readOnly = true)
     fun findRanked(criteria: VacancySearchCriteria, limit: Int = 3): VacancyRankingResult {
         val snapshot = vacancyDataset.snapshot()
-        val candidates = snapshot.vacancies
+        val candidates = dedupeCandidates(snapshot.vacancies
             .asSequence()
             .mapNotNull { vacancy -> vacancy.toDistanceCandidate(criteria, snapshot) }
             .filter { candidate -> candidate.distanceM <= criteria.radiusM }
+            .toList())
             .sortedWith(
                 compareByDescending<VacancyDistanceCandidate> { it.score }
                     .thenBy { it.distanceM }
@@ -59,6 +60,28 @@ class VacancyRankingService(
         )
     }
 
+    private fun dedupeCandidates(candidates: List<VacancyDistanceCandidate>): List<VacancyDistanceCandidate> {
+        val byKey = linkedMapOf<String, VacancyDistanceCandidate>()
+        candidates.forEach { candidate ->
+            val key = candidate.vacancy.deduplicationKey()
+            val existing = byKey[key]
+            if (existing == null || isBetterDuplicate(candidate, existing)) {
+                byKey[key] = candidate
+            }
+        }
+        return byKey.values.toList()
+    }
+
+    private fun isBetterDuplicate(
+        candidate: VacancyDistanceCandidate,
+        existing: VacancyDistanceCandidate
+    ): Boolean {
+        val scoreCompare = candidate.score.compareTo(existing.score)
+        if (scoreCompare != 0) return scoreCompare > 0
+        if (candidate.distanceM != existing.distanceM) return candidate.distanceM < existing.distanceM
+        return candidate.vacancy.id < existing.vacancy.id
+    }
+
     private fun VacancyEntity.toDistanceCandidate(
         criteria: VacancySearchCriteria,
         snapshot: VacancyDatasetSnapshot
@@ -75,7 +98,7 @@ class VacancyRankingService(
         }
         if (!fitsBudget(criteria)) return null
 
-        val scoreEntity = snapshot.scoreFor(id, criteria.categoryId) ?: return null
+        val scoreEntity = snapshot.categoryScoreFor(id, criteria.categoryId) ?: return null
         val spatial = snapshot.spatialFor(id, scoreEntity)
         val vacancyLat = latitude?.toDouble() ?: return null
         val vacancyLng = longitude?.toDouble() ?: return null

@@ -348,7 +348,7 @@ class AnalysisService(
         val snapshot = vacancyDataset.snapshot()
         return rows.mapNotNull { row ->
             snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
-                val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
+                val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
                 toRecommendationDto(
                     row = row,
                     vacancy = vacancy,
@@ -365,7 +365,7 @@ class AnalysisService(
     private fun legacyRecommendation(analysis: AnalysisEntity): List<AnalysisRecommendationDto> {
         val snapshot = vacancyDataset.snapshot()
         val vacancy = snapshot.vacancyById[analysis.vacancyId] ?: return emptyList()
-        val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
+        val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
         val latitude = vacancy.latitude ?: analysis.centerLat
         val longitude = vacancy.longitude ?: analysis.centerLng
         val common = snapshot.commonByProperty[vacancy.id]
