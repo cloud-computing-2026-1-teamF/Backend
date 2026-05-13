@@ -1,3 +1,5 @@
+name: sanggwon-cloud-backend
+
 services:
   postgres:
     image: postgres:17
@@ -7,7 +9,7 @@ services:
       POSTGRES_USER: sanggwon
       POSTGRES_PASSWORD: sanggwon
     ports:
-      - "5432:5432"
+      - "${SANGGWON_POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
@@ -24,7 +26,8 @@ services:
       DB_PASSWORD: sanggwon
       APP_JWT_SECRET: change-this-for-production
     ports:
-      - "8080:8080"
+      - "${SANGGWON_API_PORT:-8081}:8080"
 
 volumes:
   postgres-data:
+    name: sanggwon-cloud-backend-postgres-data
