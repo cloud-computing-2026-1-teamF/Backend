@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/sanggwon_ai}
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5433/sanggwon_ai}
     username: ${TEST_DB_USERNAME:sanggwon}
     password: ${TEST_DB_PASSWORD:sanggwon}
   jpa:
