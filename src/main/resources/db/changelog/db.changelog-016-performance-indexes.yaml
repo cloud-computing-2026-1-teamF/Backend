@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 035-add-query-performance-indexes
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              create extension if not exists pg_trgm;
+
+              create index if not exists idx_areas_name_trgm
+                on areas using gin (lower(name) gin_trgm_ops);
+
+              create index if not exists idx_areas_region_trgm
+                on areas using gin (lower(region) gin_trgm_ops);
+
+              create index if not exists idx_areas_full_name_trgm
+                on areas using gin (lower(full_name) gin_trgm_ops);
+
+              create index if not exists idx_shortlist_user_created_desc
+                on user_vacancy_shortlist (user_id, created_at desc);
+
+              create index if not exists idx_refresh_tokens_user
+                on refresh_tokens (user_id);
+
+              create index if not exists idx_refresh_tokens_active_user
+                on refresh_tokens (user_id)
+                where revoked = false;
+
+              create index if not exists idx_analyses_user_status
+                on analyses (user_id, status);
+
+              create index if not exists idx_analyses_business_type_key
+                on analyses (business_type_key);
+
+              create index if not exists idx_analysis_recommendations_vacancy
+                on analysis_vacancy_recommendations (vacancy_id);
+
+              create index if not exists idx_vacancy_spatial_category
+                on vacancy_category_spatial (category_id);

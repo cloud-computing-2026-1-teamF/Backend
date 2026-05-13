@@ -332,11 +332,8 @@ class AnalysisService(
             return legacyRecommendation(analysis)
         }
         val snapshot = vacancyDataset.snapshot()
-        val vacanciesById = snapshot.vacancies
-            .filter { vacancy -> vacancy.id in rows.map { it.vacancyId }.toSet() }
-            .associateBy { it.id }
         return rows.mapNotNull { row ->
-            vacanciesById[row.vacancyId]?.let { vacancy ->
+            snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
                 val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
                 toRecommendationDto(
                     row = row,
@@ -353,7 +350,7 @@ class AnalysisService(
 
     private fun legacyRecommendation(analysis: AnalysisEntity): List<AnalysisRecommendationDto> {
         val snapshot = vacancyDataset.snapshot()
-        val vacancy = snapshot.vacancies.firstOrNull { it.id == analysis.vacancyId } ?: return emptyList()
+        val vacancy = snapshot.vacancyById[analysis.vacancyId] ?: return emptyList()
         val score = snapshot.scoreFor(vacancy.id, analysis.businessTypeKey)
         val latitude = vacancy.latitude ?: analysis.centerLat
         val longitude = vacancy.longitude ?: analysis.centerLng

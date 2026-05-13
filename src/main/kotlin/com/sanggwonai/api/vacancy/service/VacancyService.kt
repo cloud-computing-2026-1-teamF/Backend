@@ -67,7 +67,7 @@ class VacancyService(
     @Transactional(readOnly = true)
     fun get(id: String): VacancyDto {
         val snapshot = vacancyDataset.snapshot()
-        val vacancy = snapshot.vacancies.firstOrNull { it.id == id }
+        val vacancy = snapshot.vacancyById[id]
             ?: throw ApiException.of(ErrorType.VACANCY_NOT_FOUND)
         return toSearchRow(vacancy, snapshot, categoryId = null).dto
     }

@@ -14,8 +14,7 @@ class AreaService(
 
     @Transactional(readOnly = true)
     fun search(query: String, limit: Int): List<AreaSearchResponseDto> {
-        return areaRepository.search(query)
-            .take(limit)
+        return areaRepository.search(query, limit)
             .map(areaMapper::toDto)
     }
 }

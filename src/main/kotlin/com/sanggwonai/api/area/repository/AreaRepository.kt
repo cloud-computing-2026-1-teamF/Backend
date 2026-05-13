@@ -8,13 +8,16 @@ import org.springframework.data.repository.query.Param
 interface AreaRepository : JpaRepository<AreaEntity, String> {
 
     @Query(
-        """
-        select a from AreaEntity a
-        where lower(a.name) like lower(concat('%', :keyword, '%'))
-           or lower(a.region) like lower(concat('%', :keyword, '%'))
-           or lower(a.fullName) like lower(concat('%', :keyword, '%'))
+        value = """
+        select *
+        from areas a
+        where lower(a.name) like ('%' || lower(:keyword) || '%')
+           or lower(a.region) like ('%' || lower(:keyword) || '%')
+           or lower(a.full_name) like ('%' || lower(:keyword) || '%')
         order by a.name asc
-        """
+        limit :limit
+        """,
+        nativeQuery = true
     )
-    fun search(@Param("keyword") keyword: String): List<AreaEntity>
+    fun search(@Param("keyword") keyword: String, @Param("limit") limit: Int): List<AreaEntity>
 }

@@ -46,9 +46,11 @@ class VacancyDataset(
 
         val spatials = categorySpatialRepository.findAll()
         val spatialsByKey = spatials.associateBy { it.id }
+        val vacancies = vacancyRepository.findAllByOrderByIdAsc()
 
         return VacancyDatasetSnapshot(
-            vacancies = vacancyRepository.findAllByOrderByIdAsc(),
+            vacancies = vacancies,
+            vacancyById = vacancies.associateBy { it.id },
             commonByProperty = commonFeatureRepository.findAll().associateBy { it.propertyId },
             accessibilityByProperty = accessibilityFoottrafficRepository.findAll().associateBy { it.propertyId },
             scoreByKey = scores.associateBy { it.id },
@@ -62,6 +64,7 @@ class VacancyDataset(
 
 data class VacancyDatasetSnapshot(
     val vacancies: List<VacancyEntity>,
+    val vacancyById: Map<String, VacancyEntity>,
     val commonByProperty: Map<String, VacancyCommonFeatureEntity>,
     val accessibilityByProperty: Map<String, VacancyAccessibilityFoottrafficEntity>,
     val scoreByKey: Map<VacancyCategoryKey, VacancyCategoryScoreEntity>,

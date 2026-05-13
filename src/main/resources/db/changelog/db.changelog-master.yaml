@@ -29,3 +29,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-014-vacancy-accessibility-foottraffic.yaml
   - include:
       file: db/changelog/db.changelog-015-social-login-constraints.yaml
+  - include:
+      file: db/changelog/db.changelog-016-performance-indexes.yaml
