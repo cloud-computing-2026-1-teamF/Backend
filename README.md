@@ -20,7 +20,8 @@ docker compose up -d postgres
 - DB: `sanggwon_ai`
 - USER: `sanggwon`
 - PASSWORD: `sanggwon`
-- PORT: `5432`
+- HOST PORT: `5433`
+- CONTAINER PORT: `5432`
 
 ### 3. 애플리케이션 실행
 
@@ -29,7 +30,14 @@ docker compose up -d postgres
 ```
 
 기본 실행 주소:
-- `http://localhost:8080`
+- 로컬 `./gradlew bootRun`: `http://localhost:8080`
+- Docker Compose API: `http://localhost:8081`
+
+다른 프로젝트와 포트가 겹치면 다음처럼 변경할 수 있습니다.
+
+```bash
+SANGGWON_POSTGRES_PORT=55433 SANGGWON_API_PORT=18081 docker compose up -d
+```
 
 ### 4. 테스트 실행
 
