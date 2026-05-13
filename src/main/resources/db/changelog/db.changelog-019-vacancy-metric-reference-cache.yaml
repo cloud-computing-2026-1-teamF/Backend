@@ -1,0 +1,272 @@
+databaseChangeLog:
+  - changeSet:
+      id: 038-persist-vacancy-metric-reference-cache
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              create table if not exists vacancy_category_memberships (
+                category_id varchar(40) not null,
+                property_id varchar(40) not null,
+                source_major_category varchar(120),
+                source_middle_category varchar(120),
+                primary key (category_id, property_id),
+                constraint fk_vacancy_category_memberships_category
+                  foreign key (category_id) references categories(category_id),
+                constraint fk_vacancy_category_memberships_property
+                  foreign key (property_id) references vacancies(property_id) on delete cascade
+              );
+
+              truncate table vacancy_category_memberships;
+
+              insert into vacancy_category_memberships (
+                category_id,
+                property_id,
+                source_major_category,
+                source_middle_category
+              )
+              select
+                case
+                  when v."업종중분류" in ('한식점', '고깃집', '기타음식점', '생선회/해물', '일반음식점') then '1'
+                  when v."업종중분류" in ('중국집') then '2'
+                  when v."업종중분류" in ('일식점', '돈까스/우동') then '3'
+                  when v."업종중분류" in ('레스토랑') then '4'
+                  when v."업종중분류" in ('기타휴게점', '휴게음식점') then '5'
+                  when v."업종중분류" in ('뷔페', '구내식당') then '6'
+                  when v."업종중분류" in ('패스트푸드', '치킨점', '피자점', '떢볶이/튀김', '분식점') then '7'
+                  when v."업종대분류" = '주류점'
+                    or v."업종중분류" in ('기타주점', '꼬치구이', '노래주점', '맥주호프점', '바', '실내포차', '이자카야', '주류점') then '8'
+                  when v."업종중분류" in ('커피점/카페', '제과점', '아이스크림점', '키즈카페') then '9'
+                  else null
+                end as category_id,
+                v.property_id,
+                v."업종대분류",
+                v."업종중분류"
+              from vacancies v
+              where case
+                  when v."업종중분류" in ('한식점', '고깃집', '기타음식점', '생선회/해물', '일반음식점') then '1'
+                  when v."업종중분류" in ('중국집') then '2'
+                  when v."업종중분류" in ('일식점', '돈까스/우동') then '3'
+                  when v."업종중분류" in ('레스토랑') then '4'
+                  when v."업종중분류" in ('기타휴게점', '휴게음식점') then '5'
+                  when v."업종중분류" in ('뷔페', '구내식당') then '6'
+                  when v."업종중분류" in ('패스트푸드', '치킨점', '피자점', '떢볶이/튀김', '분식점') then '7'
+                  when v."업종대분류" = '주류점'
+                    or v."업종중분류" in ('기타주점', '꼬치구이', '노래주점', '맥주호프점', '바', '실내포차', '이자카야', '주류점') then '8'
+                  when v."업종중분류" in ('커피점/카페', '제과점', '아이스크림점', '키즈카페') then '9'
+                  else null
+                end is not null;
+
+              create index if not exists idx_vacancy_category_memberships_property
+                on vacancy_category_memberships (property_id);
+
+              create table if not exists vacancy_metric_references (
+                category_id varchar(40) not null,
+                property_id varchar(40) not null,
+                peer_count integer not null,
+                foot_selected numeric(20, 2),
+                foot_average numeric(20, 2),
+                foot_median numeric(20, 2),
+                foot_min numeric(20, 2),
+                foot_max numeric(20, 2),
+                foot_p10 numeric(20, 2),
+                foot_p25 numeric(20, 2),
+                foot_p75 numeric(20, 2),
+                foot_p90 numeric(20, 2),
+                foot_percentile numeric(5, 1),
+                competition_selected numeric(20, 2),
+                competition_average numeric(20, 2),
+                competition_median numeric(20, 2),
+                competition_min numeric(20, 2),
+                competition_max numeric(20, 2),
+                competition_p10 numeric(20, 2),
+                competition_p25 numeric(20, 2),
+                competition_p75 numeric(20, 2),
+                competition_p90 numeric(20, 2),
+                competition_percentile numeric(5, 1),
+                sales_selected numeric(20, 2),
+                sales_average numeric(20, 2),
+                sales_median numeric(20, 2),
+                sales_min numeric(20, 2),
+                sales_max numeric(20, 2),
+                sales_p10 numeric(20, 2),
+                sales_p25 numeric(20, 2),
+                sales_p75 numeric(20, 2),
+                sales_p90 numeric(20, 2),
+                sales_percentile numeric(5, 1),
+                calculated_at timestamp with time zone not null default now(),
+                primary key (category_id, property_id),
+                constraint fk_vacancy_metric_references_category
+                  foreign key (category_id) references categories(category_id),
+                constraint fk_vacancy_metric_references_property
+                  foreign key (property_id) references vacancies(property_id) on delete cascade
+              );
+
+              truncate table vacancy_metric_references;
+
+              create temporary table tmp_vacancy_metric_member_values on commit drop as
+              select
+                m.category_id,
+                m.property_id,
+                (cf."최종_유동인구_밀도_명_per_km2_2022_연간합계" / 365.0)::numeric(20, 2) as foot_value,
+                coalesce(cs."동종_식당수_500m", coalesce(cf."식당수_500m", 0) + coalesce(cf."카페수_500m", 0))::numeric(20, 2) as competition_value,
+                (cf."가게당_평균매출" / 30000.0)::numeric(20, 2) as sales_value
+              from vacancy_category_memberships m
+              join vacancy_common_features cf on cf.property_id = m.property_id
+              left join vacancy_category_spatial cs
+                on cs.property_id = m.property_id
+               and cs.category_id = m.category_id;
+
+              create index tmp_vacancy_metric_member_values_foot_idx
+                on tmp_vacancy_metric_member_values (category_id, foot_value);
+              create index tmp_vacancy_metric_member_values_competition_idx
+                on tmp_vacancy_metric_member_values (category_id, competition_value);
+              create index tmp_vacancy_metric_member_values_sales_idx
+                on tmp_vacancy_metric_member_values (category_id, sales_value);
+
+              with stats as (
+                select
+                  category_id,
+                  count(*)::int as peer_count,
+                  round(avg(foot_value), 2) as foot_average,
+                  percentile_disc(0.50) within group (order by foot_value) filter (where foot_value is not null) as foot_median,
+                  min(foot_value) as foot_min,
+                  max(foot_value) as foot_max,
+                  percentile_disc(0.10) within group (order by foot_value) filter (where foot_value is not null) as foot_p10,
+                  percentile_disc(0.25) within group (order by foot_value) filter (where foot_value is not null) as foot_p25,
+                  percentile_disc(0.75) within group (order by foot_value) filter (where foot_value is not null) as foot_p75,
+                  percentile_disc(0.90) within group (order by foot_value) filter (where foot_value is not null) as foot_p90,
+                  round(avg(competition_value), 2) as competition_average,
+                  percentile_disc(0.50) within group (order by competition_value) filter (where competition_value is not null) as competition_median,
+                  min(competition_value) as competition_min,
+                  max(competition_value) as competition_max,
+                  percentile_disc(0.10) within group (order by competition_value) filter (where competition_value is not null) as competition_p10,
+                  percentile_disc(0.25) within group (order by competition_value) filter (where competition_value is not null) as competition_p25,
+                  percentile_disc(0.75) within group (order by competition_value) filter (where competition_value is not null) as competition_p75,
+                  percentile_disc(0.90) within group (order by competition_value) filter (where competition_value is not null) as competition_p90,
+                  round(avg(sales_value), 2) as sales_average,
+                  percentile_disc(0.50) within group (order by sales_value) filter (where sales_value is not null) as sales_median,
+                  min(sales_value) as sales_min,
+                  max(sales_value) as sales_max,
+                  percentile_disc(0.10) within group (order by sales_value) filter (where sales_value is not null) as sales_p10,
+                  percentile_disc(0.25) within group (order by sales_value) filter (where sales_value is not null) as sales_p25,
+                  percentile_disc(0.75) within group (order by sales_value) filter (where sales_value is not null) as sales_p75,
+                  percentile_disc(0.90) within group (order by sales_value) filter (where sales_value is not null) as sales_p90
+                from tmp_vacancy_metric_member_values
+                group by category_id
+              ),
+              selected_values as (
+                select
+                  c.category_id,
+                  v.property_id,
+                  (cf."최종_유동인구_밀도_명_per_km2_2022_연간합계" / 365.0)::numeric(20, 2) as foot_selected,
+                  coalesce(cs."동종_식당수_500m", coalesce(cf."식당수_500m", 0) + coalesce(cf."카페수_500m", 0))::numeric(20, 2) as competition_selected,
+                  (cf."가게당_평균매출" / 30000.0)::numeric(20, 2) as sales_selected
+                from categories c
+                cross join vacancies v
+                left join vacancy_common_features cf on cf.property_id = v.property_id
+                left join vacancy_category_spatial cs
+                  on cs.property_id = v.property_id
+                 and cs.category_id = c.category_id
+              )
+              insert into vacancy_metric_references (
+                category_id,
+                property_id,
+                peer_count,
+                foot_selected,
+                foot_average,
+                foot_median,
+                foot_min,
+                foot_max,
+                foot_p10,
+                foot_p25,
+                foot_p75,
+                foot_p90,
+                foot_percentile,
+                competition_selected,
+                competition_average,
+                competition_median,
+                competition_min,
+                competition_max,
+                competition_p10,
+                competition_p25,
+                competition_p75,
+                competition_p90,
+                competition_percentile,
+                sales_selected,
+                sales_average,
+                sales_median,
+                sales_min,
+                sales_max,
+                sales_p10,
+                sales_p25,
+                sales_p75,
+                sales_p90,
+                sales_percentile
+              )
+              select
+                sv.category_id,
+                sv.property_id,
+                coalesce(s.peer_count, 0),
+                sv.foot_selected,
+                s.foot_average,
+                s.foot_median,
+                s.foot_min,
+                s.foot_max,
+                s.foot_p10,
+                s.foot_p25,
+                s.foot_p75,
+                s.foot_p90,
+                case
+                  when sv.foot_selected is null or s.peer_count is null or s.peer_count = 0 then null
+                  else (
+                    select round((count(*) filter (where mv.foot_value <= sv.foot_selected)::numeric * 100.0) / nullif(count(*), 0), 1)
+                    from tmp_vacancy_metric_member_values mv
+                    where mv.category_id = sv.category_id
+                      and mv.foot_value is not null
+                  )
+                end as foot_percentile,
+                sv.competition_selected,
+                s.competition_average,
+                s.competition_median,
+                s.competition_min,
+                s.competition_max,
+                s.competition_p10,
+                s.competition_p25,
+                s.competition_p75,
+                s.competition_p90,
+                case
+                  when sv.competition_selected is null or s.peer_count is null or s.peer_count = 0 then null
+                  else (
+                    select round((count(*) filter (where mv.competition_value <= sv.competition_selected)::numeric * 100.0) / nullif(count(*), 0), 1)
+                    from tmp_vacancy_metric_member_values mv
+                    where mv.category_id = sv.category_id
+                      and mv.competition_value is not null
+                  )
+                end as competition_percentile,
+                sv.sales_selected,
+                s.sales_average,
+                s.sales_median,
+                s.sales_min,
+                s.sales_max,
+                s.sales_p10,
+                s.sales_p25,
+                s.sales_p75,
+                s.sales_p90,
+                case
+                  when sv.sales_selected is null or s.peer_count is null or s.peer_count = 0 then null
+                  else (
+                    select round((count(*) filter (where mv.sales_value <= sv.sales_selected)::numeric * 100.0) / nullif(count(*), 0), 1)
+                    from tmp_vacancy_metric_member_values mv
+                    where mv.category_id = sv.category_id
+                      and mv.sales_value is not null
+                  )
+                end as sales_percentile
+              from selected_values sv
+              left join stats s on s.category_id = sv.category_id;
+
+              create index if not exists idx_vacancy_metric_references_property
+                on vacancy_metric_references (property_id);
