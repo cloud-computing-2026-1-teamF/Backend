@@ -5,48 +5,82 @@ import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import java.math.BigDecimal
 
 internal fun VacancyEntity.deduplicationKey(): String {
-    val addressParts = listOf(
-        normalize(roadAddress),
-        normalize(lotAddress),
-        normalize(detailAddress),
-        normalize(floor)
+    return deduplicationKey(
+        id = id,
+        buildingName = buildingName,
+        roadAddress = roadAddress,
+        lotAddress = lotAddress,
+        detailAddress = detailAddress,
+        transactionType = transactionType,
+        dedicatedArea = dedicatedArea,
+        floor = floor
     )
-    if (addressParts.all { it.isEmpty() }) return "id:$id"
-
-    return listOf(
-        "vacancy",
-        *addressParts.toTypedArray(),
-        normalize(transactionType),
-        normalize(dedicatedArea),
-        normalize(supplyArea),
-        normalize(deposit),
-        normalize(monthlyRent),
-        normalize(maintenanceFee),
-        normalize(premium),
-        normalize(salePrice)
-    ).joinToString("|")
 }
 
 internal fun VacancyDto.deduplicationKey(): String {
-    val addressParts = listOf(
-        normalize(roadAddress),
-        normalize(lotAddress),
-        normalize(detailAddress),
-        normalize(floor)
+    return deduplicationKey(
+        id = id,
+        buildingName = buildingName,
+        roadAddress = roadAddress,
+        lotAddress = lotAddress,
+        detailAddress = detailAddress,
+        transactionType = transactionType,
+        dedicatedArea = dedicatedArea,
+        floor = floor
     )
-    if (addressParts.all { it.isEmpty() }) return "id:$id"
+}
 
+private fun deduplicationKey(
+    id: String,
+    buildingName: String?,
+    roadAddress: String?,
+    lotAddress: String?,
+    detailAddress: String?,
+    transactionType: String?,
+    dedicatedArea: BigDecimal?,
+    floor: String?
+): String {
+    val building = normalize(buildingName)
+    val road = normalize(roadAddress)
+    val lot = normalize(lotAddress)
+    val floorValue = normalize(floor)
+    val transaction = normalize(transactionType)
+    val area = normalize(dedicatedArea)
+
+    if (building.isNotEmpty() && (road.isNotEmpty() || lot.isNotEmpty())) {
+        return listOf(
+            "building",
+            building,
+            road,
+            lot,
+            transaction,
+            floorValue,
+            area
+        ).joinToString("|")
+    }
+
+    if ((road.isNotEmpty() || lot.isNotEmpty()) && area.isNotEmpty()) {
+        return listOf(
+            "address-area",
+            road,
+            lot,
+            transaction,
+            floorValue,
+            area
+        ).joinToString("|")
+    }
+
+    val detail = normalize(detailAddress)
+    val addressParts = listOf(road, lot, detail, floorValue)
+    if (addressParts.all { it.isEmpty() }) return "id:$id"
     return listOf(
         "vacancy",
-        *addressParts.toTypedArray(),
-        normalize(transactionType),
-        normalize(dedicatedArea),
-        normalize(supplyArea),
-        normalize(deposit),
-        normalize(monthlyRent),
-        normalize(maintenanceFee),
-        normalize(premium),
-        normalize(salePrice)
+        road,
+        lot,
+        detail,
+        transaction,
+        floorValue,
+        area
     ).joinToString("|")
 }
 
@@ -60,8 +94,4 @@ private fun normalize(value: String?): String {
 
 private fun normalize(value: BigDecimal?): String {
     return value?.stripTrailingZeros()?.toPlainString().orEmpty()
-}
-
-private fun normalize(value: Long?): String {
-    return value?.toString().orEmpty()
 }
