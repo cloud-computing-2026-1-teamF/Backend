@@ -12,9 +12,13 @@ interface AnalysisRepository : JpaRepository<AnalysisEntity, String> {
 
     fun findByUserIdOrderByCreatedAtDesc(userId: String, pageable: Pageable): List<AnalysisEntity>
 
+    fun findByUserIdAndSavedOrderByCreatedAtDesc(userId: String, saved: Boolean, pageable: Pageable): List<AnalysisEntity>
+
     fun countByUserId(userId: String): Long
 
     fun countByUserIdAndStatus(userId: String, status: AnalysisStatus): Long
+
+    fun countByUserIdAndSavedTrue(userId: String): Long
 
     @Query(
         """

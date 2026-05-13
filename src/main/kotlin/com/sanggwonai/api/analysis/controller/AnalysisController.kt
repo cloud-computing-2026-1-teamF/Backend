@@ -1,6 +1,7 @@
 package com.sanggwonai.api.analysis.controller
 
 import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.request.PatchAnalysisRequest
 import com.sanggwonai.api.analysis.controller.response.AnalysisErrorResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisLinksResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisPollingResponse
@@ -76,18 +77,20 @@ class AnalysisController(
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun list(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
-        @RequestParam(name = "limit", required = false) limit: Int?
+        @RequestParam(name = "limit", required = false) limit: Int?,
+        @RequestParam(name = "saved", required = false) saved: Boolean?
     ): ResponseEntity<ApiResponse<ListAnalysesResponse>> {
-        val items = analysisFacade.list(authorization, limit).map(::toResponse)
+        val items = analysisFacade.list(authorization, limit, saved).map(::toResponse)
         return ResponseEntity.ok(ApiResponse(ListAnalysesResponse(items = items, nextCursor = null)))
     }
 
     @PatchMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
     fun patch(
         @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
-        @PathVariable("id") analysisId: String
+        @PathVariable("id") analysisId: String,
+        @RequestBody(required = false) request: PatchAnalysisRequest?
     ): ResponseEntity<ApiResponse<AnalysisPollingResponse>> {
-        val data = analysisFacade.patch(authorization, analysisId)
+        val data = analysisFacade.patch(authorization, analysisId, request)
         return ResponseEntity.ok(ApiResponse(toResponse(data)))
     }
 
@@ -210,6 +213,7 @@ class AnalysisController(
             createdAt = data.createdAt,
             estimatedSeconds = data.estimatedSeconds,
             analyzedVacancyCount = data.analyzedVacancyCount,
+            saved = data.saved,
             links = toResponse(data.links),
             recommendations = data.recommendations.map(::toResponse)
         )
@@ -232,6 +236,7 @@ class AnalysisController(
             createdAt = data.createdAt,
             completedAt = data.completedAt,
             error = toResponse(data.error),
+            saved = data.saved,
             businessTypeKey = data.businessTypeKey,
             transactionType = data.transactionType,
             centerLat = data.centerLat,

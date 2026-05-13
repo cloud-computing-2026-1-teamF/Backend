@@ -1,6 +1,7 @@
 package com.sanggwonai.api.analysis.facade
 
 import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.request.PatchAnalysisRequest
 import com.sanggwonai.api.analysis.dto.AnalysisRecommendationsDto
 import com.sanggwonai.api.analysis.service.AnalysisService
 import com.sanggwonai.api.auth.service.AuthContextResolver
@@ -19,11 +20,11 @@ class AnalysisFacade(
     fun polling(authorizationHeader: String?, analysisId: String) =
         analysisService.getPolling(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
 
-    fun list(authorizationHeader: String?, limit: Int?) =
-        analysisService.list(authContextResolver.resolveOrThrow(authorizationHeader), limit)
+    fun list(authorizationHeader: String?, limit: Int?, saved: Boolean?) =
+        analysisService.list(authContextResolver.resolveOrThrow(authorizationHeader), limit, saved)
 
-    fun patch(authorizationHeader: String?, analysisId: String) =
-        analysisService.patch(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)
+    fun patch(authorizationHeader: String?, analysisId: String, request: PatchAnalysisRequest?) =
+        analysisService.patch(authContextResolver.resolveOrThrow(authorizationHeader), analysisId, request)
 
     fun delete(authorizationHeader: String?, analysisId: String) =
         analysisService.delete(authContextResolver.resolveOrThrow(authorizationHeader), analysisId)

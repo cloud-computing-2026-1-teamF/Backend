@@ -12,6 +12,7 @@ data class AnalysisPollingData(
     val createdAt: Instant,
     val completedAt: Instant?,
     val error: AnalysisErrorDto?,
+    val saved: Boolean,
     // Summary fields. Populated by the list endpoint so the History page can
     // render cards straight from the API without dipping into localStorage.
     // The single-analysis polling endpoint leaves them null because callers

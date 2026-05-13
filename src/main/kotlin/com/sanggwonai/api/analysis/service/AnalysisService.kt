@@ -1,6 +1,7 @@
 package com.sanggwonai.api.analysis.service
 
 import com.sanggwonai.api.analysis.controller.request.CreateAnalysisRequest
+import com.sanggwonai.api.analysis.controller.request.PatchAnalysisRequest
 import com.sanggwonai.api.analysis.dto.AnalysisRecommendationDto
 import com.sanggwonai.api.analysis.dto.AnalysisRecommendationsDto
 import com.sanggwonai.api.analysis.dto.AnalysisEventDto
@@ -115,6 +116,7 @@ class AnalysisService(
                 centerLng = searchPoint.longitude.toCoordinate(),
                 radiusM = radiusM,
                 analyzedVacancyCount = ranking.totalCandidates,
+                saved = false,
                 status = AnalysisStatus.PENDING,
                 progress = 0,
                 stepIndex = null,
@@ -150,6 +152,7 @@ class AnalysisService(
             createdAt = analysis.createdAt,
             estimatedSeconds = analysisProperties.estimatedSeconds,
             analyzedVacancyCount = analysis.analyzedVacancyCount,
+            saved = analysis.saved,
             links = AnalysisLinksDto(
                 self = "/v1/analyses/${analysis.id}",
                 events = "/v1/analyses/${analysis.id}/events"
@@ -165,12 +168,14 @@ class AnalysisService(
     }
 
     @Transactional(readOnly = true)
-    fun list(authContext: AuthContext, limit: Int?): List<AnalysisPollingData> {
+    fun list(authContext: AuthContext, limit: Int?, saved: Boolean?): List<AnalysisPollingData> {
         val pageSize = limit?.coerceIn(1, 50) ?: 20
-        val analyses = analysisRepository.findByUserIdOrderByCreatedAtDesc(
-            authContext.userId,
-            PageRequest.of(0, pageSize)
-        )
+        val page = PageRequest.of(0, pageSize)
+        val analyses = if (saved == null) {
+            analysisRepository.findByUserIdOrderByCreatedAtDesc(authContext.userId, page)
+        } else {
+            analysisRepository.findByUserIdAndSavedOrderByCreatedAtDesc(authContext.userId, saved, page)
+        }
         if (analyses.isEmpty()) return emptyList()
 
         // Bulk-fetch recommendations once for all analyses on this page to avoid
@@ -201,8 +206,13 @@ class AnalysisService(
     }
 
     @Transactional
-    fun patch(authContext: AuthContext, analysisId: String): AnalysisPollingData {
-        return analysisMapper.toPollingData(loadOwnedAnalysis(authContext.userId, analysisId))
+    fun patch(authContext: AuthContext, analysisId: String, request: PatchAnalysisRequest?): AnalysisPollingData {
+        val analysis = loadOwnedAnalysis(authContext.userId, analysisId)
+        request?.saved?.let { saved ->
+            analysis.saved = saved
+            analysis.updatedAt = Instant.now(clock)
+        }
+        return analysisMapper.toPollingData(analysis)
     }
 
     @Transactional
@@ -215,7 +225,7 @@ class AnalysisService(
     fun stats(authContext: AuthContext): UserStatsData {
         return UserStatsData(
             totalAnalyses = analysisRepository.countByUserId(authContext.userId),
-            savedAnalyses = analysisRepository.countByUserIdAndStatus(authContext.userId, AnalysisStatus.DONE),
+            savedAnalyses = analysisRepository.countByUserIdAndSavedTrue(authContext.userId),
             avgTopScore = 0
         )
     }

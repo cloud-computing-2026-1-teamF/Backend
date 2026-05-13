@@ -12,6 +12,7 @@ data class AnalysisPollingResponse(
     val createdAt: Instant,
     val completedAt: Instant?,
     val error: AnalysisErrorResponse?,
+    val saved: Boolean,
     val businessTypeKey: String? = null,
     val transactionType: String? = null,
     val centerLat: BigDecimal? = null,

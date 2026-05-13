@@ -10,6 +10,7 @@ data class CreateAnalysisData(
     val createdAt: Instant,
     val estimatedSeconds: Int,
     val analyzedVacancyCount: Int?,
+    val saved: Boolean,
     val links: AnalysisLinksDto,
     val recommendations: List<AnalysisRecommendationDto>
 )

@@ -55,6 +55,9 @@ class AnalysisEntity(
     @Column(name = "analyzed_vacancy_count")
     val analyzedVacancyCount: Int?,
 
+    @Column(nullable = false)
+    var saved: Boolean,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AnalysisStatus,

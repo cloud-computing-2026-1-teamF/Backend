@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 037-add-analysis-saved-flag
+      author: codex
+      changes:
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: saved
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

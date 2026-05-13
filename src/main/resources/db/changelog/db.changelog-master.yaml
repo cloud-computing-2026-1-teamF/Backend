@@ -33,3 +33,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-016-performance-indexes.yaml
   - include:
       file: db/changelog/db.changelog-017-analysis-candidate-count.yaml
+  - include:
+      file: db/changelog/db.changelog-018-analysis-saved-flag.yaml
