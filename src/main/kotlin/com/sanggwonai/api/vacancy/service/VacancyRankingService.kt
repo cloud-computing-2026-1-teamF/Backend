@@ -21,8 +21,13 @@ class VacancyRankingService(
 ) {
     @Transactional(readOnly = true)
     fun findTop(criteria: VacancySearchCriteria, limit: Int = 3): List<RankedVacancy> {
+        return findRanked(criteria, limit).top
+    }
+
+    @Transactional(readOnly = true)
+    fun findRanked(criteria: VacancySearchCriteria, limit: Int = 3): VacancyRankingResult {
         val snapshot = vacancyDataset.snapshot()
-        return snapshot.vacancies
+        val candidates = snapshot.vacancies
             .asSequence()
             .mapNotNull { vacancy -> vacancy.toDistanceCandidate(criteria, snapshot) }
             .filter { candidate -> candidate.distanceM <= criteria.radiusM }
@@ -31,6 +36,11 @@ class VacancyRankingService(
                     .thenBy { it.distanceM }
                     .thenBy { it.vacancy.id }
             )
+            .toList()
+
+        return VacancyRankingResult(
+            totalCandidates = candidates.size,
+            top = candidates
             .take(limit)
             .mapIndexed { index, candidate ->
                 RankedVacancy(
@@ -46,6 +56,7 @@ class VacancyRankingService(
                 )
             }
             .toList()
+        )
     }
 
     private fun VacancyEntity.toDistanceCandidate(
@@ -106,6 +117,11 @@ class VacancyRankingService(
         return (earthRadiusM * c).toInt()
     }
 }
+
+data class VacancyRankingResult(
+    val top: List<RankedVacancy>,
+    val totalCandidates: Int
+)
 
 private data class VacancyDistanceCandidate(
     val vacancy: VacancyEntity,

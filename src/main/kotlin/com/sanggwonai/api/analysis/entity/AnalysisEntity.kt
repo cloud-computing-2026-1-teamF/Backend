@@ -52,6 +52,9 @@ class AnalysisEntity(
     @Column(name = "radius_m", nullable = false)
     val radiusM: Int,
 
+    @Column(name = "analyzed_vacancy_count")
+    val analyzedVacancyCount: Int?,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var status: AnalysisStatus,

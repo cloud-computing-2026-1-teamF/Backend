@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 036-add-analysis-candidate-count
+      author: codex
+      changes:
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: analyzed_vacancy_count
+                  type: int

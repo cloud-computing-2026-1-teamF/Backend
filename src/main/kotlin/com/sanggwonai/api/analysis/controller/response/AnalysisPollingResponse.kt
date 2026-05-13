@@ -23,5 +23,6 @@ data class AnalysisPollingResponse(
     val budgetPremiumMax: Long? = null,
     val budgetSalePriceMax: Long? = null,
     val topScore: BigDecimal? = null,
+    val analyzedVacancyCount: Int? = null,
     val recommendationCount: Int? = null
 )

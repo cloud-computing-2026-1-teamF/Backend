@@ -209,6 +209,7 @@ class AnalysisController(
             progress = data.progress,
             createdAt = data.createdAt,
             estimatedSeconds = data.estimatedSeconds,
+            analyzedVacancyCount = data.analyzedVacancyCount,
             links = toResponse(data.links),
             recommendations = data.recommendations.map(::toResponse)
         )
@@ -242,6 +243,7 @@ class AnalysisController(
             budgetPremiumMax = data.budgetPremiumMax,
             budgetSalePriceMax = data.budgetSalePriceMax,
             topScore = data.topScore,
+            analyzedVacancyCount = data.analyzedVacancyCount,
             recommendationCount = data.recommendationCount
         )
     }

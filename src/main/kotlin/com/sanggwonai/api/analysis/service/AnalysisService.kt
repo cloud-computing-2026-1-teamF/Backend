@@ -71,7 +71,7 @@ class AnalysisService(
         val searchPoint = request.resolveSearchPoint(area)
         val radiusM = request.radiusM ?: DEFAULT_RADIUS_M
         val transactionType = request.transactionType?.trim()?.takeIf { it.isNotEmpty() }
-        val rankedVacancies = vacancyRankingService.findTop(
+        val ranking = vacancyRankingService.findRanked(
             VacancySearchCriteria(
                 areaId = request.areaId,
                 categoryId = request.businessType,
@@ -86,6 +86,7 @@ class AnalysisService(
                 salePriceMax = request.budget?.salePriceMax
             )
         )
+        val rankedVacancies = ranking.top
         if (rankedVacancies.isEmpty()) {
             throw ApiException.of(
                 ErrorType.VACANCY_NOT_FOUND,
@@ -113,6 +114,7 @@ class AnalysisService(
                 centerLat = searchPoint.latitude.toCoordinate(),
                 centerLng = searchPoint.longitude.toCoordinate(),
                 radiusM = radiusM,
+                analyzedVacancyCount = ranking.totalCandidates,
                 status = AnalysisStatus.PENDING,
                 progress = 0,
                 stepIndex = null,
@@ -147,6 +149,7 @@ class AnalysisService(
             progress = analysis.progress,
             createdAt = analysis.createdAt,
             estimatedSeconds = analysisProperties.estimatedSeconds,
+            analyzedVacancyCount = analysis.analyzedVacancyCount,
             links = AnalysisLinksDto(
                 self = "/v1/analyses/${analysis.id}",
                 events = "/v1/analyses/${analysis.id}/events"
@@ -191,6 +194,7 @@ class AnalysisService(
                 budgetPremiumMax = entity.budgetPremiumMax,
                 budgetSalePriceMax = entity.budgetSalePriceMax,
                 topScore = recs.maxOfOrNull { it.score },
+                analyzedVacancyCount = entity.analyzedVacancyCount,
                 recommendationCount = recs.size
             )
         }
