@@ -16,6 +16,7 @@ data class VacancySearchSummaryResponse(
     val averageScore: BigDecimal?,
     val averageRent: BigDecimal?,
     val averageDeposit: BigDecimal?,
+    val averageSalePrice: BigDecimal?,
     val averageMaintenanceFee: BigDecimal?,
     val minRent: Long?,
     val maxRent: Long?,

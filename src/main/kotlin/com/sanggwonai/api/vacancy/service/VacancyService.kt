@@ -336,6 +336,7 @@ class VacancyService(
             averageScore = averageDecimal(vacancies.mapNotNull { it.survivalScore }),
             averageRent = averageLong(vacancies.mapNotNull { it.monthlyRent }),
             averageDeposit = averageLong(vacancies.mapNotNull { it.deposit }),
+            averageSalePrice = averageLong(vacancies.mapNotNull { it.salePrice }),
             averageMaintenanceFee = averageLong(vacancies.mapNotNull { it.maintenanceFee }),
             minRent = vacancies.mapNotNull { it.monthlyRent }.minOrNull(),
             maxRent = vacancies.mapNotNull { it.monthlyRent }.maxOrNull(),

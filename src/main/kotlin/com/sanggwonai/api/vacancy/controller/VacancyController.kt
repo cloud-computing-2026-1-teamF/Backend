@@ -133,6 +133,7 @@ class VacancyController(
             averageScore = data.averageScore,
             averageRent = data.averageRent,
             averageDeposit = data.averageDeposit,
+            averageSalePrice = data.averageSalePrice,
             averageMaintenanceFee = data.averageMaintenanceFee,
             minRent = data.minRent,
             maxRent = data.maxRent,
