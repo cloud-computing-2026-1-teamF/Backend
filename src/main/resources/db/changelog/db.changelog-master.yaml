@@ -37,3 +37,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-018-analysis-saved-flag.yaml
   - include:
       file: db/changelog/db.changelog-019-vacancy-metric-reference-cache.yaml
+  - include:
+      file: db/changelog/db.changelog-020-analysis-region.yaml

@@ -19,6 +19,7 @@ data class AnalysisPollingData(
     // there only care about status/progress.
     val businessTypeKey: String? = null,
     val transactionType: String? = null,
+    val region: String? = null,
     val centerLat: BigDecimal? = null,
     val centerLng: BigDecimal? = null,
     val radiusM: Int? = null,

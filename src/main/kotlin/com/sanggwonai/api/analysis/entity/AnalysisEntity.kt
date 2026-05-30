@@ -52,6 +52,11 @@ class AnalysisEntity(
     @Column(name = "radius_m", nullable = false)
     val radiusM: Int,
 
+    // 분석 지점의 표시용 지역명(행정동). 좌표만으로는 다른 기기에서 지역명을
+    // 복원할 수 없어, 이력 표기 일관성을 위해 저장한다.
+    @Column(name = "region", length = 120)
+    val region: String?,
+
     @Column(name = "analyzed_vacancy_count")
     val analyzedVacancyCount: Int?,
 

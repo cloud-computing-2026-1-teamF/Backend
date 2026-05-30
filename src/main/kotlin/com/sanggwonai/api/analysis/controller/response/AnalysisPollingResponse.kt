@@ -15,6 +15,7 @@ data class AnalysisPollingResponse(
     val saved: Boolean,
     val businessTypeKey: String? = null,
     val transactionType: String? = null,
+    val region: String? = null,
     val centerLat: BigDecimal? = null,
     val centerLng: BigDecimal? = null,
     val radiusM: Int? = null,

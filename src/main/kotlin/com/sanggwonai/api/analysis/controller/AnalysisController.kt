@@ -239,6 +239,7 @@ class AnalysisController(
             saved = data.saved,
             businessTypeKey = data.businessTypeKey,
             transactionType = data.transactionType,
+            region = data.region,
             centerLat = data.centerLat,
             centerLng = data.centerLng,
             radiusM = data.radiusM,

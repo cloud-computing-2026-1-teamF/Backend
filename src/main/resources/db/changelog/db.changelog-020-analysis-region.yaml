@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 039-add-analysis-region
+      author: codex
+      changes:
+        - addColumn:
+            tableName: analyses
+            columns:
+              - column:
+                  name: region
+                  type: varchar(120)

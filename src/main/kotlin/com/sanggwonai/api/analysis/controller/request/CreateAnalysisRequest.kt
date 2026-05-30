@@ -37,7 +37,12 @@ data class CreateAnalysisRequest(
     @field:Min(1)
     @field:Max(5000)
     @param:JsonAlias("radiusM")
-    val radiusM: Int?
+    val radiusM: Int?,
+
+    // 분석 지점의 표시용 지역명(행정동). 서버에 좌표만 저장되면 다른 기기에서
+    // 이력을 열었을 때 지역명을 복원할 수 없어, 표기 일관성을 위해 함께 저장한다.
+    @param:JsonAlias("region")
+    val region: String? = null
 )
 
 data class AnalysisLocationRequest(

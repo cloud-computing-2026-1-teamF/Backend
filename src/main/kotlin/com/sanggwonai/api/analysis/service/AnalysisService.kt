@@ -115,6 +115,7 @@ class AnalysisService(
                 centerLat = searchPoint.latitude.toCoordinate(),
                 centerLng = searchPoint.longitude.toCoordinate(),
                 radiusM = radiusM,
+                region = request.region?.trim()?.takeIf { it.isNotEmpty() },
                 analyzedVacancyCount = ranking.totalCandidates,
                 saved = false,
                 status = AnalysisStatus.PENDING,
@@ -190,6 +191,7 @@ class AnalysisService(
             base.copy(
                 businessTypeKey = entity.businessTypeKey,
                 transactionType = entity.transactionType,
+                region = entity.region,
                 centerLat = entity.centerLat,
                 centerLng = entity.centerLng,
                 radiusM = entity.radiusM,
