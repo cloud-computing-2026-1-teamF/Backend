@@ -15,6 +15,14 @@ class AuthContextResolver(
         return AuthContext(userId = jwtTokenProvider.parseUserId(token))
     }
 
+    fun resolveOrNull(authorizationHeader: String?): AuthContext? {
+        return try {
+            resolveOrThrow(authorizationHeader)
+        } catch (_: ApiException) {
+            null
+        }
+    }
+
     private fun extractToken(header: String?): String? {
         if (header.isNullOrBlank()) {
             return null

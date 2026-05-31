@@ -41,3 +41,7 @@ out/
 UX_UI Figjam.pdf
 api_baseline.txt
 AGENTS.md
+
+# Local secrets/config. Keep API keys out of commits.
+.env*
+application-local.yml

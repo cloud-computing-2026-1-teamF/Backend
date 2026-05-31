@@ -46,11 +46,15 @@ class VacancyService(
     }
 
     @Transactional(readOnly = true)
-    fun search(criteria: VacancyExplorerCriteria): VacancyExplorerResult {
+    fun search(criteria: VacancyExplorerCriteria): VacancyExplorerResult = search(criteria, candidateIds = null)
+
+    @Transactional(readOnly = true)
+    fun search(criteria: VacancyExplorerCriteria, candidateIds: Set<String>?): VacancyExplorerResult {
         val snapshot = vacancyDataset.snapshot()
         val categoryId = criteria.categoryId?.trim()?.takeIf { it.isNotEmpty() }
         val matchedRows = dedupeRows(snapshot.vacancies
             .asSequence()
+            .filter { vacancy -> candidateIds == null || vacancy.id in candidateIds }
             .mapNotNull { toSearchRow(it, snapshot, categoryId, criteria.scoreMode) }
             .filter { row -> matches(row, criteria, categoryId) }
             .toList())

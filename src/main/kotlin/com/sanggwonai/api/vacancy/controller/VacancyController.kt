@@ -1,7 +1,13 @@
 package com.sanggwonai.api.vacancy.controller
 
 import com.sanggwonai.api.common.api.ApiResponse
+import com.sanggwonai.api.vacancy.controller.request.VacancyPromptParseRequest
+import com.sanggwonai.api.vacancy.controller.request.VacancyPromptSearchRequest
+import com.sanggwonai.api.vacancy.controller.request.VacancyStructuredSearchRequest
 import com.sanggwonai.api.vacancy.controller.response.VacancyMetricDistributionResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyPromptParseResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyPromptSchemaResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyPromptSearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyMetricReferenceResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
@@ -15,11 +21,16 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
+import com.sanggwonai.api.vacancy.service.VacancyPromptSchema
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -91,6 +102,79 @@ class VacancyController(
             sort = VacancyExplorerSort.from(sort)
         )
         return ResponseEntity.ok(ApiResponse(toSearchResponse(vacancyFacade.search(criteria))))
+    }
+
+    @GetMapping("/prompt/schema")
+    @Operation(
+        summary = "공실 프롬프트 필터 JSON 스키마 조회함",
+        description = "OpenAI Structured Outputs에 넣는 정적 JSON schema와 enum 계약을 반환함."
+    )
+    fun promptSchema(): ResponseEntity<ApiResponse<VacancyPromptSchemaResponse>> {
+        return ResponseEntity.ok(
+            ApiResponse(
+                VacancyPromptSchemaResponse(
+                    schemaVersion = VacancyPromptSchema.VERSION,
+                    jsonSchema = VacancyPromptSchema.jsonSchema,
+                    openAiTextFormat = VacancyPromptSchema.openAiTextFormat,
+                    enums = VacancyPromptSchema.enums,
+                    example = VacancyPromptSchema.example
+                )
+            )
+        )
+    }
+
+    @PostMapping("/structured-search")
+    @Operation(
+        summary = "공실 구조화 필터 검색함",
+        description = "프롬프트 파싱 결과 JSON을 받아 DB 조건으로 후보를 좁힌 뒤 기존 공실 탐색 응답을 반환함."
+    )
+    fun structuredSearch(
+        @RequestBody request: VacancyStructuredSearchRequest
+    ): ResponseEntity<ApiResponse<VacancySearchResponse>> {
+        return ResponseEntity.ok(ApiResponse(toSearchResponse(vacancyFacade.structuredSearch(request.filters))))
+    }
+
+    @PostMapping("/prompt/parse")
+    @Operation(
+        summary = "공실 자연어 프롬프트를 구조화 필터로 변환함",
+        description = "OpenAI 설정이 켜져 있으면 Structured Outputs로 파싱하고, 아니면 저비용 로컬 파서를 사용함."
+    )
+    fun parsePrompt(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @RequestBody request: VacancyPromptParseRequest
+    ): ResponseEntity<ApiResponse<VacancyPromptParseResponse>> {
+        val parsed = vacancyFacade.parsePrompt(authorization, request.prompt)
+        return ResponseEntity.ok(
+            ApiResponse(
+                VacancyPromptParseResponse(
+                    filters = parsed.filters,
+                    source = parsed.source,
+                    schemaVersion = parsed.schemaVersion
+                )
+            )
+        )
+    }
+
+    @PostMapping("/prompt/search")
+    @Operation(
+        summary = "공실 자연어 프롬프트 검색함",
+        description = "프롬프트를 구조화 필터로 변환하고 바로 DB 후보 검색 및 공실 탐색 응답을 반환함."
+    )
+    fun promptSearch(
+        @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) authorization: String?,
+        @RequestBody request: VacancyPromptSearchRequest
+    ): ResponseEntity<ApiResponse<VacancyPromptSearchResponse>> {
+        val (parsed, result) = vacancyFacade.promptSearch(authorization, request.prompt, request.page, request.size)
+        return ResponseEntity.ok(
+            ApiResponse(
+                VacancyPromptSearchResponse(
+                    filters = parsed.filters,
+                    source = parsed.source,
+                    schemaVersion = parsed.schemaVersion,
+                    result = toSearchResponse(result)
+                )
+            )
+        )
     }
 
     @GetMapping("/metric-reference")
