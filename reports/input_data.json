@@ -1,0 +1,197 @@
+{
+  "$schema_version": "3.0",
+  "_meta": {
+    "description": "Claude API에 보낼 input — Frontend Detail 페이지가 렌더링하는 모든 데이터 구조를 그대로 묶음. Frontend의 SavedAnalysis(분석 메타 + Top3Item[]) + VacancyMetricReference(주요 지표 분포) 형태로 구성.",
+    "language": "ko",
+    "frontend_source": {
+      "type_savedAnalysis": "Frontend/src/lib/savedAnalyses.ts → SavedAnalysis",
+      "type_metric_reference": "Frontend/src/api/types.ts → VacancyMetricReference",
+      "renders_at": "Frontend/src/pages/Detail/Detail.tsx"
+    },
+    "backend_source": {
+      "analysis_polling": "GET /v1/analyses/{id}",
+      "recommendations": "GET /v1/analyses/{id}/recommended-properties",
+      "metric_reference": "GET /v1/vacancies/{vacancy_id}/metric-reference?categoryId={id}"
+    }
+  },
+
+  "saved_analysis": {
+    "_doc": "Frontend SavedAnalysis 타입 그대로 — 페이지 헤더 + Top 3 + Hero 모두 이 데이터에서 렌더",
+    "id": "ana_20260529_xyz789",
+    "date": "2026-05-29",
+    "time": "21:20",
+    "region": "중구",
+    "regionDetail": "서울 중구",
+    "radius": 200,
+    "displayName": "서울 중구 종로 일대",
+    "centerLat": 37.566123,
+    "centerLng": 126.987456,
+    "category": "구내식당 및 뷔페",
+    "businessTypeKey": "cafeteria_buffet",
+    "categoryEmoji": "🍱",
+    "budget": "예산 조건 없음",
+    "topScore": 75,
+    "count": 4,
+    "saved": false,
+    "top3": [
+      {
+        "vacancyId": "vac_seoul_jung_001",
+        "categoryId": "cafeteria_buffet",
+        "addr": "서울 중구 삼일대로12길 22-1",
+        "recommended": true,
+        "score": 75,
+        "rent": 400,
+        "deposit": 5000,
+        "mgmt": 5,
+        "premium": 2000,
+        "salePrice": null,
+        "transactionType": "월세",
+        "area": 132.2,
+        "floor": "1층",
+        "foot": 95487,
+        "comp": 12,
+        "rev": 1893,
+        "growth": -0.034,
+        "footHourly": [42, 28, 18, 12, 8, 22, 65, 280, 520, 740, 850, 1100, 1450, 1620, 1380, 1290, 1450, 1340, 1150, 920, 680, 460, 280, 140],
+        "nearby": {
+          "subway": "을지로3가(2호선, 3호선) · 종로3가(1호선)",
+          "bus": "청계2가.삼일교(173, 청계A01) 외 19곳",
+          "parking": "관철동 외 5곳"
+        }
+      },
+      {
+        "vacancyId": "vac_seoul_jung_002",
+        "categoryId": "cafeteria_buffet",
+        "addr": "서울 중구 을지로9길 8",
+        "recommended": true,
+        "score": 75,
+        "rent": 250,
+        "deposit": 3000,
+        "mgmt": 30,
+        "premium": 1500,
+        "salePrice": null,
+        "transactionType": "월세",
+        "area": 115.7,
+        "floor": "1층",
+        "foot": 88200,
+        "comp": 14,
+        "rev": 1780,
+        "growth": -0.028,
+        "footHourly": [38, 25, 16, 10, 7, 20, 60, 260, 490, 700, 810, 1050, 1380, 1540, 1310, 1230, 1380, 1280, 1100, 880, 650, 440, 270, 130],
+        "nearby": {
+          "subway": "을지로3가(2호선, 3호선) 도보 4분",
+          "bus": "청계2가.삼일교 도보 3분",
+          "parking": "주변 공영 주차장 3곳"
+        }
+      },
+      {
+        "vacancyId": "vac_seoul_jung_003",
+        "categoryId": "cafeteria_buffet",
+        "addr": "서울 중구 을지로 97-1",
+        "recommended": true,
+        "score": 74,
+        "rent": 473,
+        "deposit": 4000,
+        "mgmt": 0,
+        "premium": 1800,
+        "salePrice": null,
+        "transactionType": "월세",
+        "area": 99.2,
+        "floor": "1층",
+        "foot": 91100,
+        "comp": 13,
+        "rev": 1820,
+        "growth": -0.031,
+        "footHourly": [40, 26, 17, 11, 8, 21, 62, 270, 510, 720, 830, 1080, 1410, 1580, 1340, 1260, 1410, 1310, 1130, 900, 670, 450, 275, 135],
+        "nearby": {
+          "subway": "을지로입구역 도보 6분",
+          "bus": "을지로입구 정류장 도보 5분",
+          "parking": "주변 유료 주차장"
+        }
+      }
+    ]
+  },
+
+  "vacancy_metric_reference": {
+    "_doc": "Frontend VacancyMetricReference 타입 그대로 — Section 02 주요 지표 카드의 distribution bar에 사용. 동일 업종 비교 기준이 수집 안 됐으면 average=null이 와서 '비교 기준 수집 중' 뱃지가 표시됨.",
+    "peerCount": 1234,
+    "footTrafficDaily": {
+      "selected": 95487,
+      "average": 95500,
+      "median": 92000,
+      "min": 76000,
+      "max": 115000,
+      "p10": 78000,
+      "p25": 85000,
+      "p75": 105000,
+      "p90": 112000,
+      "percentile": 50
+    },
+    "competition500m": {
+      "selected": 12,
+      "average": 12.3,
+      "median": 12,
+      "min": 10,
+      "max": 14,
+      "p10": 10,
+      "p25": 11,
+      "p75": 13,
+      "p90": 14,
+      "percentile": 48
+    },
+    "averageSalesMonthly": {
+      "selected": 1893,
+      "average": 1900,
+      "median": 1850,
+      "min": 1514,
+      "max": 2272,
+      "p10": 1600,
+      "p25": 1720,
+      "p75": 2050,
+      "p90": 2180,
+      "percentile": 50
+    }
+  },
+
+  "selected_vacancy_extra": {
+    "_doc": "선택된 매물(Top 1)에 대한 추가 컨텍스트. RDS 65 feature에서 핵심만 발췌. Claude 자연어 분석에 활용. (Frontend에는 안 보이고 보고서 작성용)",
+    "vacancy_id": "vac_seoul_jung_001",
+    "selected_category": "구내식당 및 뷔페",
+    "selected_score_percent": 75,
+    "nine_category_scores": {
+      "한식": 68,
+      "중식": 62,
+      "일식": 65,
+      "서양식": 55,
+      "기타": 50,
+      "구내식당및뷔페": 75,
+      "패스트푸드": 58,
+      "주점업": 45,
+      "카페디저트": 72
+    },
+    "ranking_in_9_categories": 1,
+    "neighborhood_signals": {
+      "동네_폐업률": 0.123,
+      "동네_개업율": 0.185,
+      "공시지가_원per_m2": 14200000,
+      "유동인구_2030_비율": 0.298,
+      "유동인구_여성_비율": 0.512,
+      "동네_저녁매출_비율": 0.30,
+      "상권_교체활발형": true,
+      "상권_성장형": false,
+      "업종성장률_500m": -0.034
+    },
+    "_doc_seoul_avg": {
+      "서울_평균_폐업률": 0.14,
+      "서울_평균_2030_비율": 0.28,
+      "서울_평균_저녁매출_비율": 0.28,
+      "_doc": "Claude가 '서울 평균 대비 X' 같은 비교 해석에 사용"
+    }
+  },
+
+  "_future_확장_필드": {
+    "_doc": "현재 null. 데이터 확보 시 활성화.",
+    "section_05_review_insight": null,
+    "section_06_investment_payback": null
+  }
+}
