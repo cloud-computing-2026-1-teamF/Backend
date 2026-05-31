@@ -39,3 +39,7 @@ databaseChangeLog:
       file: db/changelog/db.changelog-019-vacancy-metric-reference-cache.yaml
   - include:
       file: db/changelog/db.changelog-020-analysis-region.yaml
+  - include:
+      file: db/changelog/db.changelog-021-vacancy-review-insight.yaml
+  - include:
+      file: db/changelog/db.changelog-022-vacancy-investment-payback.yaml

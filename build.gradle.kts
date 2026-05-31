@@ -16,6 +16,15 @@ java {
     }
 }
 
+sourceSets {
+    main {
+        resources {
+            // 보고서 프롬프트 계약(reports/*.json)을 클래스패스에 포함 (단일 소스)
+            srcDir("reports")
+        }
+    }
+}
+
 repositories {
     mavenCentral()
 }
@@ -28,6 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     implementation("org.mapstruct:mapstruct:1.6.3")
+    // 보고서 HTML -> PDF 렌더 (한글 폰트는 resources/fonts 에 TTF 추가 필요).
+    // ⚠ 버전은 Spring Boot 4 / PDFBox 호환 확인 후 조정.
+    implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
     implementation("io.jsonwebtoken:jjwt-api:0.12.7")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")

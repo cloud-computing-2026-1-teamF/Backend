@@ -52,6 +52,15 @@ app:
         timeout-seconds: ${OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS:6}
         max-output-tokens: ${OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS:1200}
 
+  report:
+    openai:
+      enabled: ${OPENAI_REPORT_ENABLED:false}
+      api-key: ${OPENAI_API_KEY:}
+      endpoint: ${OPENAI_RESPONSES_ENDPOINT:https://api.openai.com/v1/responses}
+      model: ${OPENAI_REPORT_MODEL:gpt-5.4-nano}
+      timeout-seconds: ${OPENAI_REPORT_TIMEOUT_SECONDS:60}
+      max-output-tokens: ${OPENAI_REPORT_MAX_OUTPUT_TOKENS:9000}
+
 springdoc:
   swagger-ui:
     operations-sorter: alpha

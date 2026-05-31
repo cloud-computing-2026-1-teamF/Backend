@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "analysisId": "an_8f2c19a4",
+    "region": "서울 양천구 목동",
+    "businessType": { "key": "cafe", "label": "카페" },
+    "transactionType": "월세",
+    "generatedAt": "2026-05-31T14:20:00+09:00"
+  },
+  "location": {
+    "vacancyId": "vc_7720",
+    "roadAddress": "서울 양천구 목동동로 123, 2층",
+    "areaId": "1147010100",
+    "latitude": 37.5268,
+    "longitude": 126.8752,
+    "distanceM": 180,
+    "facilityTotalSizeM2": 49.5
+  },
+  "costs": {
+    "depositKrw": 30000000,
+    "monthlyRentKrw": 2200000,
+    "maintenanceFeeKrw": 200000,
+    "premiumKrw": 20000000,
+    "salePriceKrw": null
+  },
+  "market": {
+    "score": 78.4,
+    "estMonthlyRevenueKrw": 18500000,
+    "areaAvgSalesPerStoreKrw": 15000000,
+    "footTrafficDaily": 9200,
+    "footHourly": [120, 80, 55, 40, 38, 70, 190, 430, 640, 520, 610, 880, 1320, 1180, 760, 720, 840, 1180, 1460, 1390, 980, 700, 430, 230],
+    "floatingPopulationAnnualTotal": 3358000,
+    "competitorCount500m": 8,
+    "restaurantCount500m": 64,
+    "cafeCount500m": 19,
+    "industryGrowthRatePct": 6.2
+  },
+  "accessibility": {
+    "subwayStationInfo": "오목교역 도보 5분(약 320m)",
+    "busStopInfo": "목동운동장 정류장 90m, 5개 노선",
+    "parkingInfo": "건물 내 주차 7면, 발렛 없음"
+  },
+  "competitors": [
+    {
+      "name": "목동 그린빈 카페",
+      "category": "카페/디저트",
+      "distanceM": 120,
+      "reviewCount": 342,
+      "reviewSnippets": [
+        "콘센트 자리가 많아서 노트북 들고 공부하기 정말 좋아요. 음료 한 잔 시키고 두세 시간은 기본입니다.",
+        "휘낭시에랑 바스크 치즈케이크가 시그니처인데 디저트가 전반적으로 수준급이에요.",
+        "주말 오후에는 자리가 거의 없어서 10분 정도 웨이팅했어요."
+      ]
+    },
+    {
+      "name": "오목로 로스터스",
+      "category": "카페/디저트",
+      "distanceM": 210,
+      "reviewCount": 188,
+      "reviewSnippets": [
+        "원두를 직접 골라서 핸드드립으로 내려주는데 커피 맛이 확실히 좋아요.",
+        "좌석 간격이 좁은 편이라 옆 테이블 대화가 다 들리는 게 아쉬워요.",
+        "사장님이 친절하시고 라떼아트도 예쁘게 해주세요."
+      ]
+    }
+  ],
+  "assumptions": {
+    "cogsRatio": 0.35,
+    "laborCostMonthlyKrw": 3800000,
+    "avgTicketPriceKrw": 6500,
+    "interiorSetupCostKrw": 45000000,
+    "operatingDaysPerMonth": 26,
+    "peakShareOfDailySales": 0.45,
+    "peakHoursPerDay": 3
+  },
+  "derived": {
+    "initialInvestmentKrw": 95000000,
+    "monthlyFixedCostKrw": 6200000,
+    "monthlyCogsKrw": 6475000,
+    "monthlyNetProfitKrw": 5825000,
+    "roiMonths": 16.3,
+    "bep": {
+      "monthlyRevenueKrw": 9538462,
+      "dailyRevenueKrw": 366864,
+      "peakUnitsPerDay": 26
+    },
+    "target": {
+      "dailyRevenueKrw": 711538,
+      "peakUnitsPerDay": 50
+    }
+  }
+}

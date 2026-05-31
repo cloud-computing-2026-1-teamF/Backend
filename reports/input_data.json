@@ -1,8 +1,9 @@
 {
-  "$schema_version": "3.0",
+  "$schema_version": "3.1",
   "_meta": {
-    "description": "Claude API에 보낼 input — Frontend Detail 페이지가 렌더링하는 모든 데이터 구조를 그대로 묶음. Frontend의 SavedAnalysis(분석 메타 + Top3Item[]) + VacancyMetricReference(주요 지표 분포) 형태로 구성.",
+    "description": "OpenAI API에 보낼 input — Frontend Detail 페이지가 렌더링하는 모든 데이터 구조를 그대로 묶음. Frontend의 SavedAnalysis(분석 메타 + Top3Item[]) + VacancyMetricReference(주요 지표 분포) 형태로 구성.",
     "language": "ko",
+    "_doc_v31": "v3.1: 데모를 홍대 카페로 정합. section_05_review_insight(리뷰 태그, 옵션B)·section_06_investment_payback(가영 add_sales_payback.py 실데이터)을 top-level로 채움. 예시값은 illustrative(크롤·RDS 시드 후 실데이터로 교체).",
     "frontend_source": {
       "type_savedAnalysis": "Frontend/src/lib/savedAnalyses.ts → SavedAnalysis",
       "type_metric_reference": "Frontend/src/api/types.ts → VacancyMetricReference",
@@ -11,187 +12,232 @@
     "backend_source": {
       "analysis_polling": "GET /v1/analyses/{id}",
       "recommendations": "GET /v1/analyses/{id}/recommended-properties",
-      "metric_reference": "GET /v1/vacancies/{vacancy_id}/metric-reference?categoryId={id}"
+      "metric_reference": "GET /v1/vacancies/{vacancy_id}/metric-reference?categoryId={id}",
+      "review_insight": "RDS tagInsight 테이블 (홍대 시드) — 스크래퍼 옵션B 결과 적재",
+      "investment_payback": "RDS — AI add_sales_payback.py 산출 컬럼(업종별 점포당평균매출·월순이익·투자회수기간·평가)"
     }
   },
 
   "saved_analysis": {
     "_doc": "Frontend SavedAnalysis 타입 그대로 — 페이지 헤더 + Top 3 + Hero 모두 이 데이터에서 렌더",
-    "id": "ana_20260529_xyz789",
-    "date": "2026-05-29",
-    "time": "21:20",
-    "region": "중구",
-    "regionDetail": "서울 중구",
+    "id": "ana_20260601_hongdae",
+    "date": "2026-06-01",
+    "time": "14:10",
+    "region": "마포구",
+    "regionDetail": "서울 마포구",
     "radius": 200,
-    "displayName": "서울 중구 종로 일대",
-    "centerLat": 37.566123,
-    "centerLng": 126.987456,
-    "category": "구내식당 및 뷔페",
-    "businessTypeKey": "cafeteria_buffet",
-    "categoryEmoji": "🍱",
+    "displayName": "서울 마포구 홍대입구 일대",
+    "centerLat": 37.557527,
+    "centerLng": 126.924191,
+    "category": "카페·디저트",
+    "businessTypeKey": "cafe_dessert",
+    "categoryEmoji": "☕",
     "budget": "예산 조건 없음",
-    "topScore": 75,
+    "topScore": 78,
     "count": 4,
     "saved": false,
     "top3": [
       {
-        "vacancyId": "vac_seoul_jung_001",
-        "categoryId": "cafeteria_buffet",
-        "addr": "서울 중구 삼일대로12길 22-1",
+        "vacancyId": "vac_hongdae_001",
+        "categoryId": "cafe_dessert",
+        "addr": "서울 마포구 와우산로 29길 12, 1층",
         "recommended": true,
-        "score": 75,
-        "rent": 400,
-        "deposit": 5000,
-        "mgmt": 5,
+        "score": 78,
+        "rent": 280,
+        "deposit": 3500,
+        "mgmt": 15,
+        "premium": 2500,
+        "salePrice": null,
+        "transactionType": "월세",
+        "area": 66.1,
+        "floor": "1층",
+        "foot": 78400,
+        "comp": 24,
+        "rev": 3200,
+        "growth": 0.021,
+        "footHourly": [60, 35, 20, 12, 8, 15, 40, 180, 420, 680, 920, 1150, 1280, 1240, 1450, 1520, 1380, 1300, 1420, 1480, 1280, 980, 620, 300],
+        "nearby": {
+          "subway": "홍대입구역(2호선·공항철도·경의중앙선) 도보 4분",
+          "bus": "홍대입구역(서교동) 외 12곳",
+          "parking": "서교동 공영주차장 외 4곳"
+        }
+      },
+      {
+        "vacancyId": "vac_hongdae_002",
+        "categoryId": "cafe_dessert",
+        "addr": "서울 마포구 어울마당로 5길 8, 1층",
+        "recommended": true,
+        "score": 76,
+        "rent": 240,
+        "deposit": 3000,
+        "mgmt": 10,
         "premium": 2000,
         "salePrice": null,
         "transactionType": "월세",
-        "area": 132.2,
+        "area": 52.9,
         "floor": "1층",
-        "foot": 95487,
-        "comp": 12,
-        "rev": 1893,
-        "growth": -0.034,
-        "footHourly": [42, 28, 18, 12, 8, 22, 65, 280, 520, 740, 850, 1100, 1450, 1620, 1380, 1290, 1450, 1340, 1150, 920, 680, 460, 280, 140],
+        "foot": 72100,
+        "comp": 27,
+        "rev": 2800,
+        "growth": 0.018,
+        "footHourly": [55, 32, 18, 11, 7, 14, 38, 165, 390, 640, 870, 1080, 1210, 1180, 1380, 1450, 1320, 1240, 1360, 1410, 1220, 930, 590, 280],
         "nearby": {
-          "subway": "을지로3가(2호선, 3호선) · 종로3가(1호선)",
-          "bus": "청계2가.삼일교(173, 청계A01) 외 19곳",
-          "parking": "관철동 외 5곳"
+          "subway": "홍대입구역(2호선) 도보 6분",
+          "bus": "홍익대학교 정류장 도보 3분",
+          "parking": "주변 유료 주차장 2곳"
         }
       },
       {
-        "vacancyId": "vac_seoul_jung_002",
-        "categoryId": "cafeteria_buffet",
-        "addr": "서울 중구 을지로9길 8",
-        "recommended": true,
-        "score": 75,
-        "rent": 250,
-        "deposit": 3000,
-        "mgmt": 30,
-        "premium": 1500,
-        "salePrice": null,
-        "transactionType": "월세",
-        "area": 115.7,
-        "floor": "1층",
-        "foot": 88200,
-        "comp": 14,
-        "rev": 1780,
-        "growth": -0.028,
-        "footHourly": [38, 25, 16, 10, 7, 20, 60, 260, 490, 700, 810, 1050, 1380, 1540, 1310, 1230, 1380, 1280, 1100, 880, 650, 440, 270, 130],
-        "nearby": {
-          "subway": "을지로3가(2호선, 3호선) 도보 4분",
-          "bus": "청계2가.삼일교 도보 3분",
-          "parking": "주변 공영 주차장 3곳"
-        }
-      },
-      {
-        "vacancyId": "vac_seoul_jung_003",
-        "categoryId": "cafeteria_buffet",
-        "addr": "서울 중구 을지로 97-1",
+        "vacancyId": "vac_hongdae_003",
+        "categoryId": "cafe_dessert",
+        "addr": "서울 마포구 홍익로 6길 20, 1층",
         "recommended": true,
         "score": 74,
-        "rent": 473,
+        "rent": 350,
         "deposit": 4000,
-        "mgmt": 0,
-        "premium": 1800,
+        "mgmt": 20,
+        "premium": 3500,
         "salePrice": null,
         "transactionType": "월세",
-        "area": 99.2,
+        "area": 82.5,
         "floor": "1층",
-        "foot": 91100,
-        "comp": 13,
-        "rev": 1820,
-        "growth": -0.031,
-        "footHourly": [40, 26, 17, 11, 8, 21, 62, 270, 510, 720, 830, 1080, 1410, 1580, 1340, 1260, 1410, 1310, 1130, 900, 670, 450, 275, 135],
+        "foot": 81200,
+        "comp": 22,
+        "rev": 3000,
+        "growth": 0.015,
+        "footHourly": [62, 36, 21, 13, 9, 16, 42, 190, 430, 700, 940, 1170, 1300, 1260, 1470, 1540, 1400, 1320, 1440, 1500, 1300, 1000, 640, 310],
         "nearby": {
-          "subway": "을지로입구역 도보 6분",
-          "bus": "을지로입구 정류장 도보 5분",
-          "parking": "주변 유료 주차장"
+          "subway": "홍대입구역(2호선) 도보 7분 · 합정역 도보 9분",
+          "bus": "홍대입구역(서교동) 도보 5분",
+          "parking": "건물 내 주차 4면"
         }
       }
     ]
   },
 
   "vacancy_metric_reference": {
-    "_doc": "Frontend VacancyMetricReference 타입 그대로 — Section 02 주요 지표 카드의 distribution bar에 사용. 동일 업종 비교 기준이 수집 안 됐으면 average=null이 와서 '비교 기준 수집 중' 뱃지가 표시됨.",
-    "peerCount": 1234,
+    "_doc": "Frontend VacancyMetricReference 타입 그대로 — Section 02 주요 지표 카드의 distribution bar에 사용. 동일 업종(카페·디저트) 비교 기준.",
+    "peerCount": 2870,
     "footTrafficDaily": {
-      "selected": 95487,
-      "average": 95500,
-      "median": 92000,
-      "min": 76000,
-      "max": 115000,
-      "p10": 78000,
-      "p25": 85000,
-      "p75": 105000,
-      "p90": 112000,
-      "percentile": 50
+      "selected": 78400,
+      "average": 71200,
+      "median": 69000,
+      "min": 41000,
+      "max": 118000,
+      "p10": 47000,
+      "p25": 56000,
+      "p75": 86000,
+      "p90": 99000,
+      "percentile": 62
     },
     "competition500m": {
-      "selected": 12,
-      "average": 12.3,
-      "median": 12,
-      "min": 10,
-      "max": 14,
-      "p10": 10,
-      "p25": 11,
-      "p75": 13,
-      "p90": 14,
-      "percentile": 48
+      "selected": 24,
+      "average": 21.4,
+      "median": 21,
+      "min": 9,
+      "max": 38,
+      "p10": 12,
+      "p25": 16,
+      "p75": 27,
+      "p90": 32,
+      "percentile": 58
     },
     "averageSalesMonthly": {
-      "selected": 1893,
-      "average": 1900,
-      "median": 1850,
-      "min": 1514,
-      "max": 2272,
-      "p10": 1600,
-      "p25": 1720,
-      "p75": 2050,
-      "p90": 2180,
-      "percentile": 50
+      "selected": 3200,
+      "average": 2950,
+      "median": 2880,
+      "min": 1620,
+      "max": 4800,
+      "p10": 1950,
+      "p25": 2400,
+      "p75": 3450,
+      "p90": 4100,
+      "percentile": 60
     }
   },
 
   "selected_vacancy_extra": {
-    "_doc": "선택된 매물(Top 1)에 대한 추가 컨텍스트. RDS 65 feature에서 핵심만 발췌. Claude 자연어 분석에 활용. (Frontend에는 안 보이고 보고서 작성용)",
-    "vacancy_id": "vac_seoul_jung_001",
-    "selected_category": "구내식당 및 뷔페",
-    "selected_score_percent": 75,
+    "_doc": "선택된 매물(Top 1)에 대한 추가 컨텍스트. RDS feature에서 핵심 발췌. 보고서 자연어 분석용. (Frontend에는 안 보임)",
+    "vacancy_id": "vac_hongdae_001",
+    "selected_category": "카페·디저트",
+    "selected_score_percent": 78,
     "nine_category_scores": {
-      "한식": 68,
-      "중식": 62,
-      "일식": 65,
-      "서양식": 55,
-      "기타": 50,
-      "구내식당및뷔페": 75,
-      "패스트푸드": 58,
-      "주점업": 45,
-      "카페디저트": 72
+      "한식": 70,
+      "중식": 58,
+      "일식": 66,
+      "서양식": 64,
+      "기타": 52,
+      "구내식당및뷔페": 55,
+      "패스트푸드": 60,
+      "주점업": 72,
+      "카페디저트": 78
     },
     "ranking_in_9_categories": 1,
     "neighborhood_signals": {
-      "동네_폐업률": 0.123,
-      "동네_개업율": 0.185,
-      "공시지가_원per_m2": 14200000,
-      "유동인구_2030_비율": 0.298,
-      "유동인구_여성_비율": 0.512,
-      "동네_저녁매출_비율": 0.30,
+      "동네_폐업률": 0.135,
+      "동네_개업율": 0.205,
+      "공시지가_원per_m2": 18200000,
+      "유동인구_2030_비율": 0.461,
+      "유동인구_여성_비율": 0.548,
+      "동네_저녁매출_비율": 0.38,
       "상권_교체활발형": true,
-      "상권_성장형": false,
-      "업종성장률_500m": -0.034
+      "상권_성장형": true,
+      "업종성장률_500m": 0.021
     },
     "_doc_seoul_avg": {
       "서울_평균_폐업률": 0.14,
       "서울_평균_2030_비율": 0.28,
       "서울_평균_저녁매출_비율": 0.28,
-      "_doc": "Claude가 '서울 평균 대비 X' 같은 비교 해석에 사용"
+      "_doc": "OpenAI가 '서울 평균 대비 X' 비교 해석에 사용"
     }
   },
 
-  "_future_확장_필드": {
-    "_doc": "현재 null. 데이터 확보 시 활성화.",
-    "section_05_review_insight": null,
-    "section_06_investment_payback": null
+  "section_05_review_insight": {
+    "_doc": "네이버 리뷰 태그(옵션B). 스크래퍼가 홍대 요식업 전수→RDS, 백엔드가 매물별 50m·동종 집계. 민서 파트. 점수·비율은 백엔드 계산값(LLM 재계산 금지). 예시값은 illustrative.",
+    "collected": true,
+    "vacancy_id": "vac_hongdae_001",
+    "category": "카페·디저트",
+    "scope": { "radius_m": 50, "same_category_only": true, "store_count": 14, "tagged_store_count": 12 },
+    "demand_tags": [
+      { "tag": "커피가 맛있어요", "score": 8.7, "store_share": 0.83, "rank": 1 },
+      { "tag": "분위기가 좋아요", "score": 7.9, "store_share": 0.75, "rank": 2 },
+      { "tag": "집중하기 좋아요", "score": 6.8, "store_share": 0.58, "rank": 3 },
+      { "tag": "디저트가 맛있어요", "score": 6.1, "store_share": 0.50, "rank": 4 },
+      { "tag": "사진찍기 좋아요", "score": 5.2, "store_share": 0.42, "rank": 5 }
+    ],
+    "_doc_demand": "수요태그 점수 = Σ(매물별 share_i × √voterCount_i). 가게별 비율 정규화 후 √투표수 가중 = '이 동네가 원하는 것'의 크기.",
+    "popular_store_common_tags": [
+      { "tag": "디저트가 맛있어요", "store_share": 1.00, "avg_voter_count": 412 },
+      { "tag": "친절해요", "store_share": 0.80, "avg_voter_count": 286 }
+    ],
+    "_doc_popular": "voter_count(리뷰 참여수) 상위 ~1/3 '잘되는/붐비는 집'에서 공통으로 강한 태그 = '잘되는 집의 공통점'. (별점 대신 참여수 프록시)",
+    "differentiator_tags": [
+      { "tag": "디저트가 맛있어요", "gap": 0.50 }
+    ],
+    "_doc_diff": "gap = popular_store_share − demand_store_share. 디저트는 동네 수요 4위지만 잘되는(붐비는) 집은 전부 강함 → 차별화 후보."
+  },
+
+  "section_06_investment_payback": {
+    "_doc": "투자 회수(가영 add_sales_payback.py 실데이터). 선택 매물의 선택 업종(커피음료) 기준 + Top3 비교. 모든 값은 백엔드/RDS 계산값(LLM 재계산 금지). 영업이익률: 커피음료 0.17. 초기투자비에 인테리어·설비 capex 미포함.",
+    "vacancy_id": "vac_hongdae_001",
+    "matched_category": "커피음료",
+    "_doc_category_map": "프론트 '카페·디저트' → 가영 SERVICE_CODES '커피음료'(CS100010). 9분류(지호)↔10분류(가영) 매핑은 팀 합의 필요.",
+    "초기투자비_만원": 7035,
+    "점포당평균매출_만원": 3200,
+    "월순이익_만원": 249,
+    "투자회수기간_개월": 28.3,
+    "투자회수평가": "2~3년 회수",
+    "매출매칭기준": "상권",
+    "bep_action": {
+      "객단가원": 6500,
+      "피크_손익분기_잔수": 46,
+      "피크_목표매출_잔수": 85,
+      "_doc": "손익분기 월매출/추정매출을 영업일(26)·피크비중(0.45)·객단가로 환산한 피크시간 필요 판매량. 민서 derived 보조."
+    },
+    "properties": [
+      { "rank": 1, "vacancy_id": "vac_hongdae_001", "주소_간략": "와우산로29길", "초기투자비_만원": 7035, "점포당평균매출_만원": 3200, "월순이익_만원": 249, "투자회수기간_개월": 28.3, "투자회수평가": "2~3년 회수", "매출매칭기준": "상권" },
+      { "rank": 2, "vacancy_id": "vac_hongdae_002", "주소_간략": "어울마당로5길", "초기투자비_만원": 5880, "점포당평균매출_만원": 2800, "월순이익_만원": 226, "투자회수기간_개월": 26.0, "투자회수평가": "2~3년 회수", "매출매칭기준": "상권" },
+      { "rank": 3, "vacancy_id": "vac_hongdae_003", "주소_간략": "홍익로6길", "초기투자비_만원": 8780, "점포당평균매출_만원": 3000, "월순이익_만원": 140, "투자회수기간_개월": 62.7, "투자회수평가": "3년 이상", "매출매칭기준": "상권배후지" }
+    ]
   }
 }

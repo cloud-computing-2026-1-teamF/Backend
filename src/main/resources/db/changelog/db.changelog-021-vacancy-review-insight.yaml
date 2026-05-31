@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 041-create-vacancy-review-insights
+      author: minseo
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              -- 보고서 chapter_8(주변 리뷰 인사이트)용. 매물별 50m 동종 네이버 리뷰 태그를
+              -- 옵션B(voter_count 가중)로 전처리한 결과(section_05_review_insight)를 JSONB로 저장.
+              -- 적재: 스크래퍼 export_competitors.py -> load_tag_insight.py. 데모: 홍대 시드.
+              create table if not exists vacancy_review_insights (
+                property_id   varchar(40) not null,
+                category_id   varchar(40),
+                insight       jsonb not null,
+                source        varchar(60) default 'naver-scraper-optionB',
+                collected_at  timestamp with time zone,
+                created_at    timestamp with time zone not null default now(),
+                primary key (property_id),
+                constraint fk_vacancy_review_insights_property
+                  foreign key (property_id) references vacancies(property_id) on delete cascade
+              );
+
+              create index if not exists idx_vacancy_review_insights_property
+                on vacancy_review_insights (property_id);

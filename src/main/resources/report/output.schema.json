@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sanggwon.ai/report/output.schema.json",
+  "title": "ReportOutput",
+  "description": "LLM이 반환해야 하는 구조화 출력. PDF 템플릿(Jinja/openhtmltopdf)에 1:1 바인딩. 백엔드는 이 스키마로 검증하고, 실패 시 1회 재시도 후 Track B(샘플)로 폴백한다.",
+  "type": "object",
+  "required": ["headline", "summary", "estimatedRevenue", "roi", "bep", "recommendation", "competition", "risks", "opportunities", "disclaimers"],
+  "additionalProperties": false,
+  "properties": {
+    "headline": {
+      "type": "string",
+      "description": "한 줄 핵심 결론",
+      "maxLength": 80
+    },
+    "grade": {
+      "type": "string",
+      "description": "입지 점수 등급 라벨(선택). 예: A, A-, B+",
+      "maxLength": 4
+    },
+    "summary": {
+      "type": "string",
+      "description": "줄글 총평 3~5문단(markdown 허용)"
+    },
+    "estimatedRevenue": {
+      "type": "object",
+      "required": ["monthlyKrw", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "monthlyKrw": { "type": "integer", "description": "context.market.estMonthlyRevenueKrw 인용" },
+        "areaAvgKrw": { "type": "integer", "description": "context.market.areaAvgSalesPerStoreKrw 인용" },
+        "vsAreaAvgPct": { "type": "number", "description": "지역 평균 대비 (%). +면 평균 이상" },
+        "note": { "type": "string" }
+      }
+    },
+    "roi": {
+      "type": "object",
+      "required": ["months", "initialInvestmentKrw", "monthlyNetProfitKrw", "assumptions"],
+      "additionalProperties": false,
+      "properties": {
+        "months": { "type": "number", "description": "derived.roiMonths 그대로" },
+        "initialInvestmentKrw": { "type": "integer", "description": "derived.initialInvestmentKrw 그대로" },
+        "monthlyNetProfitKrw": { "type": "integer", "description": "derived.monthlyNetProfitKrw 그대로" },
+        "assumptions": {
+          "type": "array",
+          "description": "사용한 가정을 사람이 읽을 문장으로 (원가율·인건비·인테리어비 등)",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    "bep": {
+      "type": "object",
+      "required": ["peakWindow", "minPeakUnitsPerDay", "targetPeakUnitsPerDay", "avgTicketPriceKrw", "basis"],
+      "additionalProperties": false,
+      "properties": {
+        "peakWindow": { "type": "string", "description": "footHourly 상위 시간대로 서술. 예: 평일 12–13시·18–20시" },
+        "minPeakUnitsPerDay": { "type": "integer", "description": "derived.bep.peakUnitsPerDay 그대로 (손익분기 최소)" },
+        "targetPeakUnitsPerDay": { "type": "integer", "description": "derived.target.peakUnitsPerDay 그대로 (추정매출 달성)" },
+        "avgTicketPriceKrw": { "type": "integer", "description": "context.assumptions.avgTicketPriceKrw 인용" },
+        "basis": { "type": "string", "description": "영업일·피크 매출비중 등 산출 근거 한 줄" }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "required": ["concept", "menu", "priceBand", "interior", "targetCustomer"],
+      "additionalProperties": false,
+      "properties": {
+        "concept": { "type": "string", "description": "competitors 리뷰+업종 근거 컨셉 제안" },
+        "menu": { "type": "array", "items": { "type": "string" }, "description": "추천 메뉴/시그니처" },
+        "priceBand": { "type": "string", "description": "권장 가격대 (객단가 가정과 정합)" },
+        "interior": { "type": "string", "description": "인테리어/좌석 방향 제안" },
+        "targetCustomer": { "type": "string", "description": "핵심 타깃 고객" }
+      }
+    },
+    "competition": {
+      "type": "object",
+      "required": ["summary", "positiveSignals", "cautions"],
+      "additionalProperties": false,
+      "properties": {
+        "summary": { "type": "string", "description": "경쟁점 수(comp/cafeCount500m) 기반 요약" },
+        "positiveSignals": { "type": "array", "items": { "type": "string" }, "description": "기회로 읽히는 태그" },
+        "cautions": { "type": "array", "items": { "type": "string" }, "description": "주의로 읽히는 태그/신호" }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "정성적 리스크 2~4개. 생존율 수치화 금지.",
+      "items": {
+        "type": "object",
+        "required": ["title", "detail"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      },
+      "minItems": 1
+    },
+    "opportunities": {
+      "type": "array",
+      "description": "정성적 기회 2~4개.",
+      "items": {
+        "type": "object",
+        "required": ["title", "detail"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      },
+      "minItems": 1
+    },
+    "disclaimers": {
+      "type": "array",
+      "description": "데이터 한계·가정 명시 2~4줄. 추정치/가정값 사용 사실 포함.",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  }
+}

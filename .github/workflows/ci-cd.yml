@@ -125,6 +125,10 @@ jobs:
           OPENAI_VACANCY_PROMPT_MODEL: ${{ vars.OPENAI_VACANCY_PROMPT_MODEL || 'gpt-5.4-nano' }}
           OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS: ${{ vars.OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS || '6' }}
           OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS: ${{ vars.OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS || '1200' }}
+          OPENAI_REPORT_ENABLED: ${{ vars.OPENAI_REPORT_ENABLED || 'true' }}
+          OPENAI_REPORT_MODEL: ${{ vars.OPENAI_REPORT_MODEL || 'gpt-5.4-nano' }}
+          OPENAI_REPORT_TIMEOUT_SECONDS: ${{ vars.OPENAI_REPORT_TIMEOUT_SECONDS || '60' }}
+          OPENAI_REPORT_MAX_OUTPUT_TOKENS: ${{ vars.OPENAI_REPORT_MAX_OUTPUT_TOKENS || '9000' }}
         run: |
           set -euo pipefail
 
@@ -141,6 +145,10 @@ jobs:
             --arg openaiModel "${OPENAI_VACANCY_PROMPT_MODEL}" \
             --arg openaiTimeout "${OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS}" \
             --arg openaiMaxOutputTokens "${OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS}" \
+            --arg reportEnabled "${OPENAI_REPORT_ENABLED}" \
+            --arg reportModel "${OPENAI_REPORT_MODEL}" \
+            --arg reportTimeout "${OPENAI_REPORT_TIMEOUT_SECONDS}" \
+            --arg reportMaxOutputTokens "${OPENAI_REPORT_MAX_OUTPUT_TOKENS}" \
             '
               del(
                 .taskDefinitionArn,
@@ -161,13 +169,21 @@ jobs:
                           and .name != "OPENAI_VACANCY_PROMPT_MODEL"
                           and .name != "OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS"
                           and .name != "OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS"
+                          and .name != "OPENAI_REPORT_ENABLED"
+                          and .name != "OPENAI_REPORT_MODEL"
+                          and .name != "OPENAI_REPORT_TIMEOUT_SECONDS"
+                          and .name != "OPENAI_REPORT_MAX_OUTPUT_TOKENS"
                         )))
                         + [
                           { "name": "OPENAI_API_KEY", "value": $openaiApiKey },
                           { "name": "OPENAI_VACANCY_PROMPT_ENABLED", "value": $openaiEnabled },
                           { "name": "OPENAI_VACANCY_PROMPT_MODEL", "value": $openaiModel },
                           { "name": "OPENAI_VACANCY_PROMPT_TIMEOUT_SECONDS", "value": $openaiTimeout },
-                          { "name": "OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS", "value": $openaiMaxOutputTokens }
+                          { "name": "OPENAI_VACANCY_PROMPT_MAX_OUTPUT_TOKENS", "value": $openaiMaxOutputTokens },
+                          { "name": "OPENAI_REPORT_ENABLED", "value": $reportEnabled },
+                          { "name": "OPENAI_REPORT_MODEL", "value": $reportModel },
+                          { "name": "OPENAI_REPORT_TIMEOUT_SECONDS", "value": $reportTimeout },
+                          { "name": "OPENAI_REPORT_MAX_OUTPUT_TOKENS", "value": $reportMaxOutputTokens }
                         ]
                       )
                   else

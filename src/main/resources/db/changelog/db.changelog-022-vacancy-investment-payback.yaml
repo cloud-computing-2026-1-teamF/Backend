@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 042-create-vacancy-investment-payback
+      author: minseo
+      changes:
+        # 보고서 chapter_9(투자 회수)용. 가영 add_sales_payback.py 산출(업종별 점포당매출·월순이익·
+        # 회수기간·평가)을 property_id 로 join 적재. (가영 CSV.ID == vacancies.property_id)
+        - createTable:
+            tableName: vacancy_investment_payback
+            columns:
+              - column:
+                  name: property_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: "varchar(40)"
+                  constraints:
+                    nullable: false
+              - column: { name: initial_investment_man, type: integer }
+              - column: { name: store_avg_sales_man, type: integer }
+              - column: { name: monthly_net_profit_man, type: integer }
+              - column: { name: payback_months, type: "numeric(6,1)" }
+              - column: { name: payback_label, type: "varchar(40)" }
+              - column: { name: sales_basis, type: "varchar(20)" }
+        - addPrimaryKey:
+            tableName: vacancy_investment_payback
+            columnNames: "property_id, category_id"
+            constraintName: pk_vacancy_investment_payback
+  - changeSet:
+      id: 043-load-vacancy-investment-payback
+      author: minseo
+      runOnChange: true
+      changes:
+        # reshape_payback.py 가 만든 investment_payback.csv 를 upsert.
+        # 빈 헤더 CSV면 0행 적재(배포 안전). 데이터 채워 커밋하면 다음 배포에 자동 반영.
+        - loadUpdateData:
+            tableName: vacancy_investment_payback
+            file: db/data/vacancy_dataset/investment_payback.csv
+            primaryKey: "property_id,category_id"
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: category_id, type: STRING }
+              - column: { name: initial_investment_man, type: NUMERIC }
+              - column: { name: store_avg_sales_man, type: NUMERIC }
+              - column: { name: monthly_net_profit_man, type: NUMERIC }
+              - column: { name: payback_months, type: NUMERIC }
+              - column: { name: payback_label, type: STRING }
+              - column: { name: sales_basis, type: STRING }
