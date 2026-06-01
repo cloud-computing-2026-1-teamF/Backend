@@ -26,7 +26,10 @@ data class ReportProperties(
         "7" to 0.13, // 패스트푸드
         "8" to 0.18, // 주점업
         "9" to 0.17  // 카페·디저트(커피음료 기준)
-    )
+    ),
+    // chapter_8 리뷰 태그: 매물 좌표 기준 동종 가게를 찾는 반경(m).
+    // 50m는 좁아 동종이 0~2곳일 수 있음 -> 표본 부족하면 100~150으로 상향(app.report.review-insight-radius-m).
+    val reviewInsightRadiusM: Int = 50
 ) {
     data class OpenAi(
         val enabled: Boolean = false,

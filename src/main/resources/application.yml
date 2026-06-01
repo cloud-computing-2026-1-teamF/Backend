@@ -58,8 +58,9 @@ app:
       api-key: ${OPENAI_API_KEY:}
       endpoint: ${OPENAI_RESPONSES_ENDPOINT:https://api.openai.com/v1/responses}
       model: ${OPENAI_REPORT_MODEL:gpt-5.4-nano}
-      timeout-seconds: ${OPENAI_REPORT_TIMEOUT_SECONDS:60}
-      max-output-tokens: ${OPENAI_REPORT_MAX_OUTPUT_TOKENS:9000}
+      # 보고서 JSON(필수 챕터 10개)은 ~12.5k 토큰·~85초 소요. 9000/60초로는 잘림·타임아웃 -> 503.
+      timeout-seconds: ${OPENAI_REPORT_TIMEOUT_SECONDS:180}
+      max-output-tokens: ${OPENAI_REPORT_MAX_OUTPUT_TOKENS:16000}
 
 springdoc:
   swagger-ui:

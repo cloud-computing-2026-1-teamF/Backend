@@ -4,8 +4,8 @@ import com.sanggwonai.api.analysis.dto.AnalysisRecommendationDto
 import com.sanggwonai.api.analysis.service.AnalysisService
 import com.sanggwonai.api.auth.service.AuthContext
 import com.sanggwonai.api.report.config.ReportProperties
+import com.sanggwonai.api.report.repository.ReviewStorePoolRepository
 import com.sanggwonai.api.report.repository.VacancyInvestmentPaybackRepository
-import com.sanggwonai.api.report.repository.VacancyReviewInsightRepository
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.repository.VacancyMetricReferenceRepository
@@ -31,7 +31,7 @@ import kotlin.math.roundToLong
  *  - top3[].floor              : VacancyEntity.floor (추천 DTO엔 없음)
  *  - vacancy_metric_reference  : 동일 업종 분포(top1)
  *  - selected_vacancy_extra    : 9-카테고리 점수 + 동네 시그널(VacancyCommonFeatureEntity)
- *  - section_05_review_insight : vacancy_review_insights jsonb (없으면 ch8 비활성)
+ *  - section_05_review_insight : crawl_naver_stores 반경 50m 동종 가게 태그 -> 런타임 옵션B 집계(없으면 ch8 비활성)
  *  - section_06_investment_payback : 가영 산식으로 백엔드 계산(투자회수는 RDS 미적재)
  *
  * ⚠ 검증 포인트(로컬 컴파일 시 실제 필드명과 대조):
@@ -44,7 +44,8 @@ class ReportContextAssembler(
     private val analysisService: AnalysisService,
     private val vacancyDataset: VacancyDataset,
     private val metricRepository: VacancyMetricReferenceRepository,
-    private val reviewInsightRepository: VacancyReviewInsightRepository,
+    private val reviewStorePoolRepository: ReviewStorePoolRepository,
+    private val reviewTagAggregator: ReviewTagAggregator,
     private val paybackRepository: VacancyInvestmentPaybackRepository,
     private val reportProperties: ReportProperties
 ) {
@@ -88,9 +89,18 @@ class ReportContextAssembler(
         result["vacancy_metric_reference"] = top1Id?.let { metricBlock(metricRepository.find(categoryId, it)) }
         result["selected_vacancy_extra"] = top1?.let { buildSelectedExtra(it, categoryId, categoryLabel, snap) }
 
-        // chapter_8 — 리뷰 태그(있을 때만). Top3 전부 읽어 top-level=Top1 + properties[]=3개.
+        // chapter_8 — 리뷰 태그(런타임 50m 동종 조인 + 옵션B 가중). Top3 각 매물 좌표 기준으로
+        // crawl_naver_stores 에서 반경 내 동종 가게를 조회해 백엔드가 직접 집계. 데이터 없으면 비활성.
+        // top-level=Top1 + properties[]=Top3.
+        val radiusM = reportProperties.reviewInsightRadiusM
+        val categoryTokens = REVIEW_CATEGORY_SYNONYMS[categoryId].orEmpty()
         val reviews = recs.take(3).mapNotNull { rec ->
-            reviewInsightRepository.find(rec.vacancyId)?.let { rec.vacancyId to it }
+            val vacancy = snap.vacancyById[rec.vacancyId] ?: return@mapNotNull null
+            val rlat = vacancy.latitude?.toDouble() ?: return@mapNotNull null
+            val rlng = vacancy.longitude?.toDouble() ?: return@mapNotNull null
+            val stores = reviewStorePoolRepository.findWithin(rlat, rlng, radiusM, categoryTokens)
+            if (stores.isEmpty()) null
+            else rec.vacancyId to reviewTagAggregator.build(stores, radiusM, categoryLabel)
         }
         if (reviews.isNotEmpty()) {
             val primary = reviews.firstOrNull { it.first == top1Id }?.second ?: reviews.first().second
@@ -227,6 +237,8 @@ class ReportContextAssembler(
                 "월순이익_만원" to p.netProfit,
                 "투자회수기간_개월" to p.months,
                 "투자회수평가" to p.label,
+                "기존시설_활용가능" to p.facilityReusable,
+                "기존시설_문구" to p.facilityReuseNote,
                 "매출매칭기준" to p.basis
             )
         }
@@ -238,7 +250,7 @@ class ReportContextAssembler(
         val targetPeakUnits = p1.sales?.let { peakUnits(it.toDouble(), a) }
         return linkedMapOf(
             "_doc" to "투자 회수. 가영 실데이터(vacancy_investment_payback) 우선, 미적재 매물은 백엔드 추정(영업이익률 ${margin}). " +
-                "초기투자비에 인테리어·설비 capex 미포함.",
+                "초기투자비에 인테리어·설비 capex 미포함. '기존시설_활용가능'=true 면 이전에도 같은 업종이라 인테리어·설비비 절감 여지.",
             "vacancy_id" to top1.vacancyId,
             "matched_category" to categoryId,
             "초기투자비_만원" to p1.initial,
@@ -246,6 +258,8 @@ class ReportContextAssembler(
             "월순이익_만원" to p1.netProfit,
             "투자회수기간_개월" to p1.months,
             "투자회수평가" to p1.label,
+            "기존시설_활용가능" to p1.facilityReusable,
+            "기존시설_문구" to p1.facilityReuseNote,
             "매출매칭기준" to p1.basis,
             "bep_action" to linkedMapOf(
                 "객단가원" to a.avgTicketPriceKrw,
@@ -259,7 +273,9 @@ class ReportContextAssembler(
 
     private data class Payback(
         val initial: Long, val sales: Long?, val netProfit: Long?,
-        val months: Double?, val label: String, val basis: String
+        val months: Double?, val label: String, val basis: String,
+        // 기존 시설 활용 가능(이전에도 같은 업종 -> 인테리어·설비 capex 절감). 가영 실데이터에만 존재.
+        val facilityReusable: Boolean = false, val facilityReuseNote: String? = null
     )
 
     private fun payback(rec: AnalysisRecommendationDto, categoryId: String, margin: Double): Payback {
@@ -272,7 +288,9 @@ class ReportContextAssembler(
                 months = p.paybackMonths?.toDouble(),
                 label = p.paybackLabel
                     ?: paybackLabel(p.paybackMonths?.toDouble(), p.storeAvgSalesMan?.toLong(), p.monthlyNetProfitMan?.toLong()),
-                basis = "상권분석 추정매출(가영·${p.salesBasis ?: "상권"})"
+                basis = "상권분석 추정매출(가영·${p.salesBasis ?: "상권"})",
+                facilityReusable = p.facilityReusable,
+                facilityReuseNote = p.facilityReuseNote
             )
         }
         val a = reportProperties.assumptions
@@ -330,6 +348,21 @@ class ReportContextAssembler(
         val CATEGORY_NAMES: Map<String, String> = linkedMapOf(
             "1" to "한식", "2" to "중식", "3" to "일식", "4" to "서양식", "5" to "기타",
             "6" to "구내식당및뷔페", "7" to "패스트푸드", "8" to "주점업", "9" to "카페디저트"
+        )
+
+        // category_id("1".."9") -> crawl_naver_stores.category(네이버 원문) LIKE 매칭용 동의어 토큰.
+        // 스크래퍼 export_competitors.py 의 CATEGORY_SYNONYMS 를 백엔드 9분류에 맞춰 확장.
+        // 5(기타)/6(구내식당및뷔페)은 네이버 원문에 또렷한 키워드가 없어 보수적으로만 매칭.
+        val REVIEW_CATEGORY_SYNONYMS: Map<String, List<String>> = linkedMapOf(
+            "1" to listOf("한식", "백반", "국밥", "분식", "찌개", "한정식", "국수", "기사식당"),
+            "2" to listOf("중식", "중국집", "중화", "마라"),
+            "3" to listOf("일식", "초밥", "스시", "라멘", "돈카츠", "우동", "이자카야"),
+            "4" to listOf("양식", "이탈리안", "파스타", "스테이크", "레스토랑", "피자", "브런치"),
+            "5" to listOf("음식점", "식당"),
+            "6" to listOf("뷔페", "부페", "구내식당"),
+            "7" to listOf("패스트푸드", "버거", "햄버거", "치킨", "토스트"),
+            "8" to listOf("주점", "술집", "호프", "이자카야", "포차", "바", "펍", "와인"),
+            "9" to listOf("카페", "커피", "디저트", "베이커리", "브런치", "찻집", "제과", "빵")
         )
     }
 }

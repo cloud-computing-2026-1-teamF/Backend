@@ -88,14 +88,14 @@ class ReportPromptService(
             ?: error("리소스 없음: $path  (build.gradle.kts 의 sourceSets resources srcDir(\"reports\") 확인)")
 
     companion object {
+        // 9->7 챕터 재구성: chapter_2(분석개요)·chapter_6(종합진단) 제거.
+        // 리스크/액션은 chapter_1로 통합, 한계는 chapter_7로 축소.
         private val REQUIRED_CHAPTERS = listOf(
             "report_metadata",
             "chapter_1_executive_summary",
-            "chapter_2_analysis_overview",
             "chapter_3_top3_property_analysis",
             "chapter_4_location_characteristics",
             "chapter_5_business_fit_analysis",
-            "chapter_6_diagnosis_and_action",
             "chapter_7_appendix"
         )
     }

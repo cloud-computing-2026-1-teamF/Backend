@@ -101,10 +101,11 @@ class ReportPdfRenderer {
         .replace("\"", "&quot;").replace("\n", "<br/>")
 
     companion object {
+        // 9->7 챕터 재구성: chapter_2·chapter_6 제거(렌더 순서에서도 제외).
         private val CHAPTER_ORDER = listOf(
-            "chapter_1_executive_summary", "chapter_2_analysis_overview",
+            "chapter_1_executive_summary",
             "chapter_3_top3_property_analysis", "chapter_4_location_characteristics",
-            "chapter_5_business_fit_analysis", "chapter_6_diagnosis_and_action",
+            "chapter_5_business_fit_analysis",
             "chapter_7_appendix", "chapter_8_review_insight", "chapter_9_investment_payback"
         )
         private val CH_SKIP = setOf("chapter_number", "chapter_title", "활성_여부")

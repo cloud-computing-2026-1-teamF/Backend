@@ -29,6 +29,20 @@ databaseChangeLog:
             columnNames: "property_id, category_id"
             constraintName: pk_vacancy_investment_payback
   - changeSet:
+      id: 044-add-facility-reuse-to-investment-payback
+      author: minseo
+      changes:
+        # '기존 시설 활용 가능'(공실이 이전에도 같은 업종 -> 인테리어·설비 capex 절감) 구조화.
+        # 가영 라벨 문자열에 묻혀 있던 suffix 를 reshape_payback.py 가 분리해 별도 컬럼으로 적재.
+        #   facility_reusable   : 활용 가능 여부(boolean)
+        #   facility_reuse_note : 표시 문구('기존 시설 활용 가능' | 빈값)
+        # 042 createTable 이후·043 load 이전에 위치해야 load 가 새 컬럼을 채울 수 있다.
+        - addColumn:
+            tableName: vacancy_investment_payback
+            columns:
+              - column: { name: facility_reusable, type: boolean, defaultValueBoolean: false }
+              - column: { name: facility_reuse_note, type: "varchar(40)" }
+  - changeSet:
       id: 043-load-vacancy-investment-payback
       author: minseo
       runOnChange: true
@@ -48,3 +62,5 @@ databaseChangeLog:
               - column: { name: payback_months, type: NUMERIC }
               - column: { name: payback_label, type: STRING }
               - column: { name: sales_basis, type: STRING }
+              - column: { name: facility_reusable, type: BOOLEAN }
+              - column: { name: facility_reuse_note, type: STRING }

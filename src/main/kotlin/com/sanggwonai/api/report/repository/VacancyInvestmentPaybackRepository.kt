@@ -11,7 +11,10 @@ data class InvestmentPayback(
     val monthlyNetProfitMan: Int?,
     val paybackMonths: BigDecimal?,
     val paybackLabel: String?,
-    val salesBasis: String?
+    val salesBasis: String?,
+    // 공실이 이전에도 같은 업종 -> 인테리어·설비 capex 절감(기존 시설 활용 가능).
+    val facilityReusable: Boolean,
+    val facilityReuseNote: String?
 )
 
 /**
@@ -26,7 +29,8 @@ class VacancyInvestmentPaybackRepository(
         jdbcTemplate.query(
             """
             select initial_investment_man, store_avg_sales_man, monthly_net_profit_man,
-                   payback_months, payback_label, sales_basis
+                   payback_months, payback_label, sales_basis,
+                   facility_reusable, facility_reuse_note
             from vacancy_investment_payback
             where property_id = :pid and category_id = :cid
             """.trimIndent(),
@@ -38,7 +42,9 @@ class VacancyInvestmentPaybackRepository(
                 monthlyNetProfitMan = (rs.getObject("monthly_net_profit_man") as? Number)?.toInt(),
                 paybackMonths = rs.getBigDecimal("payback_months"),
                 paybackLabel = rs.getString("payback_label"),
-                salesBasis = rs.getString("sales_basis")
+                salesBasis = rs.getString("sales_basis"),
+                facilityReusable = rs.getObject("facility_reusable") as? Boolean ?: false,
+                facilityReuseNote = rs.getString("facility_reuse_note")
             )
         }.firstOrNull()
     }.getOrNull()  // 테이블 미존재/쿼리 실패 시 백엔드 추정으로 폴백
