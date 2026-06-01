@@ -45,3 +45,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-022-vacancy-investment-payback.yaml
   - include:
       file: db/changelog/db.changelog-023-naver-crawl-stores.yaml
+  - include:
+      file: db/changelog/db.changelog-024-load-naver-crawl-data.yaml
