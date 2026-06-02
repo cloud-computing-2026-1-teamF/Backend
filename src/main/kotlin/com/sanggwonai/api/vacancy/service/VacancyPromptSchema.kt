@@ -30,6 +30,7 @@ object VacancyPromptSchema {
         Apply this money conversion to every price field, including 권리금 and 매매가. Examples: 권리금 1억 이하 -> premium_max=10000, 매매가 20억 이하 -> sale_price_max=200000.
         Area fields are in 제곱미터. Convert 평 to square meters by multiplying by 3.3058. Examples: 전용 30평 이상 -> dedicated_area_min=99.17, 전용 40평 이하 -> dedicated_area_max=132.23.
         If the user says 내외, 정도, 쯤, 언저리, or 전후 for a number, use about a 10 percent range.
+        Boolean intent should be literal: 가격협의 가능 -> price.price_negotiable=true, 임대료 조정 가능 -> price.rent_adjustable=true, 무상임대기간/렌트프리 -> price.rent_free_period_available=true, 엘리베이터/엘베 있음 -> amenities.elevator_available=true, 테라스/루프탑 있으면 좋음 -> the corresponding amenity boolean true.
         Canonical transaction_type values are: 임대, 전세, 매매.
         Canonical score_mode values are: best, category.
         Canonical sort values are: score_desc, rent_asc, rent_desc, deposit_asc, area_desc, updated_desc.
@@ -41,7 +42,7 @@ object VacancyPromptSchema {
         If exactly one station is mentioned, location.subway may also contain that station. If multiple stations are mentioned, keep location.subway null and use location.subway_keywords.
         For multi-dong prompts, put every mentioned dong into location.dong_keywords. Example: "논현동이나 신사동" -> ["논현동","신사동"]. If exactly one dong is mentioned, location.dong may also contain it. If multiple dongs are mentioned, keep location.dong null and use location.dong_keywords.
         Do not invent area_id unless it is explicitly provided. Put Korean 구 terms into location.district.
-        Map soft commercial phrases when the schema has a matching metric: 유동인구 많은/학생 유동 많은 -> commercial.floating_population_quarterly_min=200000; 2030 많은/학생 많은 -> commercial.age2030_population_ratio_min=0.30; 음식점 많은 -> commercial.restaurant_count500m_min=100; 카페 적은 -> commercial.cafe_count500m_max=30; 여성 매출 비율 높은 -> commercial.female_sales_ratio_min=0.35.
+        Map soft commercial phrases when the schema has a matching metric: 유동인구 많은/학생 유동 많은 -> commercial.floating_population_quarterly_min=200000; 직장인구 많은 -> commercial.worker_population_quarterly_min=200000; 2030 많은/학생 많은 -> commercial.age2030_population_ratio_min=0.30; 음식점 많은 -> commercial.restaurant_count500m_min=100; 카페 적은/카페 너무 많지 않은/카페 많은 곳 피함 -> commercial.cafe_count500m_max=30; 여성 매출 비율 높은 -> commercial.female_sales_ratio_min=0.35; 여성 인구 비율 높은 -> commercial.female_population_ratio_min=0.45; 저녁매출/심야매출/주말매출 높은 -> matching *_sales_ratio_min; 폐업률 낮음 -> commercial.closure_rate_max=2; 개업률 높음 -> commercial.opening_rate_min=1; 공시지가 부담 낮음 -> commercial.official_land_price_max=20000000; 음식 지출/총 지출 높은 -> commercial.food_spending_min or total_spending_min=1000000000.
         Map "사무실형 상가" to building.building_type="사무실형".
     """.trimIndent()
 

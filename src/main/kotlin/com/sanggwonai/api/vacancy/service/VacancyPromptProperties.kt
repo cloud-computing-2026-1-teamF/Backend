@@ -12,7 +12,7 @@ data class VacancyPromptProperties(
         val apiKey: String = "",
         val endpoint: String = "https://api.openai.com/v1/responses",
         val model: String = "gpt-4.1-mini",
-        val timeoutSeconds: Long = 6,
+        val timeoutSeconds: Long = 15,
         val maxOutputTokens: Int = 1200
     )
 }
