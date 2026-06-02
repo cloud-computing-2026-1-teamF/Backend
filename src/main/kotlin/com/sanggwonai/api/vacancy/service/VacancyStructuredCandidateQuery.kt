@@ -30,7 +30,7 @@ class VacancyStructuredCandidateQuery(
         addText(where, params, """cf."행정동_행정동_코드"""", location?.areaId, "areaId")
         addText(where, params, """v."시도"""", location?.province, "province")
         addText(where, params, """v."구"""", location?.district, "district")
-        addText(where, params, """v."동"""", location?.dong, "dong")
+        addTextAlternatives(where, params, """v."동"""", location?.dongKeywords(), "dong")
         addCombinedText(
             where = where,
             params = params,
@@ -211,6 +211,26 @@ class VacancyStructuredCandidateQuery(
         params.addValue(name, like(value))
     }
 
+    private fun addTextAlternatives(
+        where: MutableList<String>,
+        params: MapSqlParameterSource,
+        field: String,
+        rawValues: List<String>?,
+        name: String
+    ) {
+        val values = rawValues
+            ?.mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            ?.distinct()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return
+        val clauses = values.mapIndexed { index, value ->
+            val paramName = "${name}Keyword$index"
+            params.addValue(paramName, like(value))
+            "lower(coalesce($field, '')) like :$paramName escape '\\'"
+        }
+        where += clauses.joinToString(prefix = "(", postfix = ")", separator = " or ")
+    }
+
     private fun addStationKeywords(
         where: MutableList<String>,
         params: MapSqlParameterSource,
@@ -351,6 +371,12 @@ class VacancyStructuredCandidateQuery(
 
     private fun VacancyLocationFilter.stationKeywords(): List<String> {
         return (subwayKeywords.orEmpty() + listOfNotNull(subway))
+            .mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            .distinct()
+    }
+
+    private fun VacancyLocationFilter.dongKeywords(): List<String> {
+        return (dongKeywords.orEmpty() + listOfNotNull(dong))
             .mapNotNull { it.trim().takeIf(String::isNotEmpty) }
             .distinct()
     }

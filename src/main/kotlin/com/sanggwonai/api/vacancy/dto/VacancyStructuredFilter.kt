@@ -82,6 +82,7 @@ data class VacancyLocationFilter(
     val province: String? = null,
     val district: String? = null,
     val dong: String? = null,
+    val dongKeywords: List<String>? = null,
     val address: String? = null,
     val subway: String? = null,
     val subwayKeywords: List<String>? = null,
@@ -89,19 +90,28 @@ data class VacancyLocationFilter(
     val longitude: Double? = null,
     val radiusM: Int? = null
 ) {
-    fun normalized(): VacancyLocationFilter = copy(
-        areaId = cleanText(areaId),
-        province = cleanText(province),
-        district = cleanText(district),
-        dong = cleanText(dong),
-        address = cleanText(address),
-        subway = cleanText(subway),
-        subwayKeywords = normalizeStationKeywords(subwayKeywords, subway),
-        radiusM = radiusM?.coerceIn(MIN_RADIUS_M, MAX_RADIUS_M)
-    )
+    fun normalized(): VacancyLocationFilter {
+        val cleanDistrict = cleanText(district)
+        val cleanDong = cleanText(dong)
+        val districtAsDong = cleanDistrict?.takeIf { cleanDong == null && looksLikeDong(it) }
+        val normalizedDistrict = if (districtAsDong != null) null else cleanDistrict
+        val normalizedDong = cleanDong ?: districtAsDong
+        return copy(
+            areaId = cleanText(areaId),
+            province = cleanText(province),
+            district = normalizedDistrict,
+            dong = normalizedDong,
+            dongKeywords = normalizeTextList(dongKeywords, normalizedDong),
+            address = cleanText(address),
+            subway = cleanText(subway),
+            subwayKeywords = normalizeStationKeywords(subwayKeywords, subway),
+            radiusM = radiusM?.coerceIn(MIN_RADIUS_M, MAX_RADIUS_M)
+        )
+    }
 
     fun empty(): Boolean {
         return listOf(areaId, province, district, dong, address, subway).all { it.isNullOrBlank() } &&
+            dongKeywords.isNullOrEmpty() &&
             subwayKeywords.isNullOrEmpty() &&
             latitude == null &&
             longitude == null &&
@@ -177,7 +187,7 @@ data class VacancySpaceFilter(
     val groundFloor: Boolean? = null,
     val basement: Boolean? = null
 ) {
-    fun normalized(): VacancySpaceFilter = copy(floorText = cleanText(floorText))
+    fun normalized(): VacancySpaceFilter = copy(floorText = normalizeFloorText(floorText, groundFloor, basement))
 
     fun empty(): Boolean {
         return dedicatedAreaMin == null &&
@@ -340,6 +350,25 @@ data class VacancySpatialFilter(
 
 private fun cleanText(value: String?): String? {
     return value?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+private fun normalizeTextList(values: List<String>?, singleValue: String?): List<String>? {
+    return (values.orEmpty() + listOfNotNull(singleValue))
+        .flatMap { it.split(',', ';', '/', '|', '·', 'ㆍ') }
+        .mapNotNull(::cleanText)
+        .distinct()
+        .takeIf { it.isNotEmpty() }
+}
+
+private fun looksLikeDong(value: String): Boolean {
+    return Regex("""^[가-힣]{2,}(?:동|가)$""").matches(value)
+}
+
+private fun normalizeFloorText(value: String?, groundFloor: Boolean?, basement: Boolean?): String? {
+    val text = cleanText(value) ?: return null
+    if (groundFloor == true && text == "1층") return null
+    if (basement == true && Regex("""지하\s*1층""").matches(text)) return null
+    return text
 }
 
 private fun normalizeStationKeywords(values: List<String>?, subway: String?): List<String>? {

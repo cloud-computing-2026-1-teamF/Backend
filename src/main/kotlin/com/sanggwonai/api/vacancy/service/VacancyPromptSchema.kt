@@ -27,16 +27,22 @@ object VacancyPromptSchema {
         You convert Korean commercial vacancy search text into the exact JSON filter contract.
         Use only the schema keys and enum values. Use null for every unknown or unspecified field.
         Money fields are in 만원. Convert 1억 to 10000 and 1천만원 to 1000.
+        Apply this money conversion to every price field, including 권리금 and 매매가. Examples: 권리금 1억 이하 -> premium_max=10000, 매매가 20억 이하 -> sale_price_max=200000.
+        Area fields are in 제곱미터. Convert 평 to square meters by multiplying by 3.3058. Examples: 전용 30평 이상 -> dedicated_area_min=99.17, 전용 40평 이하 -> dedicated_area_max=132.23.
         If the user says 내외, 정도, 쯤, 언저리, or 전후 for a number, use about a 10 percent range.
         Canonical transaction_type values are: 임대, 전세, 매매.
         Canonical score_mode values are: best, category.
         Canonical sort values are: score_desc, rent_asc, rent_desc, deposit_asc, area_desc, updated_desc.
+        If the user asks for 넓은/큰 매장 or explicitly wants larger area first, set sort=area_desc. If the user asks for 낮은 월세/저렴한 월세 order, set sort=rent_asc.
         Category ids and labels are: 1=한식, 2=중식, 3=일식, 4=서양식, 5=기타, 6=구내식당 및 뷔페, 7=패스트푸드, 8=주점업, 9=카페/디저트.
         Alias examples: 고기집/고깃집/한식당 -> 1, 중국집/중식당 -> 2, 일식집/초밥 -> 3, 양식/파스타 -> 4, 뷔페/구내식당 -> 6, 햄버거/패스트푸드 -> 7, 술집/주점/포차 -> 8, 카페/디저트/베이커리 -> 9.
         If a prompt asks for a business-suitable place, set category.category_id, category.category_label, category.score_mode=category, and sort=score_desc.
         For station-area prompts, put every mentioned station into location.subway_keywords. Example: "시청역이나 강남역 주변" -> ["시청역","강남역"].
         If exactly one station is mentioned, location.subway may also contain that station. If multiple stations are mentioned, keep location.subway null and use location.subway_keywords.
-        Do not invent area_id unless it is explicitly provided. Put Korean 구/동 terms into location.district and location.dong.
+        For multi-dong prompts, put every mentioned dong into location.dong_keywords. Example: "논현동이나 신사동" -> ["논현동","신사동"]. If exactly one dong is mentioned, location.dong may also contain it. If multiple dongs are mentioned, keep location.dong null and use location.dong_keywords.
+        Do not invent area_id unless it is explicitly provided. Put Korean 구 terms into location.district.
+        Map soft commercial phrases when the schema has a matching metric: 유동인구 많은/학생 유동 많은 -> commercial.floating_population_quarterly_min=200000; 2030 많은/학생 많은 -> commercial.age2030_population_ratio_min=0.30; 음식점 많은 -> commercial.restaurant_count500m_min=100; 카페 적은 -> commercial.cafe_count500m_max=30; 여성 매출 비율 높은 -> commercial.female_sales_ratio_min=0.35.
+        Map "사무실형 상가" to building.building_type="사무실형".
     """.trimIndent()
 
     val jsonSchema: Map<String, Any?> = objectSchema(
@@ -96,6 +102,7 @@ object VacancyPromptSchema {
         "province" to nullableString("시도, for example 서울특별시."),
         "district" to nullableString("구, for example 송파구."),
         "dong" to nullableString("동, for example 방이동."),
+        "dong_keywords" to nullableStringArray("Multiple dong keywords, for example [\"논현동\", \"신사동\"]. Use this for A동이나 B동 prompts."),
         "address" to nullableString("도로명주소/지번주소/building keyword."),
         "subway" to nullableString("지하철역 keyword, for example 잠실역."),
         "subway_keywords" to nullableStringArray("Multiple station keywords, for example [\"시청역\", \"강남역\"]. Use this for A역이나 B역 prompts."),

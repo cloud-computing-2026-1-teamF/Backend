@@ -1,10 +1,13 @@
 package com.sanggwonai.api.vacancy.service
 
 import com.sanggwonai.api.vacancy.dto.VacancyAmenityFilter
+import com.sanggwonai.api.vacancy.dto.VacancyBuildingFilter
 import com.sanggwonai.api.vacancy.dto.VacancyCategoryFilter
+import com.sanggwonai.api.vacancy.dto.VacancyCommercialFilter
 import com.sanggwonai.api.vacancy.dto.VacancyLocationFilter
 import com.sanggwonai.api.vacancy.dto.VacancyPriceFilter
 import com.sanggwonai.api.vacancy.dto.VacancySpaceFilter
+import com.sanggwonai.api.vacancy.dto.VacancySpatialFilter
 import com.sanggwonai.api.vacancy.dto.VacancyStructuredFilter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -152,12 +155,18 @@ private object VacancyPromptFallbackParser {
         Regex("카페|커피|디저트|베이커리|빵집") to ("9" to "카페/디저트")
     )
     private val moneyPattern = Regex(
-        """(월세|보증금|전세|권리금|매매가|매매|관리비)\s*([0-9]+(?:\.[0-9]+)?)\s*(억원|억|천만원|천만|만원|만)?\s*(이하|이내|미만|내외|정도|쯤|언저리|전후)?"""
+        """(월세|보증금|전세|권리금|매매가|매매|관리비)(?:은|는|이|가|도)?[^0-9]{0,12}([0-9]+(?:\.[0-9]+)?)\s*(억원|억|천만원|천만|만원|만)?\s*(이하|이내|미만|아래|내외|정도|쯤|언저리|전후)?"""
     )
     private val areaPattern = Regex(
         """(전용|공급|면적)?\s*([0-9]+(?:\.[0-9]+)?)\s*(평|제곱미터|㎡)\s*(이상|이하|이내|내외|정도|쯤|전후)?"""
     )
     private val approximateTerms = setOf("내외", "정도", "쯤", "언저리", "전후")
+    private val seoulDistricts = setOf(
+        "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구",
+        "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구",
+        "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"
+    )
+    private val ignoredDongWords = setOf("유동", "이동", "활동")
 
     fun parse(prompt: String): VacancyStructuredFilter {
         var location = parseLocation(prompt)
@@ -172,13 +181,19 @@ private object VacancyPromptFallbackParser {
         }
         val space = parseSpace(prompt)
         val amenities = parseAmenities(prompt)
+        val building = parseBuilding(prompt)
+        val commercial = parseCommercial(prompt)
+        val spatial = parseSpatial(prompt)
         val sort = parseSort(prompt, category)
         val recognized = location != null ||
             category != null ||
             transactionType != null ||
             !price.empty() ||
             space != null ||
-            amenities != null
+            amenities != null ||
+            building != null ||
+            commercial != null ||
+            spatial != null
 
         return VacancyStructuredFilter(
             q = if (recognized) null else prompt,
@@ -187,19 +202,28 @@ private object VacancyPromptFallbackParser {
             transactionType = transactionType,
             price = price.takeUnless { it.empty() },
             space = space,
+            building = building,
             amenities = amenities,
+            commercial = commercial,
+            spatial = spatial,
             sort = sort
         )
     }
 
     private fun parseLocation(prompt: String): VacancyLocationFilter? {
-        val district = Regex("""([가-힣]+구)""").find(prompt)?.value
-        val dong = Regex("""([가-힣]+동)""").find(prompt)?.value
         val subwayKeywords = Regex("""([가-힣A-Za-z0-9]+역)""")
             .findAll(prompt)
             .map { it.value }
             .distinct()
             .toList()
+        var locationText = prompt
+        subwayKeywords.forEach { locationText = locationText.replace(it, " ") }
+        val district = seoulDistricts.firstOrNull { locationText.contains(it) }
+        district?.let { locationText = locationText.replace(it, " ") }
+        val dong = Regex("""([가-힣]{2,}(?:동|가))""")
+            .findAll(locationText)
+            .map { it.value }
+            .firstOrNull { it !in ignoredDongWords }
         val subway = subwayKeywords.singleOrNull()
         if (district == null && dong == null && subwayKeywords.isEmpty()) return null
         return VacancyLocationFilter(
@@ -213,6 +237,9 @@ private object VacancyPromptFallbackParser {
     private fun parseCategory(prompt: String): VacancyCategoryFilter? {
         val match = categoryAliases.entries.firstOrNull { it.key.containsMatchIn(prompt) } ?: return null
         val (categoryId, label) = match.value
+        if (categoryId == "9" && Regex("""카페(?:는|은|가|도)?\s*(적은|적고|적게|부족|없는)""").containsMatchIn(prompt)) {
+            return null
+        }
         val asksSuitability = Regex("적합|추천|좋은|맞는|어울리는").containsMatchIn(prompt)
         return VacancyCategoryFilter(
             categoryId = categoryId,
@@ -232,10 +259,18 @@ private object VacancyPromptFallbackParser {
     }
 
     private fun parseSpace(prompt: String): VacancySpaceFilter? {
+        val basementMentioned = prompt.contains("지하")
+        val basementNegated = Regex("""지하[^,.，。]*?(말고|아닌|아니고|제외|빼고|싫)""").containsMatchIn(prompt)
+        val basementOne = Regex("""지하\s*1층""").containsMatchIn(prompt)
+        val floorText = Regex("""[0-9]+층""").find(prompt)?.value
         var space = VacancySpaceFilter(
-            floorText = Regex("""[0-9]+층""").find(prompt)?.value,
-            groundFloor = if (Regex("""(^|[^0-9])1층""").containsMatchIn(prompt)) true else null,
-            basement = if (prompt.contains("지하")) true else null
+            floorText = floorText?.takeUnless { it == "1층" },
+            groundFloor = if (!basementOne && Regex("""(^|[^0-9])1층""").containsMatchIn(prompt)) true else null,
+            basement = when {
+                basementNegated -> false
+                basementMentioned -> true
+                else -> null
+            }
         )
         areaPattern.findAll(prompt).forEach { match ->
             val areaKind = match.groupValues[1]
@@ -257,6 +292,18 @@ private object VacancyPromptFallbackParser {
         return space.normalized().takeUnless { it.empty() }
     }
 
+    private fun parseBuilding(prompt: String): VacancyBuildingFilter? {
+        val building = VacancyBuildingFilter(
+            buildingType = when {
+                prompt.contains("사무실형") -> "사무실형"
+                prompt.contains("상가형") -> "상가형"
+                prompt.contains("주택형") -> "주택형"
+                else -> null
+            }
+        )
+        return building.normalized().takeUnless { it.empty() }
+    }
+
     private fun parseAmenities(prompt: String): VacancyAmenityFilter? {
         val amenities = VacancyAmenityFilter(
             parkingAvailable = if (prompt.contains("주차")) true else null,
@@ -269,6 +316,29 @@ private object VacancyPromptFallbackParser {
             lateNightOperationAvailable = if (prompt.contains("심야") || prompt.contains("야간")) true else null
         )
         return amenities.takeUnless { it.empty() }
+    }
+
+    private fun parseCommercial(prompt: String): VacancyCommercialFilter? {
+        val commercial = VacancyCommercialFilter(
+            floatingPopulationQuarterlyMin = if (Regex("""유동인구|유동\s*많|유동\s*높""").containsMatchIn(prompt)) BigDecimal("200000") else null,
+            age2030PopulationRatioMin = if (Regex("""2030|20대|30대|학생""").containsMatchIn(prompt)) BigDecimal("0.30") else null,
+            femaleSalesRatioMin = if (Regex("""여성\s*매출""").containsMatchIn(prompt)) BigDecimal("0.35") else null,
+            restaurantCount500mMin = if (Regex("""(음식점|식당)[^,.，。]*(많|밀집|풍부)""").containsMatchIn(prompt)) 100 else null,
+            cafeCount500mMax = if (Regex("""카페[^,.，。]*(적|부족|없는)""").containsMatchIn(prompt)) 30 else null
+        )
+        return commercial.takeUnless { it.empty() }
+    }
+
+    private fun parseSpatial(prompt: String): VacancySpatialFilter? {
+        val sameCategoryMax = Regex("""(경쟁점포|경쟁\s*점포|동종\s*점포|동종\s*식당)[^0-9]{0,8}([0-9]+)\s*개?\s*(이하|이내|미만|아래)?""")
+            .find(prompt)
+            ?.groupValues
+            ?.getOrNull(2)
+            ?.toIntOrNull()
+        val spatial = VacancySpatialFilter(
+            sameCategoryRestaurantCount500mMax = sameCategoryMax
+        )
+        return spatial.takeUnless { it.empty() }
     }
 
     private fun parseSort(prompt: String, category: VacancyCategoryFilter?): String {
