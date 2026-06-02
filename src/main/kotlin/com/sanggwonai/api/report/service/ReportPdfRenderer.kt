@@ -198,8 +198,8 @@ class ReportPdfRenderer {
         if (nearby != null || accText.isNotBlank()) {
             sb.append("<div class=\"panel\" style=\"margin-top:14px\"><h3>교통 · 접근성</h3>")
             sb.append("<table class=\"kvs\">")
-            kv(sb, "지하철", str(nearby?.get("subway")))
-            kv(sb, "버스", str(nearby?.get("bus")))
+            kv(sb, "지하철", summarizeTransit(str(nearby?.get("subway"))))
+            kv(sb, "버스", summarizeTransit(str(nearby?.get("bus"))))
             kv(sb, "주차", str(nearby?.get("parking")))
             sb.append("</table>")
             if (accText.isNotBlank()) sb.append("<p class=\"body sm\">").append(esc(accText)).append("</p>")
@@ -460,6 +460,15 @@ class ReportPdfRenderer {
         else "₩" + "%,d".format(v.toLong()) + "만"
     }
     private fun shortAddr(addr: String): String = addr.trim().split(' ').takeLast(2).joinToString(" ").ifBlank { addr }
+    /** 정류장/역 목록 덤프를 앞 N개 이름만 요약("A · B · C 외 12곳"). 노선번호 괄호 제거. 짧으면 원문 유지. */
+    private fun summarizeTransit(raw: String, maxItems: Int = 3): String {
+        val s = raw.trim()
+        if (s.length <= 50) return s
+        val items = s.split(';', '·', '\n').map { it.substringBefore('(').trim() }.filter { it.isNotBlank() }.distinct()
+        if (items.size <= 1) return s.take(48) + "…"
+        val head = items.take(maxItems).joinToString(" · ")
+        return if (items.size > maxItems) "$head 외 ${items.size - maxItems}곳" else head
+    }
     private fun scoreColor(s: Int): String = when { s >= 80 -> GREEN; s >= 60 -> ORANGE; s >= 45 -> AMBER; else -> RED }
     private fun sevClass(s: String): String = when { s.contains("높") -> "hi"; s.contains("중") -> "mid"; else -> "low" }
     private fun sevLabel(s: String): String = when { s.contains("높") -> "심각 높음"; s.contains("중") -> "중간"; else -> "낮음" }
@@ -481,8 +490,10 @@ class ReportPdfRenderer {
               @bottom-right { content: counter(page) " / " counter(pages); font-family:'Noto Sans KR'; font-size:8pt; color:#9AA3B2; } }
             * { box-sizing: border-box; }
             body { font-family:'Noto Sans KR', sans-serif; color:#1B2330; font-size:10pt; line-height:1.5; margin:0; }
-            .sheet { page-break-before: always; }
-            .sheet.first { page-break-before: avoid; }
+            .sheet { page-break-inside: auto; }
+            .sec { page-break-after: avoid; margin-top: 22px; }
+            .cover, .panel, .callout, .risk, .hero, .twocol, .disc, .mkpi,
+              table.act, table.bar, table.kpis, table.cmp tr, .swslist tr { page-break-inside: avoid; }
             .pad { padding: 4px 2px; }
             .body { font-size:10pt; line-height:1.6; color:#374050; margin:8px 0; }
             .body.sm { font-size:9pt; line-height:1.5; }
@@ -496,7 +507,7 @@ class ReportPdfRenderer {
               background:rgba(255,255,255,.18); color:#fff; margin:0 5px 5px 0; }
             .badge.grade { background:#fff; color:#B9791A; font-weight:bold; }
             .badge.stamp { background:#D33A3A; color:#fff; }
-            .sec { font-size:12pt; color:#E85D1F; margin:18px 0 12px; padding-bottom:6px; border-bottom:1px solid #F0D6C8; }
+            .sec { font-size:12pt; color:#E85D1F; margin:26px 0 12px; padding-bottom:6px; border-bottom:1px solid #F0D6C8; }
             .sec .n { display:inline-block; width:20px; height:20px; line-height:20px; text-align:center; border-radius:5px;
               background:#E85D1F; color:#fff; font-size:9pt; margin-right:6px; }
             .sec .hint { color:#8A94A6; font-size:8.5pt; font-weight:normal; margin-left:6px; }
