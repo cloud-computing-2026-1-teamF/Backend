@@ -40,6 +40,8 @@ dependencies {
     // 보고서 HTML -> PDF 렌더 (한글 폰트는 resources/fonts 에 TTF 추가 필요).
     // ⚠ 버전은 Spring Boot 4 / PDFBox 호환 확인 후 조정.
     implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+    // 보고서 차트(게이지·라인) inline SVG 렌더 (Batik). pdfbox와 동일 버전.
+    implementation("com.openhtmltopdf:openhtmltopdf-svg-support:1.0.10")
     implementation("io.jsonwebtoken:jjwt-api:0.12.7")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")

@@ -19,6 +19,6 @@ class ReportService(
     fun generate(authContext: AuthContext, analysisId: String): GeneratedReport? {
         val result = promptService.generate(authContext, analysisId)
         val report = result.report ?: return null
-        return GeneratedReport(pdfRenderer.render(report), result.source)
+        return GeneratedReport(pdfRenderer.render(report, result.input), result.source)
     }
 }

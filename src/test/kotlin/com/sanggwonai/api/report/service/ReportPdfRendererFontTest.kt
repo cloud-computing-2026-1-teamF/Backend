@@ -29,7 +29,7 @@ class ReportPdfRendererFontTest {
             )
         )
 
-        val bytes = ReportPdfRenderer().render(report)
+        val bytes = ReportPdfRenderer().render(report, emptyMap())
         File("build/font-check.pdf").apply { parentFile.mkdirs() }.writeBytes(bytes)
 
         assertTrue(bytes.size > 5_000, "PDF 가 비정상적으로 작음(${bytes.size}B) — 렌더 실패 의심")
