@@ -100,14 +100,16 @@ class ReportContextAssembler(
             val rlng = vacancy.longitude?.toDouble() ?: return@mapNotNull null
             val stores = reviewStorePoolRepository.findWithin(rlat, rlng, radiusM, categoryTokens)
             if (stores.isEmpty()) null
-            else rec.vacancyId to reviewTagAggregator.build(stores, radiusM, categoryLabel)
+            else Triple(rec.rank, rec.vacancyId, reviewTagAggregator.build(stores, radiusM, categoryLabel))
         }
         if (reviews.isNotEmpty()) {
-            val primary = reviews.firstOrNull { it.first == top1Id }?.second ?: reviews.first().second
+            val primary = reviews.firstOrNull { it.second == top1Id }?.third ?: reviews.first().third
             val merged = LinkedHashMap<String, Any?>(primary)
-            merged["properties"] = reviews.map { (vid, ins) ->
+            merged["properties"] = reviews.map { (rank, vid, ins) ->
                 linkedMapOf(
+                    "rank" to rank,
                     "vacancy_id" to vid,
+                    "주소_간략" to (recs.firstOrNull { it.vacancyId == vid }?.roadAddress),
                     "scope" to ins["scope"],
                     "demand_tags" to (ins["demand_tags"] as? List<*>)?.take(5),
                     "popular_store_common_tags" to ins["popular_store_common_tags"],

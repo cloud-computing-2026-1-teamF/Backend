@@ -68,15 +68,14 @@
   "chapter_8_review_insight": {
     "_조건": "input.section_05_review_insight 가 있을 때만 출력. 없으면 활성_여부 false.",
     "활성_여부": true,
-    "데이터_범위": "string (예: '반경 50m 동일 업종 14곳 중 태그 보유 12곳')",
-    "수요_태그_TOP": [
+    "데이터_범위": "string (예: '추천 매물별 반경 50m 동일 업종 가게의 방문자 태그 기준')",
+    "매물별_리뷰": [
       {
-        "태그": "string (input.demand_tags 인용)",
-        "강도": "상 | 중 | 하"
+        "순위": "number (input.section_05_review_insight.properties[].rank 그대로, properties 개수만큼)",
+        "코멘트": "string (2~3문장. 해당 매물 반경 50m demand_tags 기반 해석. 매물마다 다른 내용으로. 태그 단순 나열 금지 — 의미 해석)"
       }
     ],
-    "차별화_기회": "string (2~3문장, input.differentiator_tags 기반)",
-    "리뷰_종합_해석": "string (3~4문장)"
+    "리뷰_종합_해석": "string (3~4문장. 세 매물 종합 + 이 동네 손님이 중시하는 것 + 차별화 방향)"
   },
   "chapter_9_investment_payback": {
     "_조건": "input.section_06_investment_payback 가 있을 때만 출력. 없으면 활성_여부 false.",

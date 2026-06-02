@@ -333,23 +333,46 @@ class ReportPdfRenderer {
     // ── §6 리뷰 인사이트 (옵션) ─────────────────────────────────
     private fun sectionReview(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val ch8 = asMap(report["chapter_8_review_insight"]) ?: return
+        val props = asList(path(input, "section_05_review_insight", "properties"))
+        // AI 매물별 코멘트: 순위 -> 코멘트
+        val commentByRank = HashMap<Int, String>()
+        asList(ch8["매물별_리뷰"]).forEachIndexed { i, c ->
+            val cm = asMap(c) ?: return@forEachIndexed
+            commentByRank[intOf(cm["순위"]) ?: (i + 1)] = str(cm["코멘트"])
+        }
+
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
         secHead(sb, "6", "주변 리뷰 인사이트", str(path(ch8, "데이터_범위")))
-        val demand = asList(ch8["수요_태그_TOP"])
-        if (demand.isNotEmpty()) {
-            sb.append("<div class=\"panel\"><h3>동네 수요 태그 TOP</h3>")
-            demand.take(5).forEach { d ->
-                val dm = asMap(d) ?: return@forEach
-                val strength = str(dm["강도"])
-                val w = when (strength) { "상" -> 90; "중" -> 60; else -> 35 }
-                bar(sb, str(dm["태그"]), w, strength.ifBlank { "·" }, strength == "상", null)
+        sb.append("<p class=\"body\" style=\"margin-top:-2px\">추천 매물 각각의 반경 50m 동종 가게 방문자 태그를 모아, 매물별 동네 수요를 봅니다.</p>")
+
+        props.forEachIndexed { i, p ->
+            val pm = asMap(p) ?: return@forEachIndexed
+            val rank = intOf(pm["rank"]) ?: (i + 1)
+            val addr = shortAddr(str(pm["주소_간략"]))
+            val tags = asList(pm["demand_tags"])
+            val maxScore = tags.mapNotNull { dbl(asMap(it)?.get("score")) }.maxOrNull() ?: 1.0
+
+            sb.append("<div class=\"panel\"><h3>매물 ").append(rank)
+            if (addr.isNotBlank()) sb.append(" <span class=\"hint\">").append(esc(addr)).append("</span>")
+            sb.append("</h3>")
+            if (tags.isEmpty()) {
+                sb.append("<p class=\"body sm faint\">반경 50m 내 동종 가게 태그가 없습니다.</p>")
+            } else {
+                tags.take(5).forEachIndexed { j, t ->
+                    val tm = asMap(t) ?: return@forEachIndexed
+                    val sc = dbl(tm["score"]) ?: 0.0
+                    val w = if (maxScore > 0) (sc / maxScore * 100).roundToInt() else 50
+                    val strength = if (w >= 66) "강" else if (w >= 33) "중" else "하"
+                    bar(sb, str(tm["tag"]), w, strength, j == 0, null)
+                }
             }
+            commentByRank[rank]?.ifBlank { null }
+                ?.let { sb.append("<p class=\"body sm\">").append(esc(it)).append("</p>") }
             sb.append("</div>")
         }
-        str(path(ch8, "차별화_기회")).ifBlank { null }
-            ?.let { sb.append("<div class=\"callout blue\">차별화 기회: ").append(esc(it)).append("</div>") }
+
         str(path(ch8, "리뷰_종합_해석")).ifBlank { null }
-            ?.let { sb.append("<p class=\"body\">").append(esc(it)).append("</p>") }
+            ?.let { sb.append("<div class=\"callout blue\">").append(esc(it)).append("</div>") }
         sb.append("</div></div>")
     }
 
