@@ -34,6 +34,8 @@ object VacancyPromptSchema {
         Category ids and labels are: 1=한식, 2=중식, 3=일식, 4=서양식, 5=기타, 6=구내식당 및 뷔페, 7=패스트푸드, 8=주점업, 9=카페/디저트.
         Alias examples: 고기집/고깃집/한식당 -> 1, 중국집/중식당 -> 2, 일식집/초밥 -> 3, 양식/파스타 -> 4, 뷔페/구내식당 -> 6, 햄버거/패스트푸드 -> 7, 술집/주점/포차 -> 8, 카페/디저트/베이커리 -> 9.
         If a prompt asks for a business-suitable place, set category.category_id, category.category_label, category.score_mode=category, and sort=score_desc.
+        For station-area prompts, put every mentioned station into location.subway_keywords. Example: "시청역이나 강남역 주변" -> ["시청역","강남역"].
+        If exactly one station is mentioned, location.subway may also contain that station. If multiple stations are mentioned, keep location.subway null and use location.subway_keywords.
         Do not invent area_id unless it is explicitly provided. Put Korean 구/동 terms into location.district and location.dong.
     """.trimIndent()
 
@@ -96,6 +98,7 @@ object VacancyPromptSchema {
         "dong" to nullableString("동, for example 방이동."),
         "address" to nullableString("도로명주소/지번주소/building keyword."),
         "subway" to nullableString("지하철역 keyword, for example 잠실역."),
+        "subway_keywords" to nullableStringArray("Multiple station keywords, for example [\"시청역\", \"강남역\"]. Use this for A역이나 B역 prompts."),
         "latitude" to nullableNumber("Center latitude for radius search."),
         "longitude" to nullableNumber("Center longitude for radius search."),
         "radius_m" to nullableInteger("Radius in meters, max 5000.")
@@ -221,6 +224,12 @@ object VacancyPromptSchema {
     private fun nullableString(description: String): Map<String, Any?> = linkedMapOf(
         "type" to listOf("string", "null"),
         "description" to description
+    )
+
+    private fun nullableStringArray(description: String): Map<String, Any?> = linkedMapOf(
+        "type" to listOf("array", "null"),
+        "description" to description,
+        "items" to mapOf("type" to "string")
     )
 
     private fun nullableNumber(description: String): Map<String, Any?> = linkedMapOf(

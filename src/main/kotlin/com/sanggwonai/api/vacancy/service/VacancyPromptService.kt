@@ -180,10 +180,6 @@ private object VacancyPromptFallbackParser {
             space != null ||
             amenities != null
 
-        if (location == null && prompt.contains("역")) {
-            location = VacancyLocationFilter(subway = Regex("""([가-힣A-Za-z0-9]+역)""").find(prompt)?.value)
-        }
-
         return VacancyStructuredFilter(
             q = if (recognized) null else prompt,
             location = location,
@@ -199,12 +195,18 @@ private object VacancyPromptFallbackParser {
     private fun parseLocation(prompt: String): VacancyLocationFilter? {
         val district = Regex("""([가-힣]+구)""").find(prompt)?.value
         val dong = Regex("""([가-힣]+동)""").find(prompt)?.value
-        val subway = Regex("""([가-힣A-Za-z0-9]+역)""").find(prompt)?.value
-        if (district == null && dong == null && subway == null) return null
+        val subwayKeywords = Regex("""([가-힣A-Za-z0-9]+역)""")
+            .findAll(prompt)
+            .map { it.value }
+            .distinct()
+            .toList()
+        val subway = subwayKeywords.singleOrNull()
+        if (district == null && dong == null && subwayKeywords.isEmpty()) return null
         return VacancyLocationFilter(
             district = district,
             dong = dong,
-            subway = subway
+            subway = subway,
+            subwayKeywords = subwayKeywords.takeIf { it.isNotEmpty() }
         )
     }
 

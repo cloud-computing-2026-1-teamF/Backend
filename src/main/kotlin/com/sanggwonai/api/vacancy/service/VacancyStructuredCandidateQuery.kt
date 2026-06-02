@@ -1,5 +1,6 @@
 package com.sanggwonai.api.vacancy.service
 
+import com.sanggwonai.api.vacancy.dto.VacancyLocationFilter
 import com.sanggwonai.api.vacancy.dto.VacancyStructuredFilter
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -37,7 +38,7 @@ class VacancyStructuredCandidateQuery(
             rawValue = location?.address,
             name = "address"
         )
-        addText(where, params, """v."지하철"""", location?.subway, "subway")
+        addStationKeywords(where, params, location?.stationKeywords())
         addCombinedText(
             where = where,
             params = params,
@@ -56,7 +57,9 @@ class VacancyStructuredCandidateQuery(
                 """v."업종대분류"""",
                 """v."업종중분류"""",
                 """v."지하철"""",
-                """cf."행정동_행정동_명""""
+                """cf."행정동_행정동_명"""",
+                "aft.subway_station_info",
+                "aft.bus_stop_info"
             ),
             rawValue = normalized.q,
             name = "q"
@@ -170,6 +173,7 @@ class VacancyStructuredCandidateQuery(
             left join vacancy_common_features cf on cf.property_id = v.property_id
             left join vacancy_category_scores cs on cs.property_id = v.property_id
             left join vacancy_category_spatial sp on sp.property_id = v.property_id and sp.category_id = cs.category_id
+            left join vacancy_accessibility_foottraffic aft on aft.property_id = v.property_id
             where ${where.joinToString(separator = "\n              and ")}
         """.trimIndent()
 
@@ -206,6 +210,49 @@ class VacancyStructuredCandidateQuery(
         where += "lower(concat_ws(' ', $expression)) like :$name escape '\\'"
         params.addValue(name, like(value))
     }
+
+    private fun addStationKeywords(
+        where: MutableList<String>,
+        params: MapSqlParameterSource,
+        rawValues: List<String>?
+    ) {
+        val keywords = rawValues
+            ?.mapNotNull(::stationKeyword)
+            ?.distinct()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return
+        val clauses = keywords.flatMapIndexed { index, keyword ->
+            val exactName = "subwayKeyword${index}Exact"
+            params.addValue(exactName, like(keyword.exact))
+
+            val fieldClauses = mutableListOf(
+                """lower(coalesce(v."지하철", '')) like :$exactName escape '\'""",
+                "lower(coalesce(aft.bus_stop_info, '')) like :$exactName escape '\\'"
+            )
+
+            keyword.stationInfoNames.forEachIndexed { variantIndex, stationInfoName ->
+                val name = "subwayKeyword${index}Info$variantIndex"
+                params.addValue(name, like("$stationInfoName("))
+                fieldClauses += "lower(coalesce(aft.subway_station_info, '')) like :$name escape '\\'"
+            }
+
+            fieldClauses
+        }
+        where += clauses.joinToString(prefix = "(", postfix = ")", separator = " or ")
+    }
+
+    private fun stationKeyword(value: String): StationKeyword? {
+        val trimmed = value.trim().takeIf { it.isNotEmpty() } ?: return null
+        val stationInfoNames = listOf(trimmed, trimmed.removeSuffix("역"))
+            .mapNotNull { it.trim().takeIf { name -> name.length >= 2 } }
+            .distinct()
+        return StationKeyword(exact = trimmed, stationInfoNames = stationInfoNames)
+    }
+
+    private data class StationKeyword(
+        val exact: String,
+        val stationInfoNames: List<String>
+    )
 
     private fun addRadiusBox(
         where: MutableList<String>,
@@ -300,5 +347,11 @@ class VacancyStructuredCandidateQuery(
             .replace("%", "\\%")
             .replace("_", "\\_")
         return "%$escaped%"
+    }
+
+    private fun VacancyLocationFilter.stationKeywords(): List<String> {
+        return (subwayKeywords.orEmpty() + listOfNotNull(subway))
+            .mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            .distinct()
     }
 }

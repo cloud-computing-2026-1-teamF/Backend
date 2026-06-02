@@ -84,6 +84,7 @@ data class VacancyLocationFilter(
     val dong: String? = null,
     val address: String? = null,
     val subway: String? = null,
+    val subwayKeywords: List<String>? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
     val radiusM: Int? = null
@@ -95,11 +96,13 @@ data class VacancyLocationFilter(
         dong = cleanText(dong),
         address = cleanText(address),
         subway = cleanText(subway),
+        subwayKeywords = normalizeStationKeywords(subwayKeywords, subway),
         radiusM = radiusM?.coerceIn(MIN_RADIUS_M, MAX_RADIUS_M)
     )
 
     fun empty(): Boolean {
         return listOf(areaId, province, district, dong, address, subway).all { it.isNullOrBlank() } &&
+            subwayKeywords.isNullOrEmpty() &&
             latitude == null &&
             longitude == null &&
             radiusM == null
@@ -337,6 +340,26 @@ data class VacancySpatialFilter(
 
 private fun cleanText(value: String?): String? {
     return value?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+private fun normalizeStationKeywords(values: List<String>?, subway: String?): List<String>? {
+    val extracted = (values.orEmpty() + listOfNotNull(subway))
+        .flatMap(::extractStationKeywords)
+        .distinct()
+    return extracted.takeIf { it.isNotEmpty() }
+}
+
+private fun extractStationKeywords(value: String): List<String> {
+    val stationMatches = Regex("""([가-힣A-Za-z0-9]+역)""")
+        .findAll(value)
+        .map { it.value }
+        .toList()
+    if (stationMatches.isNotEmpty()) return stationMatches
+
+    return value
+        .split(',', ';', '/', '|', '·', 'ㆍ')
+        .mapNotNull { cleanText(it) }
+        .filter { it.length >= 2 }
 }
 
 private fun normalizeTransactionType(value: String?): String? {
