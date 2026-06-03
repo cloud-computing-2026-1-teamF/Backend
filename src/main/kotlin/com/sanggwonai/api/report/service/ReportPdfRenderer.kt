@@ -44,9 +44,11 @@ class ReportPdfRenderer {
         sectionLocation(this, report, input)
         sectionFit(this, report, input)
         sectionTop3(this, report, input)
-        if (path(input, "section_06_investment_payback") != null && active(report["chapter_9_investment_payback"]))
+        // 렌더 여부는 백엔드가 조립한 input 섹션 존재만으로 판정한다. LLM 자기보고(활성_여부)에
+        // 의존하면, 데이터가 있는데도 LLM 이 활성_여부=false 로 내보내면 섹션이 조용히 사라진다.
+        if (path(input, "section_06_investment_payback") != null)
             sectionPayback(this, report, input)
-        if (path(input, "section_05_review_insight") != null && active(report["chapter_8_review_insight"]))
+        if (path(input, "section_05_review_insight") != null)
             sectionReview(this, report, input)
         sectionAppendix(this, report)
         append("</body></html>")
