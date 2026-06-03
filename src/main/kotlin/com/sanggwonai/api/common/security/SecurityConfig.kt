@@ -44,7 +44,9 @@ class SecurityConfig {
                 "http://localhost:*",
                 "http://127.0.0.1:*",
                 "http://[::1]:*",
-                "https://*.amplifyapp.com"
+                "https://*.amplifyapp.com",
+                "https://showmethesanggwon.com",
+                "https://www.showmethesanggwon.com"
             )
             allowedMethods = listOf("GET", "POST", "PATCH", "DELETE", "OPTIONS")
             allowedHeaders = listOf("Authorization", "Content-Type", "Accept")
