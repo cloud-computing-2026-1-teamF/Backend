@@ -85,6 +85,7 @@ class ReportPromptService(
 
     private fun loadText(path: String): String =
         javaClass.getResourceAsStream(path)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+            ?.removePrefix("\uFEFF")
             ?: error("리소스 없음: $path  (build.gradle.kts 의 sourceSets resources srcDir(\"reports\") 확인)")
 
     companion object {
