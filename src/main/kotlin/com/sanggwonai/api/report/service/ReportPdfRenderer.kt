@@ -83,7 +83,7 @@ class ReportPdfRenderer {
 
         // body
         sb.append("<div class=\"pad\">")
-        secHead(sb, "1", "임원 요약", null)
+        secHead(sb, "1", "입지 분석 요약", null)
         // hero: gauge + kpis + callout
         sb.append("<table class=\"hero\"><tr><td class=\"gaugecell\">")
         sb.append("<div class=\"gauge\">").append(gaugeSvg(score))
