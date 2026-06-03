@@ -209,32 +209,6 @@ jobs:
             --task-definition "${NEW_TASK_DEFINITION_ARN}" \
             --force-new-deployment
 
-          # `aws ecs wait services-stable` 은 40회×15초=10분이 하드캡이라,
-          # healthCheckGracePeriod(30분) + Liquibase 대용량 CSV 적재로 부팅이 느릴 때
-          # 배포가 실제로 성공해도 false-fail 한다. PRIMARY 배포의 rolloutState 를
-          # 직접 폴링해 COMPLETED/FAILED 로 정확히 판정한다 (최대 30분).
-          echo "Polling PRIMARY deployment rolloutState (timeout 30m)..."
-          DEADLINE=$(( SECONDS + 1800 ))
-          while true; do
-            STATE="$(aws ecs describe-services \
-              --cluster "${ECS_CLUSTER_NAME}" \
-              --services "${APP_ECS_SERVICE_NAME}" \
-              --query "services[0].deployments[?status=='PRIMARY']|[0].rolloutState" \
-              --output text 2>/dev/null || echo IN_PROGRESS)"
-            echo "rolloutState=${STATE} (elapsed ${SECONDS}s)"
-            case "${STATE}" in
-              COMPLETED)
-                echo "ECS rollout completed."
-                break
-                ;;
-              FAILED)
-                echo "ECS rollout FAILED — circuit breaker rolled back to previous task def." >&2
-                exit 1
-                ;;
-            esac
-            if [ "${SECONDS}" -ge "${DEADLINE}" ]; then
-              echo "Timed out after 30m waiting for rollout to stabilize." >&2
-              exit 1
-            fi
-            sleep 15
-          done
+          aws ecs wait services-stable \
+            --cluster "${ECS_CLUSTER_NAME}" \
+            --services "${APP_ECS_SERVICE_NAME}"
