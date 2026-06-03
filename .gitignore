@@ -45,3 +45,6 @@ AGENTS.md
 # Local secrets/config. Keep API keys out of commits.
 .env*
 application-local.yml
+
+# Large crawl exports are loaded directly into RDS, not through app-startup Liquibase.
+src/main/resources/db/data/crawl/*.csv
