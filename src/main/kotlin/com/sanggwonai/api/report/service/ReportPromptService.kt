@@ -20,7 +20,7 @@ data class ReportGenerationResult(
  *  3) ReportLlmClient(OpenAI) 호출
  *  4) 출력 JSON 파싱 + 필수 챕터 검증 (실패 시 1회 재시도 → 그래도 실패면 source=failed)
  *
- * source=failed 면 호출측(엔드포인트)이 사전 생성 샘플 PDF로 폴백한다.
+ * source=failed 면 호출측(엔드포인트)이 사전 생성 샘플 HTML로 폴백한다.
  */
 @Service
 class ReportPromptService(
@@ -94,9 +94,11 @@ class ReportPromptService(
         private val REQUIRED_CHAPTERS = listOf(
             "report_metadata",
             "chapter_1_executive_summary",
+            "chapter_2_property_operation_context",
             "chapter_3_top3_property_analysis",
             "chapter_4_location_characteristics",
             "chapter_5_business_fit_analysis",
+            "chapter_6_market_signal_diagnosis",
             "chapter_7_appendix"
         )
     }

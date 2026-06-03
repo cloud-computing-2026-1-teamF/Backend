@@ -4,33 +4,36 @@ import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
 import java.io.File
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
  * 렌더러 시각 검증용 — 서교동 일식 샘플(output_schema + ReportContextAssembler input 구조)로
- * 실제 PDF를 생성해 바탕화면에 떨군다. Batik SVG·폰트·레이아웃이 런타임에 정상인지 확인.
- * 실행: ./gradlew test --tests "*ReportPdfRendererRenderTest*"
+ * 실제 HTML을 생성한다. 레이아웃과 새 리포트 섹션 마크업이 런타임에 정상인지 확인.
+ * 실행: ./gradlew test --tests "*ReportHtmlRendererRenderTest*"
  */
-class ReportPdfRendererRenderTest {
+class ReportHtmlRendererRenderTest {
 
     private val mapper = JsonMapper.builder().build()
     private val tr = object : TypeReference<Map<String, Any?>>() {}
 
     @Test
-    fun `샘플 보고서 PDF 렌더`() {
+    fun `샘플 보고서 HTML 렌더`() {
         val report = mapper.readValue(REPORT_JSON, tr)
         val input = mapper.readValue(INPUT_JSON, tr)
 
-        val pdf = ReportPdfRenderer().render(report, input)
+        val bytes = ReportHtmlRenderer().render(report, input)
+        val html = bytes.toString(Charsets.UTF_8)
 
-        assertTrue(pdf.size > 4000, "PDF가 너무 작음: ${pdf.size}")
-        assertEquals("%PDF", String(pdf.copyOfRange(0, 4)), "PDF 헤더 아님")
+        assertTrue(bytes.size > 10_000, "HTML이 너무 작음: ${bytes.size}")
+        assertTrue(html.startsWith("<!DOCTYPE html>"), "HTML 헤더 아님")
+        assertTrue(html.contains("공실 운영 조건"), "공실 운영 조건 섹션이 렌더되지 않음")
+        assertTrue(html.contains("상권 수요·경쟁 시그널"), "상권 수요·경쟁 시그널 섹션이 렌더되지 않음")
+        assertTrue(html.contains("주변 리뷰 인사이트"), "리뷰 인사이트 섹션이 렌더되지 않음")
 
-        val out = File("build/report_sample.pdf")
+        val out = File("build/report_sample.html")
         out.parentFile.mkdirs()
-        out.writeBytes(pdf)
-        println("[RENDER] wrote ${out.absolutePath} (${pdf.size} bytes)")
+        out.writeBytes(bytes)
+        println("[RENDER] wrote ${out.absolutePath} (${bytes.size} bytes)")
     }
 
     companion object {

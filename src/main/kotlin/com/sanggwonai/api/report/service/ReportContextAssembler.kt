@@ -128,7 +128,12 @@ class ReportContextAssembler(
     // ── Top3 매물 1건 ──────────────────────────────────────────────
     private fun buildTop3Item(rec: AnalysisRecommendationDto, categoryId: String, snap: VacancyDatasetSnapshot): Map<String, Any?> {
         val metric = metricRepository.find(categoryId, rec.vacancyId)
-        val floor = snap.vacancyById[rec.vacancyId]?.floor
+        val vacancy = snap.vacancyById[rec.vacancyId]
+        val common = snap.commonByProperty[rec.vacancyId]
+        val accessibility = snap.accessibilityByProperty[rec.vacancyId]
+        val score = snap.categoryScoreFor(rec.vacancyId, categoryId)
+        val spatial = snap.spatialFor(rec.vacancyId, score)
+        val floor = vacancy?.floor
         val compFallback = (rec.restaurantCount500m ?: 0) + (rec.cafeCount500m ?: 0)
         return linkedMapOf(
             "vacancyId" to rec.vacancyId,
@@ -150,9 +155,100 @@ class ReportContextAssembler(
             "growth" to rec.industryGrowthRate500m?.toDouble(),
             "footHourly" to rec.hourlyFloatingPopulation?.map { it.toInt() },
             "nearby" to linkedMapOf(
-                "subway" to rec.subwayStationInfo,
-                "bus" to rec.busStopInfo,
-                "parking" to rec.parkingInfo
+                "subway" to (accessibility?.subwayStationInfo ?: rec.subwayStationInfo),
+                "bus" to (accessibility?.busStopInfo ?: rec.busStopInfo),
+                "parking" to (accessibility?.parkingInfo ?: rec.parkingInfo)
+            ),
+            "property" to linkedMapOf(
+                "roadAddress" to vacancy?.roadAddress,
+                "lotAddress" to vacancy?.lotAddress,
+                "detailAddress" to vacancy?.detailAddress,
+                "buildingName" to vacancy?.buildingName,
+                "transactionType" to vacancy?.transactionType,
+                "floor" to vacancy?.floor,
+                "totalFloors" to vacancy?.totalFloors,
+                "buildingType" to vacancy?.buildingType,
+                "buildingUse" to vacancy?.buildingUse,
+                "majorBusinessCategory" to vacancy?.majorBusinessCategory,
+                "middleBusinessCategory" to vacancy?.middleBusinessCategory,
+                "registeredAt" to vacancy?.registeredAt,
+                "viewCount" to vacancy?.viewCount,
+                "favoriteCount" to vacancy?.favoriteCount
+            ),
+            "lease" to linkedMapOf(
+                "deposit" to vacancy?.deposit,
+                "monthlyRent" to vacancy?.monthlyRent,
+                "maintenanceFee" to vacancy?.maintenanceFee,
+                "premium" to vacancy?.premium,
+                "salePrice" to vacancy?.salePrice,
+                "dedicatedArea" to vacancy?.dedicatedArea?.toDouble(),
+                "supplyArea" to vacancy?.supplyArea?.toDouble(),
+                "facilityTotalSize" to common?.facilityTotalSize?.toDouble(),
+                "locationArea" to common?.locationArea?.toDouble(),
+                "officialLandPrice" to common?.officialLandPrice?.toLong()
+            ),
+            "facilities" to linkedMapOf(
+                "parkingAvailable" to vacancy?.parkingAvailable,
+                "parkingCount" to vacancy?.parkingCount?.toDouble(),
+                "elevatorAvailable" to vacancy?.elevatorAvailable,
+                "elevatorCount" to vacancy?.elevatorCount,
+                "restroomType" to vacancy?.restroomType,
+                "restroomCount" to vacancy?.restroomCount?.toDouble(),
+                "heatingType" to vacancy?.heatingType,
+                "airConditioner" to vacancy?.airConditioner,
+                "heater" to vacancy?.heater,
+                "terrace" to vacancy?.terrace,
+                "rooftop" to vacancy?.rooftop,
+                "interior" to vacancy?.interior,
+                "storage" to vacancy?.storage,
+                "lateNightOperationAvailable" to vacancy?.lateNightOperationAvailable,
+                "priceNegotiable" to vacancy?.priceNegotiable,
+                "rentAdjustable" to vacancy?.rentAdjustable,
+                "rentFreePeriodAvailable" to vacancy?.rentFreePeriodAvailable,
+                "multiUseFacility" to common?.multiUseFacility
+            ),
+            "population" to linkedMapOf(
+                "floatingAnnual" to common?.floatingPopulationAnnualDensity?.toLong(),
+                "floatingQuarterly" to common?.floatingPopulationQuarterlyDensity?.toLong(),
+                "residentAnnual" to common?.residentPopulationAnnualDensity?.toLong(),
+                "residentQuarterly" to common?.residentPopulationQuarterlyDensity?.toLong(),
+                "workerAnnual" to common?.workerPopulationAnnualDensity?.toLong(),
+                "workerQuarterly" to common?.workerPopulationQuarterlyDensity?.toLong(),
+                "eveningPopulationRatio" to common?.eveningPopulationRatio?.toDouble(),
+                "lateNightPopulationRatio" to common?.lateNightPopulationRatio?.toDouble(),
+                "morningPopulationRatio" to common?.morningPopulationRatio?.toDouble(),
+                "weekendPopulationRatio" to common?.weekendPopulationRatio?.toDouble(),
+                "age2030PopulationRatio" to common?.age2030PopulationRatio?.toDouble(),
+                "femalePopulationRatio" to common?.femalePopulationRatio?.toDouble(),
+                "residentToFloatingRatio" to common?.residentToFloatingRatio?.toDouble(),
+                "workerToFloatingRatio" to common?.workerToFloatingRatio?.toDouble()
+            ),
+            "commercial" to linkedMapOf(
+                "restaurantCount250m" to common?.restaurantCount250m,
+                "restaurantCount500m" to common?.restaurantCount500m,
+                "restaurantCount1000m" to common?.restaurantCount1000m,
+                "cafeCount250m" to common?.cafeCount250m,
+                "cafeCount500m" to common?.cafeCount500m,
+                "cafeCount1000m" to common?.cafeCount1000m,
+                "sameCategoryRestaurantCount250m" to spatial?.sameCategoryRestaurantCount250m,
+                "sameCategoryRestaurantCount500m" to spatial?.sameCategoryRestaurantCount500m,
+                "sameCategoryRestaurantCount1000m" to spatial?.sameCategoryRestaurantCount1000m,
+                "industryGrowthRate250m" to spatial?.industryGrowthRate250m?.toDouble(),
+                "industryGrowthRate500m" to spatial?.industryGrowthRate500m?.toDouble(),
+                "industryGrowthRate1000m" to spatial?.industryGrowthRate1000m?.toDouble(),
+                "openingRate" to common?.openingRate?.toDouble(),
+                "closureRate" to common?.closureRate?.toDouble(),
+                "averageSalesPerStore" to common?.averageSalesPerStore?.toLong(),
+                "eveningSalesRatio" to common?.eveningSalesRatio?.toDouble(),
+                "lateNightSalesRatio" to common?.lateNightSalesRatio?.toDouble(),
+                "weekendSalesRatio" to common?.weekendSalesRatio?.toDouble(),
+                "age2030SalesRatio" to common?.age2030SalesRatio?.toDouble(),
+                "femaleSalesRatio" to common?.femaleSalesRatio?.toDouble(),
+                "totalSpending" to common?.totalSpending?.toLong(),
+                "foodSpending" to common?.foodSpending?.toLong(),
+                "spendingPerStore" to common?.spendingPerStore?.toLong(),
+                "commercialTurnoverType" to ((common?.commercialTurnoverType?.signum() ?: 0) != 0),
+                "commercialGrowthType" to ((common?.commercialGrowthType?.signum() ?: 0) != 0)
             )
         )
     }

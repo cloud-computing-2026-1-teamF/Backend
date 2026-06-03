@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  *   잘되는집 공통       voter_count 상위 ~1/3 가게의 store_share 큰 태그
  *   차별화              gap = 잘되는집_store_share − 수요_store_share (>0)
  *
- * 출력은 옛 precompute(section_05_review_insight)와 동일 형태 -> 프롬프트/PDF 무변경.
+ * 출력은 옛 precompute(section_05_review_insight)와 동일 형태 -> 프롬프트/HTML 렌더링과 호환.
  * vacancy_id / category_id 는 null 로 두고 호출측(ReportContextAssembler)이 채운다.
  */
 @Component

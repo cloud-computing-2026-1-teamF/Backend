@@ -1,10 +1,6 @@
 package com.sanggwonai.api.report.service
 
-import com.openhtmltopdf.pdfboxout.PdfRendererBuilder
-import com.openhtmltopdf.svgsupport.BatikSVGDrawer
 import org.springframework.stereotype.Component
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
@@ -12,38 +8,37 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * 보고서 렌더러 — 확장판 디자인(report-developed.html) 기반.
+ * 보고서 렌더러 — OpenAI 해석 JSON + DB 사실을 standalone HTML 리포트로 합성.
  *
  * 설계: 숫자·차트는 input_data(DB 사실)에서 직접, 문장(해석)은 AI report(output_schema)에서.
- *  - 게이지·시간대 라인차트: inline SVG (openhtmltopdf-svg-support / Batik)
- *  - 막대·KPI·표·콜아웃·리스크·액션: CSS (flexbox 회피 — table/inline-block 레이아웃)
- *  - 한글: resources/fonts/NotoSansKR-Regular.ttf 임베드(위계는 크기·색으로).
+ *  - 게이지·시간대 라인차트: inline SVG
+ *  - 막대·KPI·표·콜아웃·리스크·액션: standalone CSS
  *
  * 7섹션: 임원요약 / 입지특성 / 업종적합도 / 추천Top3 / 투자회수(opt) / 리뷰(opt) / 부록.
  */
 @Component
-class ReportPdfRenderer {
+class ReportHtmlRenderer {
 
     fun render(report: Map<String, Any?>, input: Map<String, Any?>): ByteArray {
-        val os = ByteArrayOutputStream()
-        val builder = PdfRendererBuilder()
-            .useSVGDrawer(BatikSVGDrawer())
-            .withHtmlContent(buildHtml(report, input), null)
-            .toStream(os)
-        javaClass.getResourceAsStream("/fonts/NotoSansKR-Regular.ttf")?.readBytes()?.let { bytes ->
-            builder.useFont({ ByteArrayInputStream(bytes) }, "Noto Sans KR")
-        }
-        builder.run()
-        return os.toByteArray()
+        return buildHtml(report, input).toByteArray(Charsets.UTF_8)
     }
 
     // ───────────────────────── HTML 조립 ─────────────────────────
     private fun buildHtml(report: Map<String, Any?>, input: Map<String, Any?>): String = buildString {
-        append("<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><style>").append(CSS).append("</style></head><body>")
+        val meta = asMap(report["report_metadata"]) ?: emptyMap<Any?, Any?>()
+        val title = str(meta["보고서_제목"]).ifBlank { "AI 입지 분석 보고서" }
+        append("<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"utf-8\"/>")
+        append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>")
+        append("<title>").append(esc(title)).append("</title><style>").append(CSS).append("</style></head><body>")
+        append("<main class=\"report-shell\">")
+        append("<nav class=\"report-nav\"><div><b>상권을 부탁해</b><span>AI 입지 분석 보고서</span></div>")
+        append("<a href=\"#appendix\">분석 기준 보기</a></nav>")
         sectionSummary(this, report, input)
+        sectionProperty(this, report, input)
         sectionLocation(this, report, input)
         sectionFit(this, report, input)
         sectionTop3(this, report, input)
+        sectionMarketSignals(this, report, input)
         // 렌더 여부는 백엔드가 조립한 input 섹션 존재만으로 판정한다. LLM 자기보고(활성_여부)에
         // 의존하면, 데이터가 있는데도 LLM 이 활성_여부=false 로 내보내면 섹션이 조용히 사라진다.
         if (path(input, "section_06_investment_payback") != null)
@@ -51,7 +46,7 @@ class ReportPdfRenderer {
         if (path(input, "section_05_review_insight") != null)
             sectionReview(this, report, input)
         sectionAppendix(this, report)
-        append("</body></html>")
+        append("</main></body></html>")
     }
 
     // ── §1 표지 + 임원 요약 ──────────────────────────────────────
@@ -135,7 +130,69 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §2 입지 특성 ────────────────────────────────────────────
+    // ── §2 공실 운영 조건 ────────────────────────────────────────
+    private fun sectionProperty(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+        val top1 = asList(path(input, "saved_analysis", "top3")).firstOrNull().let { asMap(it) } ?: return
+        val ch2 = asMap(report["chapter_2_property_operation_context"]) ?: emptyMap<Any?, Any?>()
+        val property = asMap(top1["property"]) ?: emptyMap<Any?, Any?>()
+        val lease = asMap(top1["lease"]) ?: emptyMap<Any?, Any?>()
+        val facilities = asMap(top1["facilities"]) ?: emptyMap<Any?, Any?>()
+        val rentTotal = (dbl(lease["monthlyRent"]) ?: dbl(top1["rent"]) ?: 0.0) + (dbl(lease["maintenanceFee"]) ?: dbl(top1["mgmt"]) ?: 0.0)
+        val revenue = dbl(top1["rev"])
+        val burden = if (revenue != null && revenue > 0) rentTotal / revenue else null
+
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "2", "공실 운영 조건", "상세 페이지 핵심 정보를 보고서에 반영")
+        sb.append("<div class=\"ops-grid\">")
+
+        sb.append("<section class=\"info-card accent-orange\"><h3>임대 조건</h3><div class=\"tile-grid\">")
+        metricTile(sb, "월세+관리비", wonShort(rentTotal), "매달 고정 부담")
+        metricTile(sb, "보증금", wonShort(dbl(lease["deposit"]) ?: dbl(top1["deposit"])), "초기 현금")
+        metricTile(sb, "권리금", wonShort(dbl(lease["premium"])), "인수 비용")
+        metricTile(sb, "전용면적", areaText(dbl(lease["dedicatedArea"]) ?: dbl(top1["area"])), "운영 가능 면적")
+        metricTile(sb, "층 / 총층", listOf(str(property["floor"]).ifBlank { str(top1["floor"]) }, str(property["totalFloors"]))
+            .filter { it.isNotBlank() }.joinToString(" / ").ifBlank { "-" }, "동선 확인")
+        metricTile(sb, "임대 부담률", burden?.let { "%.1f%%".format(it * 100) } ?: "-", "월 임대비 / 평균매출")
+        sb.append("</div>")
+        comment(sb, str(ch2["임대_조건_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("<section class=\"info-card accent-blue\"><h3>매물 프로필</h3><div class=\"info-list\">")
+        infoRow(sb, "도로명주소", str(property["roadAddress"]).ifBlank { str(top1["addr"]) })
+        infoRow(sb, "지번주소", str(property["lotAddress"]))
+        infoRow(sb, "건물유형", str(property["buildingType"]))
+        infoRow(sb, "건물용도", str(property["buildingUse"]))
+        infoRow(sb, "거래유형", str(property["transactionType"]).ifBlank { str(top1["transactionType"]) })
+        infoRow(sb, "공시지가", wonRaw(dbl(lease["officialLandPrice"])))
+        sb.append("</div>")
+        comment(sb, str(ch2["현장_체크_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("<section class=\"info-card accent-teal\"><h3>시설·운영 옵션</h3><div class=\"facility-cloud\">")
+        facilityChip(sb, "주차", boolText(facilities["parkingAvailable"], dbl(facilities["parkingCount"])?.let { "${it.roundToInt()}면" }))
+        facilityChip(sb, "엘리베이터", boolText(facilities["elevatorAvailable"], intOf(facilities["elevatorCount"])?.let { "${it}대" }))
+        facilityChip(sb, "화장실", listOf(str(facilities["restroomType"]), dbl(facilities["restroomCount"])?.let { "${it.roundToInt()}개" }).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "-" })
+        facilityChip(sb, "냉난방", listOf(str(facilities["heatingType"]), if (facilities["airConditioner"] == true) "에어컨" else null, if (facilities["heater"] == true) "난방기" else null).filterNotNull().filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "-" })
+        facilityChip(sb, "운영 옵션", listOf(
+            if (facilities["lateNightOperationAvailable"] == true) "심야영업" else null,
+            if (facilities["priceNegotiable"] == true) "가격협의" else null,
+            if (facilities["rentAdjustable"] == true) "임대료 조정" else null,
+            if (facilities["rentFreePeriodAvailable"] == true) "무상임대기간" else null
+        ).filterNotNull().joinToString(" · ").ifBlank { "-" })
+        facilityChip(sb, "공간 옵션", listOf(
+            if (facilities["terrace"] == true) "테라스" else null,
+            if (facilities["rooftop"] == true) "루프탑" else null,
+            if (facilities["interior"] == true) "인테리어" else null,
+            if (facilities["storage"] == true) "창고" else null
+        ).filterNotNull().joinToString(" · ").ifBlank { "-" })
+        sb.append("</div>")
+        comment(sb, str(ch2["시설_운영_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("</div></div></div>")
+    }
+
+    // ── §3 입지 특성 ────────────────────────────────────────────
     private fun sectionLocation(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val sa = asMap(path(input, "saved_analysis")) ?: emptyMap<Any?, Any?>()
         val top1 = asList(sa["top3"]).firstOrNull().let { asMap(it) } ?: emptyMap<Any?, Any?>()
@@ -146,7 +203,7 @@ class ReportPdfRenderer {
         val hourly = (top1["footHourly"] as? List<*>)?.mapNotNull { intOf(it) } ?: emptyList()
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "2", "입지 특성", null)
+        secHead(sb, "3", "입지 특성", null)
 
         // 시간대별 유동인구 라인차트
         if (hourly.size >= 12) {
@@ -210,14 +267,14 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §3 업종 적합도 (9개) ─────────────────────────────────────
+    // ── §4 업종 적합도 (9개) ─────────────────────────────────────
     private fun sectionFit(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val scores = asMap(path(input, "selected_vacancy_extra", "nine_category_scores")) ?: emptyMap<Any?, Any?>()
         val selected = str(path(input, "saved_analysis", "category"))
         val ch5 = asMap(report["chapter_5_business_fit_analysis"]) ?: emptyMap<Any?, Any?>()
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "3", "업종 적합도 — 9개 업종 비교", null)
+        secHead(sb, "4", "업종 적합도 — 9개 업종 비교", null)
         str(path(ch5, "선택_카테고리_평가", "해석")).ifBlank { null }
             ?.let { sb.append("<p class=\"body\" style=\"margin-top:-2px\">").append(esc(it)).append("</p>") }
 
@@ -238,7 +295,7 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §4 추천 매물 Top 3 ──────────────────────────────────────
+    // ── §5 추천 매물 Top 3 ──────────────────────────────────────
     private fun sectionTop3(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val top3 = asList(path(input, "saved_analysis", "top3"))
         val ch3 = asMap(report["chapter_3_top3_property_analysis"]) ?: emptyMap<Any?, Any?>()
@@ -247,7 +304,7 @@ class ReportPdfRenderer {
         val details = asList(ch3["매물_상세_분석"])
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "4", "추천 매물 Top 3", null)
+        secHead(sb, "5", "추천 매물 Top 3", null)
         str(ch3["chapter_intro"]).ifBlank { null }
             ?.let { sb.append("<p class=\"body\" style=\"margin-top:-2px\">").append(esc(it)).append("</p>") }
 
@@ -296,14 +353,64 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §5 투자 회수 ────────────────────────────────────────────
+    // ── §6 상권 수요·경쟁 시그널 ────────────────────────────────
+    private fun sectionMarketSignals(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+        val top1 = asList(path(input, "saved_analysis", "top3")).firstOrNull().let { asMap(it) } ?: return
+        val ch6 = asMap(report["chapter_6_market_signal_diagnosis"]) ?: emptyMap<Any?, Any?>()
+        val pop = asMap(top1["population"]) ?: emptyMap<Any?, Any?>()
+        val commercial = asMap(top1["commercial"]) ?: emptyMap<Any?, Any?>()
+
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "6", "상권 수요·경쟁 시그널", "공실 상세 지표 기반")
+
+        sb.append("<div class=\"signal-layout\">")
+        sb.append("<section class=\"info-card accent-blue\"><h3>인구 구성</h3><div class=\"tile-grid compact\">")
+        metricTile(sb, "분기 유동", peopleText(dbl(pop["floatingQuarterly"])), "반경 상권 수요")
+        metricTile(sb, "분기 상주", peopleText(dbl(pop["residentQuarterly"])), "생활권 수요")
+        metricTile(sb, "분기 직장", peopleText(dbl(pop["workerQuarterly"])), "평일 점심·퇴근")
+        metricTile(sb, "2030 비율", percentText(dbl(pop["age2030PopulationRatio"])), "젊은 수요")
+        metricTile(sb, "여성 비율", percentText(dbl(pop["femalePopulationRatio"])), "타깃 성향")
+        metricTile(sb, "직장/유동", percentText(dbl(pop["workerToFloatingRatio"])), "오피스 의존도")
+        sb.append("</div>")
+        comment(sb, str(ch6["수요_구성_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("<section class=\"info-card accent-orange\"><h3>경쟁과 성장</h3>")
+        sb.append("<table class=\"modern-table\"><thead><tr><th>반경</th><th>식당</th><th>카페</th><th>동종</th><th>성장률</th></tr></thead><tbody>")
+        competitionRow(sb, "250m", commercial, "250m")
+        competitionRow(sb, "500m", commercial, "500m")
+        competitionRow(sb, "1000m", commercial, "1000m")
+        sb.append("</tbody></table>")
+        comment(sb, str(ch6["경쟁_성장_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("<section class=\"info-card accent-teal\"><h3>매출과 리스크</h3><div class=\"tile-grid compact\">")
+        metricTile(sb, "가게당 평균 매출", dbl(commercial["averageSalesPerStore"])?.let { wonRaw(it) } ?: wonShort(dbl(top1["rev"])), "월 추정")
+        metricTile(sb, "개업률", percentText(dbl(commercial["openingRate"])), "진입 활력")
+        metricTile(sb, "폐업률", percentText(dbl(commercial["closureRate"])), "안정성")
+        metricTile(sb, "저녁 매출", percentText(dbl(commercial["eveningSalesRatio"])), "저녁 수요")
+        metricTile(sb, "심야 매출", percentText(dbl(commercial["lateNightSalesRatio"])), "야간 수요")
+        metricTile(sb, "음식 지출", wonRaw(dbl(commercial["foodSpending"])), "상권 소비")
+        sb.append("</div>")
+        val mode = listOf(
+            if (commercial["commercialGrowthType"] == true) "성장형 상권" else null,
+            if (commercial["commercialTurnoverType"] == true) "교체 활발형 상권" else null
+        ).filterNotNull().joinToString(" · ")
+        if (mode.isNotBlank()) sb.append("<div class=\"mode-strip\">").append(esc(mode)).append("</div>")
+        comment(sb, str(ch6["매출_리스크_코멘트"]))
+        sb.append("</section>")
+
+        sb.append("</div></div></div>")
+    }
+
+    // ── §7 투자 회수 ────────────────────────────────────────────
     private fun sectionPayback(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val pay = asMap(path(input, "section_06_investment_payback")) ?: return
         val ch9 = asMap(report["chapter_9_investment_payback"]) ?: emptyMap<Any?, Any?>()
         val props = asList(pay["properties"])
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "5", "투자 회수 분석", null)
+        secHead(sb, "7", "투자 회수 분석", null)
 
         sb.append("<table class=\"twocol\"><tr><td>")
         sb.append("<div class=\"panel\"><h3>매물별 월 순이익</h3>")
@@ -332,7 +439,7 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §6 리뷰 인사이트 (옵션) ─────────────────────────────────
+    // ── §8 리뷰 인사이트 (옵션) ─────────────────────────────────
     private fun sectionReview(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
         val ch8 = asMap(report["chapter_8_review_insight"]) ?: return
         val props = asList(path(input, "section_05_review_insight", "properties"))
@@ -344,7 +451,7 @@ class ReportPdfRenderer {
         }
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "6", "주변 리뷰 인사이트", str(path(ch8, "데이터_범위")))
+        secHead(sb, "8", "주변 리뷰 인사이트", str(path(ch8, "데이터_범위")))
         sb.append("<p class=\"body\" style=\"margin-top:-2px\">추천 매물 각각의 반경 50m 동종 가게 방문자 태그를 모아, 매물별 동네 수요를 봅니다.</p>")
 
         props.forEachIndexed { i, p ->
@@ -378,11 +485,11 @@ class ReportPdfRenderer {
         sb.append("</div></div>")
     }
 
-    // ── §7 부록 ────────────────────────────────────────────────
+    // ── §9 부록 ────────────────────────────────────────────────
     private fun sectionAppendix(sb: StringBuilder, report: Map<String, Any?>) {
         val ch7 = asMap(report["chapter_7_appendix"]) ?: emptyMap<Any?, Any?>()
-        sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "7", "부록 — 본 보고서의 한계", null)
+        sb.append("<div class=\"sheet\" id=\"appendix\"><div class=\"pad\">")
+        secHead(sb, "9", "부록 — 본 보고서의 한계", null)
         sb.append("<div class=\"disc\"><ul>")
         val limit = str(ch7["본_보고서의_한계"])
         val items = (if (limit.contains('\n')) limit.split('\n') else limit.split(Regex("(?<=다\\.)\\s+")))
@@ -469,6 +576,36 @@ class ReportPdfRenderer {
         sb.append("</h2>")
     }
 
+    private fun metricTile(sb: StringBuilder, label: String, value: String, sub: String) {
+        sb.append("<div class=\"metric-tile\"><span>").append(esc(label)).append("</span><b>")
+            .append(esc(value.ifBlank { "-" })).append("</b>")
+        if (sub.isNotBlank()) sb.append("<small>").append(esc(sub)).append("</small>")
+        sb.append("</div>")
+    }
+
+    private fun infoRow(sb: StringBuilder, label: String, value: String) {
+        sb.append("<div class=\"info-row\"><span>").append(esc(label)).append("</span><b>")
+            .append(esc(value.ifBlank { "-" })).append("</b></div>")
+    }
+
+    private fun facilityChip(sb: StringBuilder, label: String, value: String) {
+        sb.append("<div class=\"facility-chip\"><span>").append(esc(label)).append("</span><b>")
+            .append(esc(value.ifBlank { "-" })).append("</b></div>")
+    }
+
+    private fun comment(sb: StringBuilder, value: String) {
+        if (value.isBlank()) return
+        sb.append("<p class=\"consult-comment\">").append(esc(value)).append("</p>")
+    }
+
+    private fun competitionRow(sb: StringBuilder, label: String, commercial: Map<*, *>, suffix: String) {
+        sb.append("<tr><td>").append(esc(label)).append("</td>")
+        sb.append("<td>").append(countText(intOf(commercial["restaurantCount$suffix"]))).append("</td>")
+        sb.append("<td>").append(countText(intOf(commercial["cafeCount$suffix"]))).append("</td>")
+        sb.append("<td>").append(countText(intOf(commercial["sameCategoryRestaurantCount$suffix"]))).append("</td>")
+        sb.append("<td>").append(esc(percentText(dbl(commercial["industryGrowthRate$suffix"])))).append("</td></tr>")
+    }
+
     // ───────────────────────── 유틸 ──────────────────────────────
     private fun active(ch: Any?): Boolean = (asMap(ch)?.get("활성_여부") != false)
     private fun asMap(v: Any?): Map<*, *>? = v as? Map<*, *>
@@ -488,10 +625,35 @@ class ReportPdfRenderer {
     private fun intOf(v: Any?): Int? = dbl(v)?.roundToInt()
     private fun pct(value: Int, maxV: Int): Int = ((value.toDouble() / maxV) * 100).roundToInt().coerceIn(0, 100)
     private fun commaOrDash(v: Any?): String = dbl(v)?.let { "%,d".format(it.toLong()) } ?: "-"
+    private fun countText(v: Int?): String = v?.let { "%,d개".format(it) } ?: "-"
+    private fun peopleText(v: Double?): String {
+        val n = v ?: return "-"
+        return if (abs(n) >= 10000) "%.1f만명".format(n / 10000.0).replace(".0만", "만")
+        else "%,d명".format(n.roundToLong())
+    }
+    private fun percentText(v: Double?): String {
+        val n = v ?: return "-"
+        val p = if (abs(n) <= 1.0) n * 100.0 else n
+        return "%.1f%%".format(p)
+    }
+    private fun areaText(v: Double?): String = v?.let { "%.1f㎡".format(it) } ?: "-"
+    private fun wonRaw(v: Double?): String {
+        val n = v ?: return "-"
+        return when {
+            abs(n) >= 100000000 -> "%.1f억원".format(n / 100000000.0).replace(".0억", "억")
+            abs(n) >= 10000 -> "%,d만원".format((n / 10000.0).roundToLong())
+            else -> "%,d원".format(n.roundToLong())
+        }
+    }
     private fun wonShort(man: Double?): String {
         val v = man ?: return "-"
         return if (abs(v) >= 10000) ("₩" + "%.1f".format(v / 10000.0).removeSuffix(".0") + "억")
         else "₩" + "%,d".format(v.toLong()) + "만"
+    }
+    private fun boolText(value: Any?, detail: String? = null): String = when (value) {
+        true -> if (detail.isNullOrBlank()) "있음" else "있음 · $detail"
+        false -> "없음"
+        else -> "-"
     }
     private fun shortAddr(addr: String): String = addr.trim().split(' ').takeLast(2).joinToString(" ").ifBlank { addr }
     /** 정류장/역 목록 덤프를 앞 N개 이름만 요약("A · B · C 외 12곳"). 노선번호 괄호 제거. 짧으면 원문 유지. */
@@ -519,104 +681,190 @@ class ReportPdfRenderer {
         private const val AMBER = "#B9791A"
         private const val INK = "#1B2330"
         private val CSS = """
-            @page { size: A4; margin: 14mm 13mm 16mm;
-              @bottom-left { content: "상권을 부탁해 · AI 입지 분석"; font-family:'Noto Sans KR'; font-size:8pt; color:#9AA3B2; }
-              @bottom-right { content: counter(page) " / " counter(pages); font-family:'Noto Sans KR'; font-size:8pt; color:#9AA3B2; } }
-            * { box-sizing: border-box; }
-            body { font-family:'Noto Sans KR', sans-serif; color:#1B2330; font-size:10pt; line-height:1.5; margin:0; }
-            .sheet { page-break-inside: auto; }
-            .sec { page-break-after: avoid; margin-top: 22px; }
-            .cover, .panel, .callout, .risk, .hero, .twocol, .disc, .mkpi,
-              table.act, table.bar, table.kpis, table.cmp tr, .swslist tr { page-break-inside: avoid; }
-            .pad { padding: 4px 2px; }
-            .body { font-size:10pt; line-height:1.6; color:#374050; margin:8px 0; }
-            .body.sm { font-size:9pt; line-height:1.5; }
-            .faint { color:#8A94A6; } .red { color:#D33A3A; } .green { color:#1A8F4C; }
-            .cover { background:#52260F; color:#fff; padding:22px 24px; border-radius:10px; border-bottom:3px solid #E85D1F; }
-            .brand { font-size:9pt; letter-spacing:.5px; color:#F4D9C8; }
-            .cover h1 { font-size:21pt; margin:8px 0 4px; }
-            .csub { color:#F0D8C8; font-size:11pt; }
-            .badges { margin-top:12px; }
-            .badge { display:inline-block; font-size:8.5pt; padding:3px 9px; border-radius:14px;
-              background:rgba(255,255,255,.18); color:#fff; margin:0 5px 5px 0; }
-            .badge.grade { background:#fff; color:#B9791A; font-weight:bold; }
-            .badge.stamp { background:#D33A3A; color:#fff; }
-            .sec { font-size:12pt; color:#E85D1F; margin:26px 0 12px; padding-bottom:6px; border-bottom:1px solid #F0D6C8; }
-            .sec .n { display:inline-block; width:20px; height:20px; line-height:20px; text-align:center; border-radius:5px;
-              background:#E85D1F; color:#fff; font-size:9pt; margin-right:6px; }
-            .sec .hint { color:#8A94A6; font-size:8.5pt; font-weight:normal; margin-left:6px; }
-            .hint { color:#8A94A6; font-size:8.5pt; font-weight:normal; }
+            :root {
+              --ink:#111827; --muted:#667085; --soft:#F5F7FB; --line:#E4E8F0;
+              --orange:#E85D1F; --blue:#2D6FE0; --teal:#0FB5A6; --green:#1A8F4C;
+              --red:#D33A3A; --amber:#B9791A; --paper:#FFFFFF;
+              --shadow:0 18px 50px rgba(15,23,42,.09);
+            }
+            * { box-sizing:border-box; }
+            html { scroll-behavior:smooth; }
+            body {
+              margin:0; background:linear-gradient(180deg,#F7F9FC 0%,#EEF4F8 100%);
+              color:var(--ink); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+              font-size:15px; line-height:1.62; letter-spacing:0;
+            }
+            .report-shell { width:min(1180px, calc(100% - 48px)); margin:0 auto; padding:24px 0 72px; }
+            .report-nav {
+              position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center;
+              margin:0 0 18px; padding:12px 16px; border:1px solid rgba(228,232,240,.78);
+              border-radius:14px; background:rgba(255,255,255,.78); backdrop-filter:blur(16px);
+              box-shadow:0 10px 30px rgba(15,23,42,.06);
+            }
+            .report-nav div { display:flex; gap:10px; align-items:center; }
+            .report-nav b { font-weight:900; }
+            .report-nav span, .report-nav a { color:var(--muted); font-size:13px; text-decoration:none; }
+            .sheet {
+              margin:18px 0; border:1px solid rgba(228,232,240,.9); border-radius:18px; background:var(--paper);
+              box-shadow:var(--shadow); overflow:hidden;
+            }
+            .sheet.first { overflow:visible; }
+            .pad { padding:26px; }
+            .cover {
+              position:relative; color:#fff; padding:40px 44px; border-radius:18px;
+              background:
+                linear-gradient(135deg,rgba(232,93,31,.98),rgba(45,111,224,.92) 48%,rgba(15,181,166,.92)),
+                radial-gradient(circle at 85% 0%,rgba(255,255,255,.22),transparent 34%);
+              overflow:hidden; box-shadow:0 24px 70px rgba(232,93,31,.22);
+            }
+            .cover::after {
+              content:""; position:absolute; inset:0;
+              background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);
+              background-size:34px 34px; mask-image:linear-gradient(90deg,transparent,black 28%,black 72%,transparent);
+            }
+            .cover > * { position:relative; z-index:1; }
+            .brand { font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.78); }
+            .cover h1 { margin:12px 0 8px; max-width:860px; font-size:42px; line-height:1.14; letter-spacing:0; }
+            .csub { max-width:760px; color:rgba(255,255,255,.88); font-size:17px; font-weight:650; }
+            .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+            .badge {
+              display:inline-flex; align-items:center; min-height:30px; padding:5px 12px; border-radius:999px;
+              background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); color:#fff;
+              font-size:13px; font-weight:800;
+            }
+            .badge.grade { background:#fff; color:#B45309; }
+            .badge.stamp { background:#111827; color:#fff; }
+            .body { color:#344054; margin:12px 0; }
+            .body.sm { font-size:13px; }
+            .faint { color:#98A2B3; } .red { color:var(--red); } .green { color:var(--green); }
+            .sec {
+              display:flex; align-items:center; gap:10px; margin:2px 0 18px; padding-bottom:14px;
+              border-bottom:1px solid var(--line); font-size:23px; line-height:1.25; letter-spacing:0; color:var(--ink);
+            }
+            .sec .n {
+              display:inline-grid; place-items:center; width:30px; height:30px; flex:0 0 auto;
+              border-radius:9px; color:#fff; background:linear-gradient(135deg,var(--orange),var(--blue));
+              font-size:13px; font-weight:900;
+            }
+            .sec .hint, .hint { color:var(--muted); font-size:13px; font-weight:650; }
             .hero { width:100%; border-collapse:collapse; }
-            .gaugecell { width:140px; vertical-align:middle; text-align:center; }
-            .gauge { position:relative; width:130px; height:130px; margin:0 auto; }
-            .gctr { position:absolute; left:0; top:0; width:130px; height:130px; text-align:center; }
-            .gctr b { display:block; font-size:30pt; line-height:118px; }
-            .gctr span { display:block; margin-top:-30px; font-size:8.5pt; color:#5A6678; }
-            .herobody { vertical-align:middle; padding-left:12px; }
-            .kpis { width:100%; border-collapse:separate; border-spacing:7px 0; }
-            .kpi { border:1px solid #E7EAF0; border-radius:9px; padding:9px 11px; width:33%; vertical-align:top; }
-            .klab { font-size:8.5pt; color:#5A6678; }
-            .kval { font-size:16pt; font-weight:bold; margin-top:2px; }
-            .kval small, .mval small { font-size:9pt; color:#8A94A6; font-weight:normal; }
-            .callout { border-left:3px solid #E85D1F; background:#FCF5F1; border-radius:0 8px 8px 0;
-              padding:10px 13px; margin:12px 0; font-size:9.5pt; line-height:1.55; }
-            .callout.blue { border-color:#2D6FE0; background:#EAF1FD; }
-            .callout.green { border-color:#1A8F4C; background:#E9F7EF; }
-            .callout.amber { border-color:#B9791A; background:#FBF1DD; }
+            .gaugecell { width:180px; vertical-align:middle; text-align:center; }
+            .gauge { position:relative; width:150px; height:150px; margin:0 auto; }
+            .gauge svg { width:150px; height:150px; filter:drop-shadow(0 12px 18px rgba(15,23,42,.08)); }
+            .gctr { position:absolute; inset:0; text-align:center; }
+            .gctr b { display:block; font-size:42px; line-height:134px; letter-spacing:-.02em; }
+            .gctr span { display:block; margin-top:-40px; font-size:12px; color:var(--muted); font-weight:800; }
+            .herobody { vertical-align:middle; padding-left:18px; }
+            .kpis { width:100%; border-collapse:separate; border-spacing:10px 0; }
+            .kpi {
+              width:33%; padding:14px 15px; border:1px solid var(--line); border-radius:14px;
+              background:linear-gradient(180deg,#fff,#FAFBFD); vertical-align:top;
+            }
+            .klab { color:var(--muted); font-size:12px; font-weight:800; }
+            .kval { margin-top:4px; font-size:25px; line-height:1.15; font-weight:950; letter-spacing:-.02em; }
+            .kval small, .mval small { font-size:13px; color:var(--muted); font-weight:700; }
+            .callout, .consult-comment {
+              margin:16px 0 0; padding:15px 17px; border-radius:14px; border:1px solid rgba(232,93,31,.18);
+              background:linear-gradient(180deg,#FFF7F3,#FFFFFF); color:#273142; font-size:14px; line-height:1.72;
+            }
+            .consult-comment::before { content:"AI 코멘트"; display:block; margin-bottom:5px; color:var(--orange); font-size:11px; font-weight:950; letter-spacing:.06em; }
+            .callout.blue { border-color:rgba(45,111,224,.18); background:#F3F7FF; }
+            .callout.green { border-color:rgba(26,143,76,.18); background:#F0FBF5; }
+            .callout.amber { border-color:rgba(185,121,26,.18); background:#FFF8E8; }
             .twocol { width:100%; border-collapse:collapse; }
             .twocol > tbody > tr > td { width:50%; vertical-align:top; padding:0 8px; }
-            .colh { font-size:9pt; font-weight:bold; margin:4px 0 8px; }
-            .colh.warn { color:#8A94A6; } .colh.ok { color:#8A94A6; }
-            .risk { border:1px solid #F2D6D6; border-left:3px solid #D33A3A; border-radius:0 8px 8px 0;
-              padding:8px 11px; margin:7px 0; }
-            .risktop .rt { font-weight:bold; font-size:9.5pt; }
-            .risktop .pill { float:right; font-size:8pt; padding:2px 7px; border-radius:10px; }
-            .pill.hi { background:#FCEAEA; color:#D33A3A; } .pill.mid { background:#FBF1DD; color:#B9791A; }
-            .pill.low { background:#EAF1FD; color:#2D6FE0; }
-            .rd { font-size:8.5pt; color:#5A6678; margin-top:6px; line-height:1.5; clear:both; }
-            .act { width:100%; border-collapse:collapse; border-bottom:1px solid #EEF0F4; }
-            .act .ano { width:22px; vertical-align:top; }
-            .act .ano { color:#fff; }
-            .act td.ano { background:#E85D1F; border-radius:11px; text-align:center; font-size:9pt; font-weight:bold;
-              width:20px; height:20px; }
-            .atx { padding:6px 8px; } .atx b { font-size:9.5pt; } .atx p { margin:3px 0 0; font-size:8.5pt; color:#5A6678; }
-            .adur { vertical-align:top; text-align:right; font-size:8pt; color:#8A94A6; white-space:nowrap; width:54px; padding-top:6px; }
-            .panel { border:1px solid #E7EAF0; border-radius:10px; padding:12px; margin-bottom:12px; }
-            .panel h3 { margin:0 0 10px; font-size:10pt; }
-            .axis { width:100%; border-collapse:collapse; margin-top:2px; }
-            .axis td { font-size:8pt; color:#8A94A6; }
-            .range { position:relative; height:34px; margin:16px 4px 8px; }
-            .rtrack { position:absolute; top:13px; left:0; right:0; height:7px; border-radius:4px; background:#EAECF1; }
-            .rme { position:absolute; top:6px; width:3px; height:21px; background:#E85D1F; border-radius:2px; }
-            .rlab { position:absolute; top:22px; font-size:8pt; color:#8A94A6; }
-            .bar { width:100%; border-collapse:collapse; margin:5px 0; }
-            .bar .bnm { width:34%; font-size:9pt; color:#5A6678; padding-right:8px; }
-            .bar.hl .bnm { color:#1B2330; font-weight:bold; }
-            .bbg { height:16px; background:#EEF0F4; border-radius:5px; overflow:hidden; }
-            .bfill { height:16px; border-radius:5px; }
-            .bar .bvv { width:46px; text-align:right; font-size:9pt; font-weight:bold; }
-            .kvs { width:100%; border-collapse:collapse; }
-            .kvs .kvk { width:60px; font-size:8.5pt; color:#8A94A6; padding:3px 0; }
-            .kvs .kvv { font-size:9pt; color:#374050; }
-            table.cmp { width:100%; border-collapse:collapse; font-size:9pt; margin-top:6px; }
-            table.cmp th { background:#F7F8FB; color:#5A6678; text-align:left; padding:7px 8px; border-bottom:1px solid #E7EAF0; font-size:8.5pt; }
-            table.cmp td { padding:7px 8px; border-bottom:1px solid #EEF0F4; }
+            .colh { color:var(--muted); font-size:13px; font-weight:900; margin:4px 0 10px; }
+            .risk {
+              margin:10px 0; padding:13px 15px; border:1px solid #F2D6D6; border-left:4px solid var(--red);
+              border-radius:13px; background:#fff;
+            }
+            .risktop .rt { font-weight:900; }
+            .risktop .pill { float:right; font-size:12px; padding:3px 8px; border-radius:999px; font-weight:850; }
+            .pill.hi { background:#FCEAEA; color:var(--red); } .pill.mid { background:#FBF1DD; color:var(--amber); }
+            .pill.low { background:#EAF1FD; color:var(--blue); }
+            .rd { clear:both; margin-top:7px; color:var(--muted); font-size:13px; }
+            .act { width:100%; border-collapse:collapse; border-bottom:1px solid var(--line); }
+            .act td.ano { background:var(--orange); color:#fff; border-radius:999px; text-align:center; font-size:13px; font-weight:900; width:24px; height:24px; }
+            .atx { padding:8px 10px; } .atx b { font-size:14px; } .atx p { margin:4px 0 0; font-size:13px; color:var(--muted); }
+            .adur { width:64px; padding-top:8px; text-align:right; color:var(--muted); font-size:12px; white-space:nowrap; vertical-align:top; }
+            .ops-grid, .signal-layout { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+            .info-card, .panel {
+              position:relative; padding:18px; border:1px solid var(--line); border-radius:16px;
+              background:linear-gradient(180deg,#fff,#FAFBFD); overflow:hidden;
+            }
+            .info-card::before, .panel::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent,var(--orange)); }
+            .accent-orange { --accent:var(--orange); } .accent-blue { --accent:var(--blue); } .accent-teal { --accent:var(--teal); }
+            .info-card h3, .panel h3 { margin:0 0 14px; font-size:16px; line-height:1.25; letter-spacing:0; }
+            .tile-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+            .tile-grid.compact { grid-template-columns:repeat(3,minmax(0,1fr)); }
+            .metric-tile {
+              min-height:82px; padding:12px; border:1px solid #EDF0F5; border-radius:13px; background:#fff;
+              display:flex; flex-direction:column; justify-content:space-between;
+            }
+            .metric-tile span { color:var(--muted); font-size:12px; font-weight:850; }
+            .metric-tile b { font-size:18px; line-height:1.18; letter-spacing:-.01em; overflow-wrap:anywhere; }
+            .metric-tile small { color:#98A2B3; font-size:11px; font-weight:750; }
+            .info-list { display:grid; gap:8px; }
+            .info-row { display:grid; grid-template-columns:92px minmax(0,1fr); gap:12px; padding:9px 0; border-bottom:1px solid #EEF1F5; }
+            .info-row span { color:var(--muted); font-size:12px; font-weight:850; }
+            .info-row b { font-size:13px; overflow-wrap:anywhere; }
+            .facility-cloud { display:flex; flex-wrap:wrap; gap:8px; }
+            .facility-chip { padding:9px 11px; border:1px solid #E7EEF3; border-radius:12px; background:#fff; min-width:calc(50% - 4px); }
+            .facility-chip span { display:block; color:var(--muted); font-size:11px; font-weight:850; }
+            .facility-chip b { font-size:13px; }
+            .modern-table, table.cmp { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--line); border-radius:14px; font-size:13px; }
+            .modern-table th, table.cmp th { background:#F6F8FB; color:var(--muted); text-align:left; padding:10px 12px; font-size:12px; font-weight:900; }
+            .modern-table td, table.cmp td { padding:10px 12px; border-top:1px solid #EDF0F5; }
             table.cmp td.r, table.cmp th.r { text-align:right; }
-            table.cmp tr.best td { background:#FCF5F1; }
-            .recmark { font-size:7.5pt; color:#fff; background:#E85D1F; padding:1px 6px; border-radius:9px; }
-            .tag { font-size:8pt; padding:2px 7px; border-radius:10px; white-space:nowrap; }
-            .tag.g { background:#E9F7EF; color:#1A8F4C; } .tag.r { background:#FCEAEA; color:#D33A3A; }
-            .tag.a { background:#FBF1DD; color:#B9791A; } .tag.b { background:#EAF1FD; color:#2D6FE0; }
-            .swslist { width:100%; border-collapse:collapse; margin-top:10px; }
-            .swslist .swr { width:46px; vertical-align:top; font-size:8.5pt; color:#8A94A6; font-weight:bold; padding-top:6px; }
-            .swslist td { padding:6px 0; border-bottom:1px solid #EEF0F4; }
-            .swt { font-weight:bold; font-size:9pt; margin-bottom:3px; }
-            .sw { font-size:8.5pt; line-height:1.5; margin:2px 0; }
-            .sw.g { color:#1A8F4C; } .sw.w { color:#D33A3A; }
-            .mkpi { border:1px solid #E7EAF0; border-radius:8px; padding:8px 10px; margin-bottom:7px; }
-            .mval { font-size:13pt; font-weight:bold; margin-top:2px; }
-            .disc { border:1px dashed #D6DAE3; border-radius:10px; background:#FAFBFC; padding:12px 14px; }
-            .disc ul { margin:0; padding-left:16px; } .disc li { font-size:9pt; color:#5A6678; line-height:1.7; margin:2px 0; }
+            table.cmp tr.best td { background:#FFF7F2; }
+            .mode-strip { margin-top:12px; padding:10px 12px; border-radius:12px; background:#F0FAF8; color:#0B766C; font-weight:900; }
+            .panel { margin-bottom:14px; }
+            .axis { width:100%; border-collapse:collapse; margin-top:2px; }
+            .axis td { font-size:12px; color:var(--muted); }
+            .range { position:relative; height:42px; margin:20px 8px 10px; }
+            .rtrack { position:absolute; top:15px; left:0; right:0; height:8px; border-radius:999px; background:#EAECF1; }
+            .rme { position:absolute; top:7px; width:4px; height:24px; background:var(--orange); border-radius:999px; box-shadow:0 0 0 5px rgba(232,93,31,.12); }
+            .rlab { position:absolute; top:27px; font-size:12px; color:var(--muted); }
+            .bar { width:100%; border-collapse:collapse; margin:8px 0; }
+            .bar .bnm { width:30%; padding-right:10px; color:var(--muted); font-size:13px; }
+            .bar.hl .bnm { color:var(--ink); font-weight:900; }
+            .bbg { height:18px; background:#EEF1F5; border-radius:999px; overflow:hidden; }
+            .bfill { height:18px; border-radius:999px; }
+            .bar .bvv { width:58px; text-align:right; font-size:13px; font-weight:900; }
+            .kvs { width:100%; border-collapse:collapse; }
+            .kvs .kvk { width:70px; color:var(--muted); font-size:13px; font-weight:850; padding:5px 0; }
+            .kvs .kvv { font-size:13px; color:#344054; }
+            .recmark, .tag { display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-size:12px; font-weight:900; white-space:nowrap; }
+            .recmark { color:#fff; background:var(--orange); }
+            .tag.g { background:#E9F7EF; color:var(--green); } .tag.r { background:#FCEAEA; color:var(--red); }
+            .tag.a { background:#FBF1DD; color:var(--amber); } .tag.b { background:#EAF1FD; color:var(--blue); }
+            .swslist { width:100%; border-collapse:collapse; margin-top:12px; }
+            .swslist .swr { width:64px; vertical-align:top; color:var(--muted); font-size:13px; font-weight:900; padding-top:8px; }
+            .swslist td { padding:9px 0; border-bottom:1px solid #EEF1F5; }
+            .swt { margin-bottom:4px; font-weight:900; }
+            .sw { margin:3px 0; color:#344054; font-size:13px; }
+            .sw.g { color:var(--green); } .sw.w { color:var(--red); }
+            .mkpi { margin-bottom:9px; padding:13px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+            .mval { margin-top:3px; font-size:20px; line-height:1.2; font-weight:950; }
+            .disc { padding:18px 20px; border:1px dashed #CBD5E1; border-radius:16px; background:#FAFBFC; }
+            .disc ul { margin:0; padding-left:18px; } .disc li { color:#4B5563; margin:5px 0; }
+            @media (max-width: 900px) {
+              .report-shell { width:min(100% - 24px, 1180px); padding-top:12px; }
+              .cover { padding:30px 24px; } .cover h1 { font-size:30px; }
+              .ops-grid, .signal-layout { grid-template-columns:1fr; }
+              .tile-grid.compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
+              .twocol > tbody > tr > td { display:block; width:100%; padding:0; }
+              .gaugecell, .herobody { display:block; width:100%; padding:0; }
+              .kpis, .kpis tbody, .kpis tr, .kpis td { display:block; width:100%; }
+              .kpi { margin:8px 0; }
+              .report-nav { position:static; }
+            }
+            @media print {
+              body { background:#fff; }
+              .report-shell { width:100%; padding:0; }
+              .report-nav { display:none; }
+              .sheet { box-shadow:none; break-inside:avoid; page-break-inside:avoid; }
+            }
         """.trimIndent()
     }
 }
