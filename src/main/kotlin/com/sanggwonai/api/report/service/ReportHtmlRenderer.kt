@@ -3,6 +3,7 @@ package com.sanggwonai.api.report.service
 import org.springframework.stereotype.Component
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -429,7 +430,9 @@ class ReportHtmlRenderer {
         val evalLabel = str(pay["투자회수평가"])
         miniKpi(sb, "투자 회수 평가", evalLabel.ifBlank { "-" }, "", if (evalLabel.contains("적자")) RED else INK)
         intOf(path(pay, "bep_action", "피크_손익분기_잔수"))?.let {
-            miniKpi(sb, "손익분기 — 피크 필요 판매량", "시간당 약 $it", "", INK)
+            val ticket = dbl(path(pay, "bep_action", "객단가원")) ?: 0.0
+            val peakRevenue = if (ticket > 0) ceil((it * ticket) / 10_000.0) * 10_000.0 else null
+            miniKpi(sb, "손익분기 — 피크 필요 매출", peakRevenue?.let { v -> "시간당 약 ${wonRaw(v)}" } ?: "확인 필요", "", INK)
         }
         sb.append("</div></td></tr></table>")
         str(ch9["회수_해석"]).ifBlank { str(path(ch9, "bep_action")) }.ifBlank { null }
@@ -509,7 +512,7 @@ class ReportHtmlRenderer {
         sb.append("<li><b>투자 회수기간</b> = 초기투자비 ÷ 월 순이익</li>")
         sb.append("<li><b>평균 추정매출</b>: 서울시 상권분석서비스 추정매출 데이터 기반 (상권 → 상권배후지 → 행정동 순으로 우선 적용)</li>")
         sb.append("<li><b>영업이익률</b>: 업종별 고정값 적용 (예: 일식 13%, 한식 12%, 카페 17% 등)</li>")
-        sb.append("<li><b>손익분기 피크 필요 판매량</b> = 손익분기 월매출 ÷ 영업일수(26일) × 피크 매출 비중(45%) ÷ 객단가</li>")
+        sb.append("<li><b>손익분기 피크 필요 매출</b> = 손익분기 월매출 ÷ 영업일수(26일) × 피크 매출 비중(45%)</li>")
         sb.append("</ul></div>")
         sb.append("</div></div>")
     }
@@ -771,8 +774,11 @@ class ReportHtmlRenderer {
             .callout.blue { border-color:rgba(45,111,224,.18); background:#F3F7FF; }
             .callout.green { border-color:rgba(26,143,76,.18); background:#F0FBF5; }
             .callout.amber { border-color:rgba(185,121,26,.18); background:#FFF8E8; }
-            .twocol { width:100%; border-collapse:collapse; }
-            .twocol > tbody > tr > td { width:50%; vertical-align:top; padding:0 8px; }
+            .twocol { width:100%; border-collapse:separate; border-spacing:0; }
+            .twocol > tbody { display:block; width:100%; }
+            .twocol > tbody > tr { display:flex; align-items:stretch; margin:0 -8px; }
+            .twocol > tbody > tr > td { display:flex; flex-direction:column; width:50%; vertical-align:top; padding:0 8px; }
+            .twocol > tbody > tr > td > .panel { flex:1; height:auto; }
             .colh { color:var(--muted); font-size:13px; font-weight:900; margin:4px 0 10px; }
             .risk {
               margin:10px 0; padding:13px 15px; border:1px solid #F2D6D6; border-left:4px solid var(--red);
@@ -845,6 +851,7 @@ class ReportHtmlRenderer {
             .sw { margin:3px 0; color:#344054; font-size:13px; }
             .sw.g { color:var(--green); } .sw.w { color:var(--red); }
             .mkpi { margin-bottom:9px; padding:13px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+            .mkpi:last-child { margin-bottom:0; }
             .mval { margin-top:3px; font-size:20px; line-height:1.2; font-weight:950; }
             .disc { padding:18px 20px; border:1px dashed #CBD5E1; border-radius:16px; background:#FAFBFC; }
             .disc ul { margin:0; padding-left:18px; } .disc li { color:#4B5563; margin:5px 0; }
@@ -853,6 +860,7 @@ class ReportHtmlRenderer {
               .cover { padding:30px 24px; } .cover h1 { font-size:30px; }
               .ops-grid, .signal-layout { grid-template-columns:1fr; }
               .tile-grid.compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
+              .twocol > tbody, .twocol > tbody > tr { display:block; margin:0; }
               .twocol > tbody > tr > td { display:block; width:100%; padding:0; }
               .gaugecell, .herobody { display:block; width:100%; padding:0; }
               .kpis, .kpis tbody, .kpis tr, .kpis td { display:block; width:100%; }
