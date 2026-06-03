@@ -29,7 +29,7 @@ class VacancyStructuredCandidateQuery(
 
         addText(where, params, """cf."행정동_행정동_코드"""", location?.areaId, "areaId")
         addText(where, params, """v."시도"""", location?.province, "province")
-        addText(where, params, """v."구"""", location?.district, "district")
+        addTextAlternatives(where, params, """v."구"""", location?.districtKeywords(), "district")
         addTextAlternatives(where, params, """v."동"""", location?.dongKeywords(), "dong")
         addCombinedText(
             where = where,
@@ -96,7 +96,7 @@ class VacancyStructuredCandidateQuery(
         addRange(where, params, """v."공급면적_제곱미터"""", space?.supplyAreaMin, space?.supplyAreaMax, "supplyArea")
         addText(where, params, """v."층"""", space?.floorText, "floorText")
         if (space?.groundFloor == true) {
-            where += """v."층" like '%1%' and coalesce(v."층", '') not like '%지하%'"""
+            where += """coalesce(v."층", '') ~ '(^|[^0-9-])1(층|$|[^0-9])' and coalesce(v."층", '') !~* '(지하|b\s*1|-\s*1)'"""
         }
         space?.basement?.let {
             where += if (it) """coalesce(v."층", '') like '%지하%'""" else """coalesce(v."층", '') not like '%지하%'"""
@@ -439,6 +439,12 @@ class VacancyStructuredCandidateQuery(
 
     private fun VacancyLocationFilter.stationKeywords(): List<String> {
         return (subwayKeywords.orEmpty() + listOfNotNull(subway))
+            .mapNotNull { it.trim().takeIf(String::isNotEmpty) }
+            .distinct()
+    }
+
+    private fun VacancyLocationFilter.districtKeywords(): List<String> {
+        return (districtKeywords.orEmpty() + listOfNotNull(district))
             .mapNotNull { it.trim().takeIf(String::isNotEmpty) }
             .distinct()
     }

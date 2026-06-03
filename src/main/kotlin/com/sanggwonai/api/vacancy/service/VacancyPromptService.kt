@@ -74,6 +74,10 @@ private fun mergeLocation(primary: VacancyLocationFilter?, repair: VacancyLocati
     if (repair == null) return primary
     return primary.copy(
         district = primary.district?.takeIf(::looksLikeSeoulDistrict) ?: repair.district,
+        districtKeywords = mergeStringLists(
+            primary.districtKeywords?.filter(::looksLikeSeoulDistrict),
+            repair.districtKeywords?.filter(::looksLikeSeoulDistrict)
+        ),
         dong = primary.dong?.takeUnless(::looksLikeBadLocationKeyword)
             ?: repair.dong?.takeUnless(::looksLikeBadLocationKeyword),
         dongKeywords = mergeStringLists(
@@ -459,8 +463,10 @@ private object VacancyPromptFallbackParser {
             .toList()
         var locationText = prompt
         subwayKeywords.forEach { locationText = locationText.replace(it, " ") }
-        val district = seoulDistricts.firstOrNull { locationText.contains(it) }
-        district?.let { locationText = locationText.replace(it, " ") }
+        val districts = seoulDistricts
+            .filter { locationText.contains(it) }
+            .distinct()
+        districts.forEach { locationText = locationText.replace(it, " ") }
         val dong = Regex("""([가-힣]{1,}(?:동|가))""")
             .findAll(locationText)
             .map { it.value }
@@ -468,9 +474,11 @@ private object VacancyPromptFallbackParser {
             .distinct()
             .toList()
         val subway = subwayKeywords.singleOrNull()
-        if (district == null && dong.isEmpty() && subwayKeywords.isEmpty()) return null
+        val district = districts.singleOrNull()
+        if (districts.isEmpty() && dong.isEmpty() && subwayKeywords.isEmpty()) return null
         return VacancyLocationFilter(
             district = district,
+            districtKeywords = districts.takeIf { it.isNotEmpty() },
             dong = dong.singleOrNull(),
             dongKeywords = dong.takeIf { it.isNotEmpty() },
             subway = subway,

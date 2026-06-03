@@ -81,6 +81,7 @@ data class VacancyLocationFilter(
     val areaId: String? = null,
     val province: String? = null,
     val district: String? = null,
+    val districtKeywords: List<String>? = null,
     val dong: String? = null,
     val dongKeywords: List<String>? = null,
     val address: String? = null,
@@ -100,6 +101,7 @@ data class VacancyLocationFilter(
             areaId = cleanText(areaId),
             province = cleanText(province),
             district = normalizedDistrict,
+            districtKeywords = normalizeTextList(districtKeywords, normalizedDistrict),
             dong = normalizedDong,
             dongKeywords = normalizeTextList(dongKeywords, normalizedDong),
             address = cleanText(address),
@@ -111,6 +113,7 @@ data class VacancyLocationFilter(
 
     fun empty(): Boolean {
         return listOf(areaId, province, district, dong, address, subway).all { it.isNullOrBlank() } &&
+            districtKeywords.isNullOrEmpty() &&
             dongKeywords.isNullOrEmpty() &&
             subwayKeywords.isNullOrEmpty() &&
             latitude == null &&
