@@ -87,6 +87,7 @@ data class VacancyLocationFilter(
     val address: String? = null,
     val subway: String? = null,
     val subwayKeywords: List<String>? = null,
+    val subwayWalkMinutesMax: Int? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
     val radiusM: Int? = null
@@ -107,6 +108,7 @@ data class VacancyLocationFilter(
             address = cleanText(address),
             subway = cleanText(subway),
             subwayKeywords = normalizeStationKeywords(subwayKeywords, subway),
+            subwayWalkMinutesMax = subwayWalkMinutesMax?.coerceIn(0, MAX_SUBWAY_WALK_MINUTES),
             radiusM = radiusM?.coerceIn(MIN_RADIUS_M, MAX_RADIUS_M)
         )
     }
@@ -116,6 +118,7 @@ data class VacancyLocationFilter(
             districtKeywords.isNullOrEmpty() &&
             dongKeywords.isNullOrEmpty() &&
             subwayKeywords.isNullOrEmpty() &&
+            subwayWalkMinutesMax == null &&
             latitude == null &&
             longitude == null &&
             radiusM == null
@@ -124,6 +127,7 @@ data class VacancyLocationFilter(
     companion object {
         private const val MIN_RADIUS_M = 1
         private const val MAX_RADIUS_M = 5000
+        private const val MAX_SUBWAY_WALK_MINUTES = 60
     }
 }
 
@@ -190,7 +194,10 @@ data class VacancySpaceFilter(
     val groundFloor: Boolean? = null,
     val basement: Boolean? = null
 ) {
-    fun normalized(): VacancySpaceFilter = copy(floorText = normalizeFloorText(floorText, groundFloor, basement))
+    fun normalized(): VacancySpaceFilter = copy(
+        floorText = normalizeFloorText(floorText, groundFloor, basement),
+        basement = if (groundFloor == true && basement == true) null else basement
+    )
 
     fun empty(): Boolean {
         return dedicatedAreaMin == null &&

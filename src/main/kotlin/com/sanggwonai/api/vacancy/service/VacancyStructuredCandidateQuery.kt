@@ -39,6 +39,7 @@ class VacancyStructuredCandidateQuery(
             name = "address"
         )
         addStationKeywords(where, params, location?.stationKeywords())
+        addSubwayWalkMinutesMax(where, params, location?.subwayWalkMinutesMax)
         addCombinedText(
             where = where,
             params = params,
@@ -286,6 +287,16 @@ class VacancyStructuredCandidateQuery(
             fieldClauses
         }
         where += clauses.joinToString(prefix = "(", postfix = ")", separator = " or ")
+    }
+
+    private fun addSubwayWalkMinutesMax(
+        where: MutableList<String>,
+        params: MapSqlParameterSource,
+        value: Int?
+    ) {
+        value ?: return
+        where += """(substring(coalesce(v."지하철", '') from '도보[[:space:]]*([0-9]+)[[:space:]]*분'))::int <= :subwayWalkMinutesMax"""
+        params.addValue("subwayWalkMinutesMax", value)
     }
 
     private fun stationKeyword(value: String): StationKeyword? {

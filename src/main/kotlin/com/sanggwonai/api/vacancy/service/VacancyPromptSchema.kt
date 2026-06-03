@@ -41,6 +41,7 @@ object VacancyPromptSchema {
         If a prompt asks for a business-suitable place, set category.category_id, category.category_label, category.score_mode=category, and sort=score_desc.
         For station-area prompts, put every mentioned station into location.subway_keywords. Example: "시청역이나 강남역 주변" -> ["시청역","강남역"].
         If exactly one station is mentioned, location.subway may also contain that station. If multiple stations are mentioned, keep location.subway null and use location.subway_keywords.
+        For subway walking-time prompts, use location.subway_walk_minutes_max. Example: "지하철에서 5분거리 안쪽" or "역 도보 5분 이내" -> subway_walk_minutes_max=5. Do not treat 지하철 as basement.
         For multi-district prompts, put every mentioned 구 into location.district_keywords. Example: "종로구나 강남구" -> ["종로구","강남구"]. If exactly one district is mentioned, location.district may also contain it. If multiple districts are mentioned, keep location.district null and use location.district_keywords.
         For multi-dong prompts, put every mentioned dong into location.dong_keywords. Example: "논현동이나 신사동" -> ["논현동","신사동"]. If exactly one dong is mentioned, location.dong may also contain it. If multiple dongs are mentioned, keep location.dong null and use location.dong_keywords.
         Do not invent area_id unless it is explicitly provided. Put Korean 구 terms into location.district or location.district_keywords.
@@ -114,6 +115,7 @@ object VacancyPromptSchema {
         "address" to nullableString("도로명주소/지번주소/building keyword."),
         "subway" to nullableString("지하철역 keyword, for example 잠실역."),
         "subway_keywords" to nullableStringArray("Multiple station keywords, for example [\"시청역\", \"강남역\"]. Use this for A역이나 B역 prompts."),
+        "subway_walk_minutes_max" to nullableInteger("Maximum walking minutes to any subway station, for example 지하철에서 5분거리 안쪽 -> 5."),
         "latitude" to nullableNumber("Center latitude for radius search."),
         "longitude" to nullableNumber("Center longitude for radius search."),
         "radius_m" to nullableInteger("Radius in meters, max 5000.")

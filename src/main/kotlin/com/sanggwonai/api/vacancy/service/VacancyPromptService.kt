@@ -85,7 +85,8 @@ private fun mergeLocation(primary: VacancyLocationFilter?, repair: VacancyLocati
             repair.dongKeywords?.filterNot(::looksLikeBadLocationKeyword)
         ),
         subway = primary.subway ?: repair.subway,
-        subwayKeywords = mergeStringLists(primary.subwayKeywords, repair.subwayKeywords)
+        subwayKeywords = mergeStringLists(primary.subwayKeywords, repair.subwayKeywords),
+        subwayWalkMinutesMax = primary.subwayWalkMinutesMax ?: repair.subwayWalkMinutesMax
     )
 }
 
@@ -401,6 +402,13 @@ private object VacancyPromptFallbackParser {
     )
     private val ignoredDongWords = setOf("유동", "이동", "활동", "테라스가", "학원가")
 
+    private fun isUsefulDongKeyword(value: String): Boolean {
+        if (value in ignoredDongWords) return false
+        if (looksLikeBadLocationKeyword(value)) return false
+        if (value.endsWith("가") && !Regex("""^[가-힣]{1,6}[0-9]+가$""").matches(value)) return false
+        return true
+    }
+
     fun parse(prompt: String): VacancyStructuredFilter {
         var location = parseLocation(prompt)
         val category = parseCategory(prompt)
@@ -467,23 +475,34 @@ private object VacancyPromptFallbackParser {
             .filter { locationText.contains(it) }
             .distinct()
         districts.forEach { locationText = locationText.replace(it, " ") }
+        val subwayWalkMinutesMax = parseSubwayWalkMinutesMax(prompt)
         val dong = Regex("""([가-힣]{1,}(?:동|가))""")
             .findAll(locationText)
             .map { it.value }
-            .filter { it !in ignoredDongWords }
+            .filter { isUsefulDongKeyword(it) }
             .distinct()
             .toList()
         val subway = subwayKeywords.singleOrNull()
         val district = districts.singleOrNull()
-        if (districts.isEmpty() && dong.isEmpty() && subwayKeywords.isEmpty()) return null
+        if (districts.isEmpty() && dong.isEmpty() && subwayKeywords.isEmpty() && subwayWalkMinutesMax == null) return null
         return VacancyLocationFilter(
             district = district,
             districtKeywords = districts.takeIf { it.isNotEmpty() },
             dong = dong.singleOrNull(),
             dongKeywords = dong.takeIf { it.isNotEmpty() },
             subway = subway,
-            subwayKeywords = subwayKeywords.takeIf { it.isNotEmpty() }
+            subwayKeywords = subwayKeywords.takeIf { it.isNotEmpty() },
+            subwayWalkMinutesMax = subwayWalkMinutesMax
         )
+    }
+
+    private fun parseSubwayWalkMinutesMax(prompt: String): Int? {
+        return Regex("""(?:지하철|역)[^0-9]{0,12}([0-9]{1,2})\s*분(?:거리|이내|안쪽|안|내)?|도보\s*([0-9]{1,2})\s*분(?:거리|이내|안쪽|안|내)?""")
+            .find(prompt)
+            ?.groupValues
+            ?.drop(1)
+            ?.firstOrNull { it.isNotBlank() }
+            ?.toIntOrNull()
     }
 
     private fun parseCategory(prompt: String): VacancyCategoryFilter? {
@@ -516,9 +535,10 @@ private object VacancyPromptFallbackParser {
     }
 
     private fun parseSpace(prompt: String): VacancySpaceFilter? {
-        val basementMentioned = prompt.contains("지하")
-        val basementNegated = Regex("""지하[^,.，。]*?(말고|아닌|아니고|제외|빼고|싫)""").containsMatchIn(prompt)
-        val basementOne = Regex("""지하\s*1층""").containsMatchIn(prompt)
+        val floorPrompt = prompt.replace("지하철", " ")
+        val basementMentioned = Regex("""지하\s*(?:[0-9]+층|층|상가|매장|공간)""").containsMatchIn(floorPrompt)
+        val basementNegated = Regex("""지하[^,.，。]*?(말고|아닌|아니고|제외|빼고|싫)""").containsMatchIn(floorPrompt)
+        val basementOne = Regex("""지하\s*1층""").containsMatchIn(floorPrompt)
         val floorText = Regex("""[0-9]+층""").find(prompt)?.value
         var space = VacancySpaceFilter(
             floorText = floorText?.takeUnless { it == "1층" },
