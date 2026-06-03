@@ -271,33 +271,60 @@ data class VacancyCommercialFilter(
     val locationAreaMax: BigDecimal? = null,
     val multiUseFacility: Boolean? = null,
     val floatingPopulationQuarterlyMin: BigDecimal? = null,
+    val floatingPopulationQuarterlyLevel: String? = null,
     val residentPopulationQuarterlyMin: BigDecimal? = null,
+    val residentPopulationQuarterlyLevel: String? = null,
     val workerPopulationQuarterlyMin: BigDecimal? = null,
+    val workerPopulationQuarterlyLevel: String? = null,
     val eveningPopulationRatioMin: BigDecimal? = null,
+    val eveningPopulationRatioLevel: String? = null,
     val lateNightPopulationRatioMin: BigDecimal? = null,
+    val lateNightPopulationRatioLevel: String? = null,
     val morningPopulationRatioMin: BigDecimal? = null,
+    val morningPopulationRatioLevel: String? = null,
     val weekendPopulationRatioMin: BigDecimal? = null,
+    val weekendPopulationRatioLevel: String? = null,
     val age2030PopulationRatioMin: BigDecimal? = null,
+    val age2030PopulationRatioLevel: String? = null,
     val age40PlusPopulationRatioMin: BigDecimal? = null,
+    val age40PlusPopulationRatioLevel: String? = null,
     val femalePopulationRatioMin: BigDecimal? = null,
+    val femalePopulationRatioLevel: String? = null,
     val restaurantCount500mMin: Int? = null,
     val restaurantCount500mMax: Int? = null,
+    val restaurantCount500mLevel: String? = null,
     val cafeCount500mMin: Int? = null,
     val cafeCount500mMax: Int? = null,
+    val cafeCount500mLevel: String? = null,
+    val cafeToRestaurantRatioMax: BigDecimal? = null,
     val closureRateMax: BigDecimal? = null,
+    val closureRateLevel: String? = null,
     val openingRateMin: BigDecimal? = null,
+    val openingRateLevel: String? = null,
     val averageSalesPerStoreMin: BigDecimal? = null,
+    val averageSalesPerStoreLevel: String? = null,
     val eveningSalesRatioMin: BigDecimal? = null,
+    val eveningSalesRatioLevel: String? = null,
     val lateNightSalesRatioMin: BigDecimal? = null,
+    val lateNightSalesRatioLevel: String? = null,
     val weekendSalesRatioMin: BigDecimal? = null,
+    val weekendSalesRatioLevel: String? = null,
     val age2030SalesRatioMin: BigDecimal? = null,
+    val age2030SalesRatioLevel: String? = null,
     val femaleSalesRatioMin: BigDecimal? = null,
+    val femaleSalesRatioLevel: String? = null,
     val officialLandPriceMax: BigDecimal? = null,
+    val officialLandPriceLevel: String? = null,
     val totalSpendingMin: BigDecimal? = null,
+    val totalSpendingLevel: String? = null,
     val foodSpendingMin: BigDecimal? = null,
+    val foodSpendingLevel: String? = null,
     val spendingPerStoreMin: BigDecimal? = null,
+    val spendingPerStoreLevel: String? = null,
     val commercialTurnoverTypeMin: BigDecimal? = null,
-    val commercialGrowthTypeMin: BigDecimal? = null
+    val commercialTurnoverTypeLevel: String? = null,
+    val commercialGrowthTypeMin: BigDecimal? = null,
+    val commercialGrowthTypeLevel: String? = null
 ) {
     fun empty(): Boolean {
         return facilityTotalSizeMin == null &&
@@ -306,33 +333,60 @@ data class VacancyCommercialFilter(
             locationAreaMax == null &&
             multiUseFacility == null &&
             floatingPopulationQuarterlyMin == null &&
+            floatingPopulationQuarterlyLevel.isNullOrBlank() &&
             residentPopulationQuarterlyMin == null &&
+            residentPopulationQuarterlyLevel.isNullOrBlank() &&
             workerPopulationQuarterlyMin == null &&
+            workerPopulationQuarterlyLevel.isNullOrBlank() &&
             eveningPopulationRatioMin == null &&
+            eveningPopulationRatioLevel.isNullOrBlank() &&
             lateNightPopulationRatioMin == null &&
+            lateNightPopulationRatioLevel.isNullOrBlank() &&
             morningPopulationRatioMin == null &&
+            morningPopulationRatioLevel.isNullOrBlank() &&
             weekendPopulationRatioMin == null &&
+            weekendPopulationRatioLevel.isNullOrBlank() &&
             age2030PopulationRatioMin == null &&
+            age2030PopulationRatioLevel.isNullOrBlank() &&
             age40PlusPopulationRatioMin == null &&
+            age40PlusPopulationRatioLevel.isNullOrBlank() &&
             femalePopulationRatioMin == null &&
+            femalePopulationRatioLevel.isNullOrBlank() &&
             restaurantCount500mMin == null &&
             restaurantCount500mMax == null &&
+            restaurantCount500mLevel.isNullOrBlank() &&
             cafeCount500mMin == null &&
             cafeCount500mMax == null &&
+            cafeCount500mLevel.isNullOrBlank() &&
+            cafeToRestaurantRatioMax == null &&
             closureRateMax == null &&
+            closureRateLevel.isNullOrBlank() &&
             openingRateMin == null &&
+            openingRateLevel.isNullOrBlank() &&
             averageSalesPerStoreMin == null &&
+            averageSalesPerStoreLevel.isNullOrBlank() &&
             eveningSalesRatioMin == null &&
+            eveningSalesRatioLevel.isNullOrBlank() &&
             lateNightSalesRatioMin == null &&
+            lateNightSalesRatioLevel.isNullOrBlank() &&
             weekendSalesRatioMin == null &&
+            weekendSalesRatioLevel.isNullOrBlank() &&
             age2030SalesRatioMin == null &&
+            age2030SalesRatioLevel.isNullOrBlank() &&
             femaleSalesRatioMin == null &&
+            femaleSalesRatioLevel.isNullOrBlank() &&
             officialLandPriceMax == null &&
+            officialLandPriceLevel.isNullOrBlank() &&
             totalSpendingMin == null &&
+            totalSpendingLevel.isNullOrBlank() &&
             foodSpendingMin == null &&
+            foodSpendingLevel.isNullOrBlank() &&
             spendingPerStoreMin == null &&
+            spendingPerStoreLevel.isNullOrBlank() &&
             commercialTurnoverTypeMin == null &&
-            commercialGrowthTypeMin == null
+            commercialTurnoverTypeLevel.isNullOrBlank() &&
+            commercialGrowthTypeMin == null &&
+            commercialGrowthTypeLevel.isNullOrBlank()
     }
 }
 

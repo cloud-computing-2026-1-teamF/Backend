@@ -129,31 +129,58 @@ class VacancyStructuredCandidateQuery(
             params.addValue("multiUseFacility", if (it) 1 else 0)
         }
         addMin(where, params, """cf."최종_유동인구_밀도_명_per_km2_2022_분기평균"""", commercial?.floatingPopulationQuarterlyMin, "floatingPopulationQuarterly")
+        addRelativeLevel(where, """cf."최종_유동인구_밀도_명_per_km2_2022_분기평균"""", "vacancy_common_features", """"최종_유동인구_밀도_명_per_km2_2022_분기평균"""", commercial?.floatingPopulationQuarterlyLevel)
         addMin(where, params, """cf."최종_상주인구_밀도_명_per_km2_2022_분기평균"""", commercial?.residentPopulationQuarterlyMin, "residentPopulationQuarterly")
+        addRelativeLevel(where, """cf."최종_상주인구_밀도_명_per_km2_2022_분기평균"""", "vacancy_common_features", """"최종_상주인구_밀도_명_per_km2_2022_분기평균"""", commercial?.residentPopulationQuarterlyLevel)
         addMin(where, params, """cf."최종_직장인구_밀도_명_per_km2_2022_분기평균"""", commercial?.workerPopulationQuarterlyMin, "workerPopulationQuarterly")
+        addRelativeLevel(where, """cf."최종_직장인구_밀도_명_per_km2_2022_분기평균"""", "vacancy_common_features", """"최종_직장인구_밀도_명_per_km2_2022_분기평균"""", commercial?.workerPopulationQuarterlyLevel)
         addMin(where, params, """cf."저녁_비율"""", commercial?.eveningPopulationRatioMin, "eveningPopulationRatio")
+        addRelativeLevel(where, """cf."저녁_비율"""", "vacancy_common_features", """"저녁_비율"""", commercial?.eveningPopulationRatioLevel)
         addMin(where, params, """cf."심야_비율"""", commercial?.lateNightPopulationRatioMin, "lateNightPopulationRatio")
+        addRelativeLevel(where, """cf."심야_비율"""", "vacancy_common_features", """"심야_비율"""", commercial?.lateNightPopulationRatioLevel)
         addMin(where, params, """cf."아침_비율"""", commercial?.morningPopulationRatioMin, "morningPopulationRatio")
+        addRelativeLevel(where, """cf."아침_비율"""", "vacancy_common_features", """"아침_비율"""", commercial?.morningPopulationRatioLevel)
         addMin(where, params, """cf."주말_비율"""", commercial?.weekendPopulationRatioMin, "weekendPopulationRatio")
+        addRelativeLevel(where, """cf."주말_비율"""", "vacancy_common_features", """"주말_비율"""", commercial?.weekendPopulationRatioLevel)
         addMin(where, params, """cf."연령_2030_비율"""", commercial?.age2030PopulationRatioMin, "age2030PopulationRatio")
+        addRelativeLevel(where, """cf."연령_2030_비율"""", "vacancy_common_features", """"연령_2030_비율"""", commercial?.age2030PopulationRatioLevel)
         addMin(where, params, """cf."연령_40plus_비율"""", commercial?.age40PlusPopulationRatioMin, "age40PlusPopulationRatio")
+        addRelativeLevel(where, """cf."연령_40plus_비율"""", "vacancy_common_features", """"연령_40plus_비율"""", commercial?.age40PlusPopulationRatioLevel)
         addMin(where, params, """cf."여성_비율"""", commercial?.femalePopulationRatioMin, "femalePopulationRatio")
+        addRelativeLevel(where, """cf."여성_비율"""", "vacancy_common_features", """"여성_비율"""", commercial?.femalePopulationRatioLevel)
         addRange(where, params, """cf."식당수_500m"""", commercial?.restaurantCount500mMin, commercial?.restaurantCount500mMax, "restaurantCount500m")
+        addRelativeLevel(where, """cf."식당수_500m"""", "vacancy_common_features", """"식당수_500m"""", commercial?.restaurantCount500mLevel)
         addRange(where, params, """cf."카페수_500m"""", commercial?.cafeCount500mMin, commercial?.cafeCount500mMax, "cafeCount500m")
+        addRelativeLevel(where, """cf."카페수_500m"""", "vacancy_common_features", """"카페수_500m"""", commercial?.cafeCount500mLevel)
+        addRatioMax(where, params, """cf."카페수_500m"""", """cf."식당수_500m"""", commercial?.cafeToRestaurantRatioMax, "cafeToRestaurantRatio")
         addMax(where, params, """cf."동네_폐업률"""", commercial?.closureRateMax, "closureRate")
+        addRelativeLevel(where, """cf."동네_폐업률"""", "vacancy_common_features", """"동네_폐업률"""", commercial?.closureRateLevel)
         addMin(where, params, """cf."동네_개업율"""", commercial?.openingRateMin, "openingRate")
+        addRelativeLevel(where, """cf."동네_개업율"""", "vacancy_common_features", """"동네_개업율"""", commercial?.openingRateLevel)
         addMin(where, params, """cf."가게당_평균매출"""", commercial?.averageSalesPerStoreMin, "averageSalesPerStore")
+        addRelativeLevel(where, """cf."가게당_평균매출"""", "vacancy_common_features", """"가게당_평균매출"""", commercial?.averageSalesPerStoreLevel)
         addMin(where, params, """cf."동네_저녁매출_비율"""", commercial?.eveningSalesRatioMin, "eveningSalesRatio")
+        addRelativeLevel(where, """cf."동네_저녁매출_비율"""", "vacancy_common_features", """"동네_저녁매출_비율"""", commercial?.eveningSalesRatioLevel)
         addMin(where, params, """cf."동네_심야매출_비율"""", commercial?.lateNightSalesRatioMin, "lateNightSalesRatio")
+        addRelativeLevel(where, """cf."동네_심야매출_비율"""", "vacancy_common_features", """"동네_심야매출_비율"""", commercial?.lateNightSalesRatioLevel)
         addMin(where, params, """cf."동네_주말매출_비율"""", commercial?.weekendSalesRatioMin, "weekendSalesRatio")
+        addRelativeLevel(where, """cf."동네_주말매출_비율"""", "vacancy_common_features", """"동네_주말매출_비율"""", commercial?.weekendSalesRatioLevel)
         addMin(where, params, """cf."동네_2030매출_비율"""", commercial?.age2030SalesRatioMin, "age2030SalesRatio")
+        addRelativeLevel(where, """cf."동네_2030매출_비율"""", "vacancy_common_features", """"동네_2030매출_비율"""", commercial?.age2030SalesRatioLevel)
         addMin(where, params, """cf."동네_여성매출_비율"""", commercial?.femaleSalesRatioMin, "femaleSalesRatio")
+        addRelativeLevel(where, """cf."동네_여성매출_비율"""", "vacancy_common_features", """"동네_여성매출_비율"""", commercial?.femaleSalesRatioLevel)
         addMax(where, params, """cf."공시지가"""", commercial?.officialLandPriceMax, "officialLandPrice")
+        addRelativeLevel(where, """cf."공시지가"""", "vacancy_common_features", """"공시지가"""", commercial?.officialLandPriceLevel)
         addMin(where, params, """cf."지출_총금액"""", commercial?.totalSpendingMin, "totalSpending")
+        addRelativeLevel(where, """cf."지출_총금액"""", "vacancy_common_features", """"지출_총금액"""", commercial?.totalSpendingLevel)
         addMin(where, params, """cf."음식_지출_총금액"""", commercial?.foodSpendingMin, "foodSpending")
+        addRelativeLevel(where, """cf."음식_지출_총금액"""", "vacancy_common_features", """"음식_지출_총금액"""", commercial?.foodSpendingLevel)
         addMin(where, params, """cf."점포당_지출"""", commercial?.spendingPerStoreMin, "spendingPerStore")
+        addRelativeLevel(where, """cf."점포당_지출"""", "vacancy_common_features", """"점포당_지출"""", commercial?.spendingPerStoreLevel)
         addMin(where, params, """cf."상권_교체활발형"""", commercial?.commercialTurnoverTypeMin, "commercialTurnoverType")
+        addRelativeLevel(where, """cf."상권_교체활발형"""", "vacancy_common_features", """"상권_교체활발형"""", commercial?.commercialTurnoverTypeLevel)
         addMin(where, params, """cf."상권_성장형"""", commercial?.commercialGrowthTypeMin, "commercialGrowthType")
+        addRelativeLevel(where, """cf."상권_성장형"""", "vacancy_common_features", """"상권_성장형"""", commercial?.commercialGrowthTypeLevel)
 
         addRange(
             where,
@@ -358,6 +385,47 @@ class VacancyStructuredCandidateQuery(
         value ?: return
         where += "$field <= :${name}Max"
         params.addValue("${name}Max", value)
+    }
+
+    private fun addRatioMax(
+        where: MutableList<String>,
+        params: MapSqlParameterSource,
+        numerator: String,
+        denominator: String,
+        value: BigDecimal?,
+        name: String
+    ) {
+        value ?: return
+        where += "($numerator::numeric / nullif($denominator::numeric, 0)) <= :${name}Max"
+        params.addValue("${name}Max", value)
+    }
+
+    private fun addRelativeLevel(
+        where: MutableList<String>,
+        field: String,
+        table: String,
+        column: String,
+        rawLevel: String?
+    ) {
+        val level = rawLevel?.trim()?.lowercase(Locale.KOREA)?.replace("-", "_") ?: return
+        val percentile = when (level) {
+            "very_high", "top", "상위", "매우_높음" -> "0.75"
+            "high", "above_average", "많음", "높음" -> "0.60"
+            "low", "below_average", "적음", "낮음" -> "0.40"
+            "very_low", "bottom", "하위", "매우_낮음" -> "0.25"
+            else -> return
+        }
+        val operator = when (level) {
+            "low", "below_average", "적음", "낮음", "very_low", "bottom", "하위", "매우_낮음" -> "<="
+            else -> ">="
+        }
+        where += """
+            $field $operator (
+                select percentile_cont($percentile) within group (order by $column)
+                from $table
+                where $column is not null
+            )
+        """.trimIndent()
     }
 
     private fun like(value: String): String {

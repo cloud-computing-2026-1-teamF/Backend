@@ -76,15 +76,16 @@ class VacancyPromptService(
 }
 
 private fun mergePromptRepairs(primary: VacancyStructuredFilter, repair: VacancyStructuredFilter): VacancyStructuredFilter {
+    val commercial = mergeCommercial(primary.commercial, repair.commercial)
     return primary.copy(
         location = mergeLocation(primary.location, repair.location),
-        category = mergeCategory(primary.category, repair.category),
+        category = mergeCategory(primary.category, repair.category, repair.commercial),
         transactionType = primary.transactionType ?: repair.transactionType,
         price = mergePrice(primary.price, repair.price),
         space = mergeSpace(primary.space, repair.space),
         building = mergeBuilding(primary.building, repair.building),
         amenities = mergeAmenities(primary.amenities, repair.amenities),
-        commercial = mergeCommercial(primary.commercial, repair.commercial),
+        commercial = commercial,
         spatial = mergeSpatial(primary.spatial, repair.spatial),
         sort = if (primary.sort == null || primary.sort == "score_desc") repair.sort ?: primary.sort else primary.sort
     )
@@ -95,7 +96,8 @@ private fun mergeLocation(primary: VacancyLocationFilter?, repair: VacancyLocati
     if (repair == null) return primary
     return primary.copy(
         district = primary.district?.takeIf(::looksLikeSeoulDistrict) ?: repair.district,
-        dong = primary.dong?.takeUnless(::looksLikeBadLocationKeyword) ?: repair.dong,
+        dong = primary.dong?.takeUnless(::looksLikeBadLocationKeyword)
+            ?: repair.dong?.takeUnless(::looksLikeBadLocationKeyword),
         dongKeywords = mergeStringLists(
             primary.dongKeywords?.filterNot(::looksLikeBadLocationKeyword),
             repair.dongKeywords?.filterNot(::looksLikeBadLocationKeyword)
@@ -105,9 +107,21 @@ private fun mergeLocation(primary: VacancyLocationFilter?, repair: VacancyLocati
     )
 }
 
-private fun mergeCategory(primary: VacancyCategoryFilter?, repair: VacancyCategoryFilter?): VacancyCategoryFilter? {
+private fun mergeCategory(
+    primary: VacancyCategoryFilter?,
+    repair: VacancyCategoryFilter?,
+    repairCommercial: VacancyCommercialFilter?
+): VacancyCategoryFilter? {
     if (primary == null || primary.empty()) return repair
-    if (repair == null || repair.empty()) return primary
+    if (repair == null || repair.empty()) {
+        if (
+            primary.categoryId == "9" &&
+            (repairCommercial?.cafeToRestaurantRatioMax != null || repairCommercial?.cafeCount500mLevel == "low")
+        ) {
+            return null
+        }
+        return primary
+    }
     val primaryGeneralCategory = primary.categoryId in setOf("5", "9") ||
         primary.categoryLabel in setOf("기타", "카페/디저트")
     val sameCategory = repair.categoryId == primary.categoryId || repair.categoryLabel == primary.categoryLabel
@@ -193,34 +207,61 @@ private fun mergeCommercial(primary: VacancyCommercialFilter?, repair: VacancyCo
         locationAreaMin = primary.locationAreaMin ?: repair.locationAreaMin,
         locationAreaMax = primary.locationAreaMax ?: repair.locationAreaMax,
         multiUseFacility = primary.multiUseFacility ?: repair.multiUseFacility,
-        floatingPopulationQuarterlyMin = repairPositive(primary.floatingPopulationQuarterlyMin, repair.floatingPopulationQuarterlyMin),
-        residentPopulationQuarterlyMin = repairPositive(primary.residentPopulationQuarterlyMin, repair.residentPopulationQuarterlyMin),
-        workerPopulationQuarterlyMin = repairPositive(primary.workerPopulationQuarterlyMin, repair.workerPopulationQuarterlyMin),
-        eveningPopulationRatioMin = repairPositive(primary.eveningPopulationRatioMin, repair.eveningPopulationRatioMin),
-        lateNightPopulationRatioMin = repairPositive(primary.lateNightPopulationRatioMin, repair.lateNightPopulationRatioMin),
-        morningPopulationRatioMin = repairPositive(primary.morningPopulationRatioMin, repair.morningPopulationRatioMin),
-        weekendPopulationRatioMin = repairPositive(primary.weekendPopulationRatioMin, repair.weekendPopulationRatioMin),
-        age2030PopulationRatioMin = repairPositive(primary.age2030PopulationRatioMin, repair.age2030PopulationRatioMin),
-        age40PlusPopulationRatioMin = repairPositive(primary.age40PlusPopulationRatioMin, repair.age40PlusPopulationRatioMin),
-        femalePopulationRatioMin = repairPositive(primary.femalePopulationRatioMin, repair.femalePopulationRatioMin),
-        restaurantCount500mMin = primary.restaurantCount500mMin ?: repair.restaurantCount500mMin,
+        floatingPopulationQuarterlyMin = repairRelativeNumber(primary.floatingPopulationQuarterlyMin, repair.floatingPopulationQuarterlyMin, repair.floatingPopulationQuarterlyLevel),
+        floatingPopulationQuarterlyLevel = primary.floatingPopulationQuarterlyLevel ?: repair.floatingPopulationQuarterlyLevel,
+        residentPopulationQuarterlyMin = repairRelativeNumber(primary.residentPopulationQuarterlyMin, repair.residentPopulationQuarterlyMin, repair.residentPopulationQuarterlyLevel),
+        residentPopulationQuarterlyLevel = primary.residentPopulationQuarterlyLevel ?: repair.residentPopulationQuarterlyLevel,
+        workerPopulationQuarterlyMin = repairRelativeNumber(primary.workerPopulationQuarterlyMin, repair.workerPopulationQuarterlyMin, repair.workerPopulationQuarterlyLevel),
+        workerPopulationQuarterlyLevel = primary.workerPopulationQuarterlyLevel ?: repair.workerPopulationQuarterlyLevel,
+        eveningPopulationRatioMin = repairRelativeNumber(primary.eveningPopulationRatioMin, repair.eveningPopulationRatioMin, repair.eveningPopulationRatioLevel),
+        eveningPopulationRatioLevel = primary.eveningPopulationRatioLevel ?: repair.eveningPopulationRatioLevel,
+        lateNightPopulationRatioMin = repairRelativeNumber(primary.lateNightPopulationRatioMin, repair.lateNightPopulationRatioMin, repair.lateNightPopulationRatioLevel),
+        lateNightPopulationRatioLevel = primary.lateNightPopulationRatioLevel ?: repair.lateNightPopulationRatioLevel,
+        morningPopulationRatioMin = repairRelativeNumber(primary.morningPopulationRatioMin, repair.morningPopulationRatioMin, repair.morningPopulationRatioLevel),
+        morningPopulationRatioLevel = primary.morningPopulationRatioLevel ?: repair.morningPopulationRatioLevel,
+        weekendPopulationRatioMin = repairRelativeNumber(primary.weekendPopulationRatioMin, repair.weekendPopulationRatioMin, repair.weekendPopulationRatioLevel),
+        weekendPopulationRatioLevel = primary.weekendPopulationRatioLevel ?: repair.weekendPopulationRatioLevel,
+        age2030PopulationRatioMin = repairRelativeNumber(primary.age2030PopulationRatioMin, repair.age2030PopulationRatioMin, repair.age2030PopulationRatioLevel),
+        age2030PopulationRatioLevel = primary.age2030PopulationRatioLevel ?: repair.age2030PopulationRatioLevel,
+        age40PlusPopulationRatioMin = repairRelativeNumber(primary.age40PlusPopulationRatioMin, repair.age40PlusPopulationRatioMin, repair.age40PlusPopulationRatioLevel),
+        age40PlusPopulationRatioLevel = primary.age40PlusPopulationRatioLevel ?: repair.age40PlusPopulationRatioLevel,
+        femalePopulationRatioMin = repairRelativeNumber(primary.femalePopulationRatioMin, repair.femalePopulationRatioMin, repair.femalePopulationRatioLevel),
+        femalePopulationRatioLevel = primary.femalePopulationRatioLevel ?: repair.femalePopulationRatioLevel,
+        restaurantCount500mMin = if (repair.restaurantCount500mLevel != null || repair.cafeToRestaurantRatioMax != null) repair.restaurantCount500mMin else primary.restaurantCount500mMin ?: repair.restaurantCount500mMin,
         restaurantCount500mMax = primary.restaurantCount500mMax ?: repair.restaurantCount500mMax,
-        cafeCount500mMin = primary.cafeCount500mMin ?: repair.cafeCount500mMin,
-        cafeCount500mMax = primary.cafeCount500mMax ?: repair.cafeCount500mMax,
-        closureRateMax = primary.closureRateMax ?: repair.closureRateMax,
-        openingRateMin = repairPositive(primary.openingRateMin, repair.openingRateMin),
-        averageSalesPerStoreMin = repairPositive(primary.averageSalesPerStoreMin, repair.averageSalesPerStoreMin),
-        eveningSalesRatioMin = repairPositive(primary.eveningSalesRatioMin, repair.eveningSalesRatioMin),
-        lateNightSalesRatioMin = repairPositive(primary.lateNightSalesRatioMin, repair.lateNightSalesRatioMin),
-        weekendSalesRatioMin = repairPositive(primary.weekendSalesRatioMin, repair.weekendSalesRatioMin),
-        age2030SalesRatioMin = repairPositive(primary.age2030SalesRatioMin, repair.age2030SalesRatioMin),
-        femaleSalesRatioMin = repairPositive(primary.femaleSalesRatioMin, repair.femaleSalesRatioMin),
-        officialLandPriceMax = primary.officialLandPriceMax ?: repair.officialLandPriceMax,
-        totalSpendingMin = repairPositive(primary.totalSpendingMin, repair.totalSpendingMin),
-        foodSpendingMin = repairPositive(primary.foodSpendingMin, repair.foodSpendingMin),
-        spendingPerStoreMin = repairPositive(primary.spendingPerStoreMin, repair.spendingPerStoreMin),
-        commercialTurnoverTypeMin = repairPositive(primary.commercialTurnoverTypeMin, repair.commercialTurnoverTypeMin),
-        commercialGrowthTypeMin = repairPositive(primary.commercialGrowthTypeMin, repair.commercialGrowthTypeMin)
+        restaurantCount500mLevel = primary.restaurantCount500mLevel ?: repair.restaurantCount500mLevel,
+        cafeCount500mMin = if (repair.cafeCount500mLevel != null || repair.cafeToRestaurantRatioMax != null) repair.cafeCount500mMin else primary.cafeCount500mMin ?: repair.cafeCount500mMin,
+        cafeCount500mMax = if (repair.cafeCount500mLevel != null || repair.cafeToRestaurantRatioMax != null) repair.cafeCount500mMax else primary.cafeCount500mMax ?: repair.cafeCount500mMax,
+        cafeCount500mLevel = if (primary.cafeToRestaurantRatioMax != null || repair.cafeToRestaurantRatioMax != null) null else primary.cafeCount500mLevel ?: repair.cafeCount500mLevel,
+        cafeToRestaurantRatioMax = primary.cafeToRestaurantRatioMax ?: repair.cafeToRestaurantRatioMax,
+        closureRateMax = if (repair.closureRateLevel != null) repair.closureRateMax else primary.closureRateMax ?: repair.closureRateMax,
+        closureRateLevel = primary.closureRateLevel ?: repair.closureRateLevel,
+        openingRateMin = repairRelativeNumber(primary.openingRateMin, repair.openingRateMin, repair.openingRateLevel),
+        openingRateLevel = primary.openingRateLevel ?: repair.openingRateLevel,
+        averageSalesPerStoreMin = repairRelativeNumber(primary.averageSalesPerStoreMin, repair.averageSalesPerStoreMin, repair.averageSalesPerStoreLevel),
+        averageSalesPerStoreLevel = primary.averageSalesPerStoreLevel ?: repair.averageSalesPerStoreLevel,
+        eveningSalesRatioMin = repairRelativeNumber(primary.eveningSalesRatioMin, repair.eveningSalesRatioMin, repair.eveningSalesRatioLevel),
+        eveningSalesRatioLevel = primary.eveningSalesRatioLevel ?: repair.eveningSalesRatioLevel,
+        lateNightSalesRatioMin = repairRelativeNumber(primary.lateNightSalesRatioMin, repair.lateNightSalesRatioMin, repair.lateNightSalesRatioLevel),
+        lateNightSalesRatioLevel = primary.lateNightSalesRatioLevel ?: repair.lateNightSalesRatioLevel,
+        weekendSalesRatioMin = repairRelativeNumber(primary.weekendSalesRatioMin, repair.weekendSalesRatioMin, repair.weekendSalesRatioLevel),
+        weekendSalesRatioLevel = primary.weekendSalesRatioLevel ?: repair.weekendSalesRatioLevel,
+        age2030SalesRatioMin = repairRelativeNumber(primary.age2030SalesRatioMin, repair.age2030SalesRatioMin, repair.age2030SalesRatioLevel),
+        age2030SalesRatioLevel = primary.age2030SalesRatioLevel ?: repair.age2030SalesRatioLevel,
+        femaleSalesRatioMin = repairRelativeNumber(primary.femaleSalesRatioMin, repair.femaleSalesRatioMin, repair.femaleSalesRatioLevel),
+        femaleSalesRatioLevel = primary.femaleSalesRatioLevel ?: repair.femaleSalesRatioLevel,
+        officialLandPriceMax = if (repair.officialLandPriceLevel != null) repair.officialLandPriceMax else primary.officialLandPriceMax ?: repair.officialLandPriceMax,
+        officialLandPriceLevel = primary.officialLandPriceLevel ?: repair.officialLandPriceLevel,
+        totalSpendingMin = repairRelativeNumber(primary.totalSpendingMin, repair.totalSpendingMin, repair.totalSpendingLevel),
+        totalSpendingLevel = primary.totalSpendingLevel ?: repair.totalSpendingLevel,
+        foodSpendingMin = repairRelativeNumber(primary.foodSpendingMin, repair.foodSpendingMin, repair.foodSpendingLevel),
+        foodSpendingLevel = primary.foodSpendingLevel ?: repair.foodSpendingLevel,
+        spendingPerStoreMin = repairRelativeNumber(primary.spendingPerStoreMin, repair.spendingPerStoreMin, repair.spendingPerStoreLevel),
+        spendingPerStoreLevel = primary.spendingPerStoreLevel ?: repair.spendingPerStoreLevel,
+        commercialTurnoverTypeMin = repairRelativeNumber(primary.commercialTurnoverTypeMin, repair.commercialTurnoverTypeMin, repair.commercialTurnoverTypeLevel),
+        commercialTurnoverTypeLevel = primary.commercialTurnoverTypeLevel ?: repair.commercialTurnoverTypeLevel,
+        commercialGrowthTypeMin = repairRelativeNumber(primary.commercialGrowthTypeMin, repair.commercialGrowthTypeMin, repair.commercialGrowthTypeLevel),
+        commercialGrowthTypeLevel = primary.commercialGrowthTypeLevel ?: repair.commercialGrowthTypeLevel
     )
 }
 
@@ -261,6 +302,11 @@ private fun repairPositive(primary: BigDecimal?, repair: BigDecimal?): BigDecima
     return primary
 }
 
+private fun repairRelativeNumber(primary: BigDecimal?, repair: BigDecimal?, repairLevel: String?): BigDecimal? {
+    if (!repairLevel.isNullOrBlank()) return repair
+    return repairPositive(primary, repair)
+}
+
 private fun repairCountMax(primary: Int?, repair: Int?): Int? {
     if (primary == null) return repair
     if (repair != null && repair < primary && primary > repair * 2) return repair
@@ -270,7 +316,9 @@ private fun repairCountMax(primary: Int?, repair: Int?): Int? {
 private fun looksLikeSeoulDistrict(value: String): Boolean = Regex("""^[가-힣]{1,4}구$""").matches(value)
 
 private fun looksLikeBadLocationKeyword(value: String): Boolean {
-    return value in setOf("테라스가", "학원가") || Regex("""(상권|주변|근처|후보)$""").containsMatchIn(value)
+    return value in setOf("테라스가", "학원가") ||
+        value.contains("인구") ||
+        Regex("""(상권|주변|근처|후보)$""").containsMatchIn(value)
 }
 
 @Component
@@ -455,7 +503,7 @@ private object VacancyPromptFallbackParser {
     private fun parseCategory(prompt: String): VacancyCategoryFilter? {
         val match = categoryAliases.entries.firstOrNull { it.key.containsMatchIn(prompt) } ?: return null
         val (categoryId, label) = match.value
-        if (categoryId == "9" && Regex("""카페(?:는|은|가|도)?\s*(적은|적고|적게|부족|없는)""").containsMatchIn(prompt)) {
+        if (categoryId == "9" && Regex("""카페(?:는|은|가|도)?[^,.，。]{0,12}(적은|적고|적게|부족|없는|많지|피하)""").containsMatchIn(prompt)) {
             return null
         }
         val asksSuitability = Regex("적합|추천|좋은|맞는|어울리는").containsMatchIn(prompt)
@@ -575,34 +623,39 @@ private object VacancyPromptFallbackParser {
                 .find(prompt)
                 ?.let { toSquareMeters(it.groupValues[1], it.groupValues.getOrNull(2).orEmpty()) },
             multiUseFacility = if (prompt.contains("다중이용업소")) true else null,
-            floatingPopulationQuarterlyMin = if (Regex("""유동인구|유동\s*많|유동\s*높""").containsMatchIn(prompt)) BigDecimal("200000") else null,
-            residentPopulationQuarterlyMin = if (Regex("""상주인구|거주인구""").containsMatchIn(prompt)) BigDecimal("200000") else null,
-            workerPopulationQuarterlyMin = if (Regex("""직장인구|직장인\s*많""").containsMatchIn(prompt)) BigDecimal("200000") else null,
-            morningPopulationRatioMin = if (Regex("""오전\s*유동|아침\s*유동""").containsMatchIn(prompt)) BigDecimal("0.20") else null,
-            lateNightPopulationRatioMin = if (Regex("""심야\s*유동|야간\s*유동""").containsMatchIn(prompt)) BigDecimal("0.08") else null,
-            weekendPopulationRatioMin = if (Regex("""주말\s*유동|주말\s*인구""").containsMatchIn(prompt)) BigDecimal("0.20") else null,
-            age2030PopulationRatioMin = if (Regex("""2030|20대|30대|학생""").containsMatchIn(prompt)) BigDecimal("0.30") else null,
-            femalePopulationRatioMin = if (Regex("""여성\s*(인구|비율)""").containsMatchIn(prompt)) BigDecimal("0.45") else null,
-            femaleSalesRatioMin = if (Regex("""여성\s*매출""").containsMatchIn(prompt)) BigDecimal("0.35") else null,
-            restaurantCount500mMin = if (Regex("""(음식점|식당)[^,.，。]*(많|밀집|풍부)""").containsMatchIn(prompt)) 100 else null,
-            cafeCount500mMax = if (Regex("""카페[^,.，。]*(적|부족|없는|많지|피하)""").containsMatchIn(prompt)) 30 else null,
+            floatingPopulationQuarterlyMin = parseMetricMinimum(prompt, "유동인구"),
+            floatingPopulationQuarterlyLevel = if (Regex("""유동인구[^0-9,.，。]*(많|높|풍부)|유동\s*(많|높)""").containsMatchIn(prompt)) "high" else null,
+            residentPopulationQuarterlyLevel = if (Regex("""상주인구|거주인구""").containsMatchIn(prompt)) "high" else null,
+            workerPopulationQuarterlyLevel = if (Regex("""직장인구|직장인\s*많""").containsMatchIn(prompt)) "high" else null,
+            morningPopulationRatioLevel = if (Regex("""오전\s*유동|아침\s*유동""").containsMatchIn(prompt)) "high" else null,
+            lateNightPopulationRatioLevel = if (Regex("""심야\s*유동|야간\s*유동""").containsMatchIn(prompt)) "high" else null,
+            weekendPopulationRatioLevel = if (Regex("""주말\s*유동|주말\s*인구""").containsMatchIn(prompt)) "high" else null,
+            age2030PopulationRatioLevel = if (Regex("""2030|20대|30대|학생""").containsMatchIn(prompt)) "high" else null,
+            femalePopulationRatioLevel = if (Regex("""여성\s*(인구|비율)""").containsMatchIn(prompt)) "high" else null,
+            femaleSalesRatioLevel = if (Regex("""여성\s*매출""").containsMatchIn(prompt)) "high" else null,
+            restaurantCount500mLevel = if (Regex("""(음식점|식당)[^,.，。]*(많|밀집|풍부)""").containsMatchIn(prompt)) "high" else null,
+            cafeCount500mLevel = if (Regex("""카페[^,.，。]*(적|부족|없는|많지|피하)""").containsMatchIn(prompt)) "low" else null,
+            cafeToRestaurantRatioMax = if (
+                Regex("""(음식점|식당)[^,.，。]*(많|밀집|풍부)""").containsMatchIn(prompt) &&
+                Regex("""카페[^,.，。]*(적|부족|없는|많지|피하)""").containsMatchIn(prompt)
+            ) BigDecimal("0.30") else null,
             closureRateMax = when {
                 Regex("""폐업률[^0-9]{0,8}([0-9]+(?:\.[0-9]+)?)\s*%?\s*(이하|이내|미만|아래)""").containsMatchIn(prompt) ->
                     Regex("""폐업률[^0-9]{0,8}([0-9]+(?:\.[0-9]+)?)""").find(prompt)?.groupValues?.getOrNull(1)?.let(::BigDecimal)
-                Regex("""폐업률[^,.，。]*(낮|적)""").containsMatchIn(prompt) -> BigDecimal("2")
                 else -> null
             },
-            openingRateMin = if (Regex("""개업률[^,.，。]*(높|많)""").containsMatchIn(prompt)) BigDecimal("1") else null,
-            averageSalesPerStoreMin = if (Regex("""평균\s*매출|가게당\s*평균매출""").containsMatchIn(prompt)) BigDecimal("20000000") else null,
-            eveningSalesRatioMin = if (Regex("""저녁\s*매출""").containsMatchIn(prompt)) BigDecimal("0.20") else null,
-            lateNightSalesRatioMin = if (Regex("""심야\s*매출""").containsMatchIn(prompt)) BigDecimal("0.08") else null,
-            weekendSalesRatioMin = if (Regex("""주말\s*매출""").containsMatchIn(prompt)) BigDecimal("0.20") else null,
-            age2030SalesRatioMin = if (Regex("""2030\s*매출|20대\s*매출|30대\s*매출""").containsMatchIn(prompt)) BigDecimal("0.20") else null,
-            officialLandPriceMax = if (Regex("""공시지가[^,.，。]*(낮|부담)""").containsMatchIn(prompt)) BigDecimal("20000000") else null,
-            totalSpendingMin = if (Regex("""총\s*지출|전체\s*지출""").containsMatchIn(prompt)) BigDecimal("1000000000") else null,
-            foodSpendingMin = if (Regex("""음식\s*지출|먹거리\s*지출""").containsMatchIn(prompt)) BigDecimal("1000000000") else null,
-            spendingPerStoreMin = if (Regex("""점포당\s*지출""").containsMatchIn(prompt)) BigDecimal("1000000") else null,
-            commercialGrowthTypeMin = if (Regex("""성장형\s*상권|상권\s*성장""").containsMatchIn(prompt)) BigDecimal("1") else null
+            closureRateLevel = if (Regex("""폐업률[^,.，。]*(낮|적)""").containsMatchIn(prompt)) "low" else null,
+            openingRateLevel = if (Regex("""개업률[^,.，。]*(높|많)""").containsMatchIn(prompt)) "high" else null,
+            averageSalesPerStoreLevel = if (Regex("""평균\s*매출|가게당\s*평균매출""").containsMatchIn(prompt)) "high" else null,
+            eveningSalesRatioLevel = if (Regex("""저녁\s*매출""").containsMatchIn(prompt)) "high" else null,
+            lateNightSalesRatioLevel = if (Regex("""심야\s*매출""").containsMatchIn(prompt)) "high" else null,
+            weekendSalesRatioLevel = if (Regex("""주말\s*매출""").containsMatchIn(prompt)) "high" else null,
+            age2030SalesRatioLevel = if (Regex("""2030\s*매출|20대\s*매출|30대\s*매출""").containsMatchIn(prompt)) "high" else null,
+            officialLandPriceLevel = if (Regex("""공시지가[^,.，。]*(낮|부담)""").containsMatchIn(prompt)) "low" else null,
+            totalSpendingLevel = if (Regex("""총\s*지출|전체\s*지출""").containsMatchIn(prompt)) "high" else null,
+            foodSpendingLevel = if (Regex("""음식\s*지출|먹거리\s*지출""").containsMatchIn(prompt)) "high" else null,
+            spendingPerStoreLevel = if (Regex("""점포당\s*지출""").containsMatchIn(prompt)) "high" else null,
+            commercialGrowthTypeLevel = if (Regex("""성장형\s*상권|상권\s*성장""").containsMatchIn(prompt)) "high" else null
         )
         return commercial.takeUnless { it.empty() }
     }
@@ -623,6 +676,15 @@ private object VacancyPromptFallbackParser {
             industryGrowthRate500mMin = growthMin
         )
         return spatial.takeUnless { it.empty() }
+    }
+
+    private fun parseMetricMinimum(prompt: String, label: String): BigDecimal? {
+        return Regex("""$label[^0-9]{0,8}([0-9]+(?:\.[0-9]+)?)\s*(만)?\s*명?(?:보다)?\s*(이상|많|높|넘|초과)""")
+            .find(prompt)
+            ?.let {
+                val value = BigDecimal(it.groupValues[1])
+                if (it.groupValues.getOrNull(2) == "만") value.multiply(BigDecimal("10000")) else value
+            }
     }
 
     private fun parseSort(prompt: String, category: VacancyCategoryFilter?): String {

@@ -11,6 +11,7 @@ object VacancyPromptSchema {
     val transactionTypes = listOf("임대", "전세", "매매")
     val scoreModes = listOf("best", "category")
     val sorts = listOf("score_desc", "rent_asc", "rent_desc", "deposit_asc", "area_desc", "updated_desc")
+    val relativeLevels = listOf("very_low", "low", "high", "very_high")
     val categories = mapOf(
         "1" to "한식",
         "2" to "중식",
@@ -42,7 +43,10 @@ object VacancyPromptSchema {
         If exactly one station is mentioned, location.subway may also contain that station. If multiple stations are mentioned, keep location.subway null and use location.subway_keywords.
         For multi-dong prompts, put every mentioned dong into location.dong_keywords. Example: "논현동이나 신사동" -> ["논현동","신사동"]. If exactly one dong is mentioned, location.dong may also contain it. If multiple dongs are mentioned, keep location.dong null and use location.dong_keywords.
         Do not invent area_id unless it is explicitly provided. Put Korean 구 terms into location.district.
-        Map soft commercial phrases when the schema has a matching metric: 유동인구 많은/학생 유동 많은 -> commercial.floating_population_quarterly_min=200000; 직장인구 많은 -> commercial.worker_population_quarterly_min=200000; 2030 많은/학생 많은 -> commercial.age2030_population_ratio_min=0.30; 음식점 많은 -> commercial.restaurant_count500m_min=100; 카페 적은/카페 너무 많지 않은/카페 많은 곳 피함 -> commercial.cafe_count500m_max=30; 여성 매출 비율 높은 -> commercial.female_sales_ratio_min=0.35; 여성 인구 비율 높은 -> commercial.female_population_ratio_min=0.45; 저녁매출/심야매출/주말매출 높은 -> matching *_sales_ratio_min; 폐업률 낮음 -> commercial.closure_rate_max=2; 개업률 높음 -> commercial.opening_rate_min=1; 공시지가 부담 낮음 -> commercial.official_land_price_max=20000000; 음식 지출/총 지출 높은 -> commercial.food_spending_min or total_spending_min=1000000000.
+        For commercial metrics, explicit numeric prompts must use numeric min/max fields. Examples: 유동인구 1만명 이상 -> floating_population_quarterly_min=10000, 카페 30개 이하 -> cafe_count500m_max=30.
+        For vague soft phrases without a number, never invent an absolute number. Use relative level fields instead: 많은/높은 -> *_level="high", 아주 많은/상위 -> "very_high", 적은/낮은 -> "low", 아주 적은 -> "very_low".
+        If the prompt compares two nearby store counts, use ratios when possible. Example: "식당은 많은데 카페는 적은/많이 없는" -> restaurant_count500m_level="high" and cafe_to_restaurant_ratio_max=0.30, not cafe_count500m_max.
+        Soft commercial examples: 유동인구 많은/학생 유동 많은 -> floating_population_quarterly_level="high"; 직장인구 많은 -> worker_population_quarterly_level="high"; 2030 많은/학생 많은 -> age2030_population_ratio_level="high"; 음식점 많은 -> restaurant_count500m_level="high"; 카페 적은/카페 너무 많지 않은/카페 많은 곳 피함 -> cafe_count500m_level="low"; 여성 매출 비율 높은 -> female_sales_ratio_level="high"; 여성 인구 비율 높은 -> female_population_ratio_level="high"; 저녁매출/심야매출/주말매출 높은 -> matching *_sales_ratio_level="high"; 폐업률 낮음 -> closure_rate_level="low"; 개업률 높음 -> opening_rate_level="high"; 공시지가 부담 낮음 -> official_land_price_level="low"; 음식 지출/총 지출 높은 -> food_spending_level or total_spending_level="high".
         Map "사무실형 상가" to building.building_type="사무실형".
     """.trimIndent()
 
@@ -77,6 +81,7 @@ object VacancyPromptSchema {
         "transaction_type" to transactionTypes,
         "score_mode" to scoreModes,
         "sort" to sorts,
+        "relative_level" to relativeLevels,
         "categories" to categories
     )
 
@@ -178,33 +183,60 @@ object VacancyPromptSchema {
         "location_area_max" to nullableNumber("소재지면적 maximum."),
         "multi_use_facility" to nullableBoolean("다중이용업소여부."),
         "floating_population_quarterly_min" to nullableNumber("유동인구 분기평균 minimum."),
+        "floating_population_quarterly_level" to nullableEnum(relativeLevels, "Relative 유동인구 level for vague phrases."),
         "resident_population_quarterly_min" to nullableNumber("상주인구 분기평균 minimum."),
+        "resident_population_quarterly_level" to nullableEnum(relativeLevels, "Relative 상주인구 level for vague phrases."),
         "worker_population_quarterly_min" to nullableNumber("직장인구 분기평균 minimum."),
+        "worker_population_quarterly_level" to nullableEnum(relativeLevels, "Relative 직장인구 level for vague phrases."),
         "evening_population_ratio_min" to nullableNumber("저녁 인구 비율 minimum."),
+        "evening_population_ratio_level" to nullableEnum(relativeLevels, "Relative 저녁 인구 비율 level."),
         "late_night_population_ratio_min" to nullableNumber("심야 인구 비율 minimum."),
+        "late_night_population_ratio_level" to nullableEnum(relativeLevels, "Relative 심야 인구 비율 level."),
         "morning_population_ratio_min" to nullableNumber("아침 인구 비율 minimum."),
+        "morning_population_ratio_level" to nullableEnum(relativeLevels, "Relative 아침 인구 비율 level."),
         "weekend_population_ratio_min" to nullableNumber("주말 인구 비율 minimum."),
+        "weekend_population_ratio_level" to nullableEnum(relativeLevels, "Relative 주말 인구 비율 level."),
         "age2030_population_ratio_min" to nullableNumber("2030 인구 비율 minimum."),
+        "age2030_population_ratio_level" to nullableEnum(relativeLevels, "Relative 2030 인구 비율 level."),
         "age40_plus_population_ratio_min" to nullableNumber("40대 이상 인구 비율 minimum."),
+        "age40_plus_population_ratio_level" to nullableEnum(relativeLevels, "Relative 40대 이상 인구 비율 level."),
         "female_population_ratio_min" to nullableNumber("여성 인구 비율 minimum."),
+        "female_population_ratio_level" to nullableEnum(relativeLevels, "Relative 여성 인구 비율 level."),
         "restaurant_count500m_min" to nullableInteger("500m 식당수 minimum."),
         "restaurant_count500m_max" to nullableInteger("500m 식당수 maximum."),
+        "restaurant_count500m_level" to nullableEnum(relativeLevels, "Relative 500m 식당수 level."),
         "cafe_count500m_min" to nullableInteger("500m 카페수 minimum."),
         "cafe_count500m_max" to nullableInteger("500m 카페수 maximum."),
+        "cafe_count500m_level" to nullableEnum(relativeLevels, "Relative 500m 카페수 level."),
+        "cafe_to_restaurant_ratio_max" to nullableNumber("Maximum cafe_count500m / restaurant_count500m ratio."),
         "closure_rate_max" to nullableNumber("동네 폐업률 maximum."),
+        "closure_rate_level" to nullableEnum(relativeLevels, "Relative 동네 폐업률 level."),
         "opening_rate_min" to nullableNumber("동네 개업률 minimum."),
+        "opening_rate_level" to nullableEnum(relativeLevels, "Relative 동네 개업률 level."),
         "average_sales_per_store_min" to nullableNumber("가게당 평균매출 minimum."),
+        "average_sales_per_store_level" to nullableEnum(relativeLevels, "Relative 가게당 평균매출 level."),
         "evening_sales_ratio_min" to nullableNumber("저녁매출 비율 minimum."),
+        "evening_sales_ratio_level" to nullableEnum(relativeLevels, "Relative 저녁매출 비율 level."),
         "late_night_sales_ratio_min" to nullableNumber("심야매출 비율 minimum."),
+        "late_night_sales_ratio_level" to nullableEnum(relativeLevels, "Relative 심야매출 비율 level."),
         "weekend_sales_ratio_min" to nullableNumber("주말매출 비율 minimum."),
+        "weekend_sales_ratio_level" to nullableEnum(relativeLevels, "Relative 주말매출 비율 level."),
         "age2030_sales_ratio_min" to nullableNumber("2030매출 비율 minimum."),
+        "age2030_sales_ratio_level" to nullableEnum(relativeLevels, "Relative 2030매출 비율 level."),
         "female_sales_ratio_min" to nullableNumber("여성매출 비율 minimum."),
+        "female_sales_ratio_level" to nullableEnum(relativeLevels, "Relative 여성매출 비율 level."),
         "official_land_price_max" to nullableNumber("공시지가 maximum."),
+        "official_land_price_level" to nullableEnum(relativeLevels, "Relative 공시지가 level."),
         "total_spending_min" to nullableNumber("지출 총금액 minimum."),
+        "total_spending_level" to nullableEnum(relativeLevels, "Relative 지출 총금액 level."),
         "food_spending_min" to nullableNumber("음식 지출 총금액 minimum."),
+        "food_spending_level" to nullableEnum(relativeLevels, "Relative 음식 지출 총금액 level."),
         "spending_per_store_min" to nullableNumber("점포당 지출 minimum."),
+        "spending_per_store_level" to nullableEnum(relativeLevels, "Relative 점포당 지출 level."),
         "commercial_turnover_type_min" to nullableNumber("상권 교체활발형 minimum."),
-        "commercial_growth_type_min" to nullableNumber("상권 성장형 minimum.")
+        "commercial_turnover_type_level" to nullableEnum(relativeLevels, "Relative 상권 교체활발형 level."),
+        "commercial_growth_type_min" to nullableNumber("상권 성장형 minimum."),
+        "commercial_growth_type_level" to nullableEnum(relativeLevels, "Relative 상권 성장형 level.")
     )
 
     private fun spatialProperties(): LinkedHashMap<String, Map<String, Any?>> = linkedMapOf(
