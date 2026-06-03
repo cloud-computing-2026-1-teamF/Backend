@@ -225,15 +225,25 @@ class ReportHtmlRenderer {
         val sales = asMap(mref?.get("averageSalesMonthly"))
         val sMin = dbl(sales?.get("min")); val sMed = dbl(sales?.get("median")); val sMax = dbl(sales?.get("max"))
         val sSel = dbl(sales?.get("selected")) ?: dbl(top1["rev"])
-        if (sMin != null && sMax != null && sMax > sMin && sSel != null) {
-            val posPct = (((sSel - sMin) / (sMax - sMin)) * 100).coerceIn(0.0, 100.0).roundToInt()
-            sb.append("<div class=\"range\"><div class=\"rtrack\"></div><div class=\"rme\" style=\"left:").append(posPct).append("%\"></div>")
-            sb.append("<div class=\"rlab\" style=\"left:0%\">").append(wonShort(sMin)).append("</div>")
-            sMed?.let { sb.append("<div class=\"rlab\" style=\"left:50%;transform:translateX(-50%)\">중앙 ").append(wonShort(it)).append("</div>") }
-            sb.append("<div class=\"rlab\" style=\"left:100%;transform:translateX(-100%)\">").append(wonShort(sMax)).append("</div></div>")
+        if (sSel != null) {
+            val baseline = sMed ?: listOfNotNull(sMin, sMax).takeIf { it.size == 2 }?.average()
+            val scaleMax = max(sSel, baseline ?: sSel).coerceAtLeast(1.0)
+            val selectedWidth = (((sSel / scaleMax) * 100).coerceIn(6.0, 100.0)).roundToInt()
+            val baselineWidth = baseline?.let { (((it / scaleMax) * 100).coerceIn(6.0, 100.0)).roundToInt() }
+            val delta = baseline?.takeIf { abs(it) > 0.0 }?.let { ((sSel - it) / it) * 100.0 }
+            sb.append("<div class=\"rev-compare\"><div class=\"rev-stats\">")
+            sb.append("<div class=\"rev-stat accent\"><span>내 매물 추정</span><b>").append(wonMan(sSel)).append("</b></div>")
+            sb.append("<div class=\"rev-stat\"><span>동네 중앙값</span><b>").append(wonMan(baseline)).append("</b></div>")
+            sb.append("<div class=\"rev-stat\"><span>중앙값 대비</span><b class=\"")
+                .append(if ((delta ?: 0.0) >= 0) "green" else "red")
+                .append("\">").append(delta?.let { signedPercentText(it) } ?: "-").append("</b></div>")
+            sb.append("</div><div class=\"rev-bars\">")
+            revBar(sb, "내 매물", selectedWidth, wonMan(sSel), true)
+            if (baseline != null && baselineWidth != null) revBar(sb, "중앙값", baselineWidth, wonMan(baseline), false)
+            sb.append("</div></div>")
         }
         str(path(ch4, "section_4_3_estimated_revenue", "매출_환경_해석")).ifBlank {
-            "내 매물 추정 ${wonShort(sSel)} 수준입니다."
+            "내 매물 추정 ${wonMan(sSel)} 수준입니다."
         }.let { sb.append("<p class=\"body sm\">").append(esc(it)).append("</p>") }
         sb.append("</div></td><td>")
 
@@ -568,6 +578,13 @@ class ReportHtmlRenderer {
             .append(esc(value)).append("</td></tr></table>")
     }
 
+    private fun revBar(sb: StringBuilder, label: String, widthPct: Int, value: String, selected: Boolean) {
+        sb.append("<div class=\"rev-row").append(if (selected) " selected" else "").append("\"><span>")
+            .append(esc(label)).append("</span><div class=\"rev-track\"><div class=\"rev-fill\" style=\"width:")
+            .append(widthPct.coerceIn(6, 100)).append("%\"></div></div><b>")
+            .append(esc(value)).append("</b></div>")
+    }
+
     private fun kv(sb: StringBuilder, k: String, v: String) {
         sb.append("<tr><td class=\"kvk\">").append(esc(k)).append("</td><td class=\"kvv\">")
             .append(if (v.isBlank()) "정보 없음" else esc(v)).append("</td></tr>")
@@ -652,6 +669,15 @@ class ReportHtmlRenderer {
         val v = man ?: return "-"
         return if (abs(v) >= 10000) ("₩" + "%.1f".format(v / 10000.0).removeSuffix(".0") + "억")
         else "₩" + "%,d".format(v.toLong()) + "만"
+    }
+    private fun wonMan(man: Double?): String {
+        val v = man ?: return "-"
+        return if (abs(v) >= 10000) "%.1f억원".format(v / 10000.0).replace(".0억", "억")
+        else "%,d만원".format(v.roundToLong())
+    }
+    private fun signedPercentText(value: Double): String {
+        val sign = if (value > 0) "+" else ""
+        return sign + "%.0f%%".format(value)
     }
     private fun boolText(value: Any?, detail: String? = null): String = when (value) {
         true -> if (detail.isNullOrBlank()) "있음" else "있음 · $detail"
@@ -827,10 +853,28 @@ class ReportHtmlRenderer {
             .panel { margin-bottom:14px; }
             .axis { width:100%; border-collapse:collapse; margin-top:2px; }
             .axis td { font-size:12px; color:var(--muted); }
-            .range { position:relative; height:42px; margin:20px 8px 10px; }
-            .rtrack { position:absolute; top:15px; left:0; right:0; height:8px; border-radius:999px; background:#EAECF1; }
-            .rme { position:absolute; top:7px; width:4px; height:24px; background:var(--orange); border-radius:999px; box-shadow:0 0 0 5px rgba(232,93,31,.12); }
-            .rlab { position:absolute; top:27px; font-size:12px; color:var(--muted); }
+            .rev-compare {
+              margin:12px 0 14px; padding:14px; border-radius:16px;
+              background:linear-gradient(135deg,#FFF7F2 0%,#FFFFFF 54%,#F4F8FF 100%);
+              box-shadow:inset 0 0 0 1px rgba(226,232,240,.84);
+            }
+            .rev-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:13px; }
+            .rev-stat {
+              min-width:0; padding:10px 11px; border-radius:13px; background:rgba(255,255,255,.92);
+              box-shadow:inset 0 0 0 1px rgba(226,232,240,.8);
+            }
+            .rev-stat.accent { box-shadow:inset 0 0 0 1px rgba(232,93,31,.22), 0 10px 24px rgba(232,93,31,.08); }
+            .rev-stat span { display:block; color:var(--muted); font-size:11px; line-height:1.1; font-weight:900; white-space:nowrap; }
+            .rev-stat b { display:block; margin-top:4px; color:var(--ink); font-size:17px; line-height:1.18; font-weight:950; white-space:nowrap; letter-spacing:0; }
+            .rev-stat b.green { color:var(--green); } .rev-stat b.red { color:var(--red); }
+            .rev-bars { display:grid; gap:9px; }
+            .rev-row { display:grid; grid-template-columns:54px minmax(0,1fr) 78px; gap:10px; align-items:center; }
+            .rev-row span { color:var(--muted); font-size:12px; font-weight:900; white-space:nowrap; }
+            .rev-row b { text-align:right; color:#344054; font-size:12px; font-weight:950; white-space:nowrap; }
+            .rev-track { height:12px; border-radius:999px; background:#E8ECF2; overflow:hidden; }
+            .rev-fill { height:100%; border-radius:999px; background:#A9B4C5; }
+            .rev-row.selected span, .rev-row.selected b { color:var(--ink); }
+            .rev-row.selected .rev-fill { background:linear-gradient(90deg,var(--orange),var(--blue)); }
             .bar { width:100%; border-collapse:collapse; margin:8px 0; }
             .bar .bnm { width:30%; padding-right:10px; color:var(--muted); font-size:13px; }
             .bar.hl .bnm { color:var(--ink); font-weight:900; }
@@ -860,6 +904,7 @@ class ReportHtmlRenderer {
               .cover { padding:30px 24px; } .cover h1 { font-size:30px; }
               .ops-grid, .signal-layout { grid-template-columns:1fr; }
               .tile-grid.compact { grid-template-columns:repeat(2,minmax(0,1fr)); }
+              .rev-stats { grid-template-columns:1fr; }
               .twocol > tbody, .twocol > tbody > tr { display:block; margin:0; }
               .twocol > tbody > tr > td { display:block; width:100%; padding:0; }
               .gaugecell, .herobody { display:block; width:100%; padding:0; }
