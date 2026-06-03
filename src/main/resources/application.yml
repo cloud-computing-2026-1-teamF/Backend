@@ -43,7 +43,6 @@ app:
 
   vacancy:
     prompt:
-      cache-size: ${VACANCY_PROMPT_CACHE_SIZE:200}
       openai:
         enabled: ${OPENAI_VACANCY_PROMPT_ENABLED:false}
         api-key: ${OPENAI_API_KEY:}

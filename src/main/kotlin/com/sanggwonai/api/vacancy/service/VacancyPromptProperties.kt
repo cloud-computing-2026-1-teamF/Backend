@@ -4,8 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "app.vacancy.prompt")
 data class VacancyPromptProperties(
-    val openai: OpenAi = OpenAi(),
-    val cacheSize: Int = 200
+    val openai: OpenAi = OpenAi()
 ) {
     data class OpenAi(
         val enabled: Boolean = false,

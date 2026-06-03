@@ -21,7 +21,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.util.LinkedHashMap
 
 data class VacancyPromptParseResult(
     val filters: VacancyStructuredFilter,
@@ -31,15 +30,8 @@ data class VacancyPromptParseResult(
 
 @Service
 class VacancyPromptService(
-    private val openAiClient: OpenAiVacancyPromptClient,
-    properties: VacancyPromptProperties
+    private val openAiClient: OpenAiVacancyPromptClient
 ) {
-    private val cache = object : LinkedHashMap<String, VacancyPromptParseResult>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, VacancyPromptParseResult>?): Boolean {
-            return size > properties.cacheSize.coerceAtLeast(0)
-        }
-    }
-
     fun parse(prompt: String, allowOpenAi: Boolean): VacancyPromptParseResult {
         val normalizedPrompt = prompt.trim()
         if (normalizedPrompt.isEmpty()) {
@@ -50,28 +42,14 @@ class VacancyPromptService(
         }
 
         val canUseOpenAi = allowOpenAi && openAiClient.isAvailable()
-        val cacheKey = "${if (canUseOpenAi) "openai" else "fallback"}:$normalizedPrompt"
-        synchronized(cache) {
-            cache[cacheKey]?.let {
-                return it.copy(source = if (it.source == "openai") "cache" else it.source)
-            }
-        }
-
         val fallbackFilters = VacancyPromptFallbackParser.parse(normalizedPrompt)
         val parsed = if (canUseOpenAi) openAiClient.parse(normalizedPrompt) else null
-        val result = parsed
+        return parsed
             ?.let { VacancyPromptParseResult(filters = mergePromptRepairs(it, fallbackFilters).normalized(), source = "openai") }
             ?: VacancyPromptParseResult(
                 filters = fallbackFilters.normalized(),
                 source = "fallback"
             )
-
-        if (result.source == "openai" || !canUseOpenAi) {
-            synchronized(cache) {
-                cache[cacheKey] = result
-            }
-        }
-        return result
     }
 }
 
