@@ -28,8 +28,9 @@ data class ReportProperties(
         "9" to 0.17  // 카페·디저트(커피음료 기준)
     ),
     // chapter_8 리뷰 태그: 매물 좌표 기준 동종 가게를 찾는 반경(m).
-    // 50m는 좁아 동종이 0~2곳일 수 있음 -> 표본 부족하면 100~150으로 상향(app.report.review-insight-radius-m).
-    val reviewInsightRadiusM: Int = 50
+    // 50m는 좁아 동종이 0~2곳(밀집지)~0곳(골목)일 수 있음. 실측상 250m가 도보 3~4분 경쟁권 +
+    // 동종 ~10~36곳의 유의미한 표본을 확보해 디폴트로 상향(app.report.review-insight-radius-m로 오버라이드).
+    val reviewInsightRadiusM: Int = 250
 ) {
     data class OpenAi(
         val enabled: Boolean = false,
