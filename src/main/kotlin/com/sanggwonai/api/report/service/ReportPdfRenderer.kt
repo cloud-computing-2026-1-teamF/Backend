@@ -315,7 +315,7 @@ class ReportPdfRenderer {
             val color = if (net < 0) RED else GREEN
             barColored(sb, shortAddr(str(pm["주소_간략"])), w, (if (net >= 0) "+" else "") + net.roundToLong(), color, net < 0)
         }
-        sb.append("<p class=\"body sm faint\">* 초기투자비에 인테리어·설비 capex 미포함</p></div>")
+        sb.append("<p class=\"body sm faint\">* 초기투자비에 인테리어·설비 공사비 미포함 (실제 투자비는 더 높을 수 있습니다)</p></div>")
         sb.append("</td><td>")
         sb.append("<div class=\"panel\"><h3>1순위 투자 회수 요약</h3>")
         miniKpi(sb, "초기투자비", wonShort(dbl(pay["초기투자비_만원"])), "")
@@ -395,6 +395,15 @@ class ReportPdfRenderer {
         }
         sb.append("</ul></div>")
         sb.append("<p class=\"body sm faint\" style=\"margin-top:12px\">분석 모델: 생존율 예측 모델 · 공공데이터(인허가·상권분석·소상공인·공시지가) 기반</p>")
+        sb.append("<p class=\"body sm\" style=\"margin-top:16px\"><b>투자 회수 계산 방법</b></p>")
+        sb.append("<div class=\"disc\"><ul>")
+        sb.append("<li><b>초기투자비</b> = 보증금 + 권리금 + 중개수수료 + (월세+관리비) × 3개월 운전자금</li>")
+        sb.append("<li><b>월 순이익</b> = 동종 업종 점포당 평균 추정매출 × 영업이익률 − (월세+관리비)</li>")
+        sb.append("<li><b>투자 회수기간</b> = 초기투자비 ÷ 월 순이익</li>")
+        sb.append("<li><b>평균 추정매출</b>: 서울시 상권분석서비스 추정매출 데이터 기반 (상권 → 상권배후지 → 행정동 순으로 우선 적용)</li>")
+        sb.append("<li><b>영업이익률</b>: 업종별 고정값 적용 (예: 일식 13%, 한식 12%, 카페 17% 등)</li>")
+        sb.append("<li><b>손익분기 피크 필요 판매량</b> = 손익분기 월매출 ÷ 영업일수(26일) × 피크 매출 비중(45%) ÷ 객단가</li>")
+        sb.append("</ul></div>")
         sb.append("</div></div>")
     }
 
@@ -496,7 +505,7 @@ class ReportPdfRenderer {
     }
     private fun scoreColor(s: Int): String = when { s >= 80 -> GREEN; s >= 60 -> ORANGE; s >= 45 -> AMBER; else -> RED }
     private fun sevClass(s: String): String = when { s.contains("높") -> "hi"; s.contains("중") -> "mid"; else -> "low" }
-    private fun sevLabel(s: String): String = when { s.contains("높") -> "심각 높음"; s.contains("중") -> "중간"; else -> "낮음" }
+    private fun sevLabel(s: String): String = when { s.contains("높") -> "리스크 높음"; s.contains("중") -> "리스크 중간"; else -> "리스크 낮음" }
     private fun labelTagClass(l: String): String = when {
         l.contains("적자") -> "r"; l.contains("1년") -> "g"; l.contains("이내") -> "g"; l.contains("3년") -> "a"; else -> "b"
     }
