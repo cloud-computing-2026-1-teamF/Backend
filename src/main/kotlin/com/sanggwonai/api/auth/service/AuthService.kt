@@ -74,7 +74,7 @@ class AuthService(
                 passwordHash = passwordEncoder.encode(request.password)
                     ?: throw ApiException.of(ErrorType.PASSWORD_ENCODING_FAILED),
                 name = request.name,
-                tier = UserTier.FREE,
+                tier = UserTier.PRO,
                 oauthProvider = AuthProvider.EMAIL,
                 createdAt = now
             )
@@ -271,7 +271,7 @@ class AuthService(
                 email = normalizedEmail ?: fallbackEmail,
                 passwordHash = null,
                 name = displayName,
-                tier = UserTier.FREE,
+                tier = UserTier.PRO,
                 oauthProvider = provider,
                 kakaoId = if (provider == AuthProvider.KAKAO) providerId else null,
                 naverId = if (provider == AuthProvider.NAVER) providerId else null,
