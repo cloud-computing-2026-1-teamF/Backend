@@ -53,7 +53,7 @@ app:
 
   report:
     openai:
-      enabled: ${OPENAI_REPORT_ENABLED:false}
+      enabled: ${OPENAI_REPORT_ENABLED:true}
       api-key: ${OPENAI_API_KEY:}
       endpoint: ${OPENAI_RESPONSES_ENDPOINT:https://api.openai.com/v1/responses}
       model: ${OPENAI_REPORT_MODEL:gpt-5.4-nano}

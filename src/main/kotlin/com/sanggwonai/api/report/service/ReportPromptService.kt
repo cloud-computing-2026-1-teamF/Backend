@@ -19,8 +19,6 @@ data class ReportGenerationResult(
  *  2) reports/prompt_template.json·output_schema.json(클래스패스) 로드 + 플레이스홀더 치환
  *  3) ReportLlmClient(OpenAI) 호출
  *  4) 출력 JSON 파싱 + 필수 챕터 검증 (실패 시 1회 재시도 → 그래도 실패면 source=failed)
- *
- * source=failed 면 호출측(엔드포인트)이 사전 생성 샘플 HTML로 폴백한다.
  */
 @Service
 class ReportPromptService(

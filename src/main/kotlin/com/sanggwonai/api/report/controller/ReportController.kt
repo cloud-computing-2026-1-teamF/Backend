@@ -17,8 +17,8 @@ class ReportController(
     private val reportFacade: ReportFacade
 ) {
     /**
-     * 분석이력 1건 → 발표 시연용 AI 입지 분석 보고서 HTML.
-     * 성공: 30초 지연 후 검수된 standalone text/html 바이트 반환.
+     * 분석이력 1건 → OpenAI 기반 AI 입지 분석 보고서 HTML.
+     * 성공: 생성된 standalone text/html 바이트 반환.
      */
     @PostMapping("/{id}/report", produces = [MediaType.TEXT_HTML_VALUE])
     fun generate(
