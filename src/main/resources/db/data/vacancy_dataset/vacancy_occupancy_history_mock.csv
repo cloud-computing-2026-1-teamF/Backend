@@ -1,0 +1,13 @@
+id,property_id,started_on,ended_on,tenant_label,business_category,status,monthly_rent_man,deposit_man,exit_reason_code,exit_reason_summary,source
+vh-94044653-2018,94044653-f558-4273-acbe-982b38d9134b,2018-03-01,2020-12-31,소형 분식점 운영,일반음식점,closed,940,30000,demand_shift,코로나 이후 저녁 수요 약화 추정,mock_seed
+vh-94044653-2021,94044653-f558-4273-acbe-982b38d9134b,2021-04-01,2023-08-31,배달형 한식 운영,한식점,closed,1080,36000,competition_pressure,동종 경쟁과 배달 의존도 증가 추정,mock_seed
+vh-94044653-2024,94044653-f558-4273-acbe-982b38d9134b,2024-01-01,2025-11-30,단기 테스트 매장,기타음식점,closed,1160,39000,fixed_cost_burden,매출 대비 고정비 부담 추정,mock_seed
+vh-94044653-2026,94044653-f558-4273-acbe-982b38d9134b,2026-01-01,,현재 공실,,vacant,1200,40000,,,mock_seed
+vh-0f5d207d-2017,0f5d207d-3e66-4934-92d9-75d56e501da5,2017-09-01,2020-06-30,주점 운영,일반음식점,closed,1120,24000,demand_shift,야간 유동 감소와 회전율 저하 추정,mock_seed
+vh-0f5d207d-2020,0f5d207d-3e66-4934-92d9-75d56e501da5,2020-09-01,2022-12-31,소형 식당 운영,한식점,closed,1220,27000,lease_pressure,임대료 인상과 객단가 방어 실패 추정,mock_seed
+vh-0f5d207d-2023,0f5d207d-3e66-4934-92d9-75d56e501da5,2023-03-01,2025-10-31,서비스 업종 운영,근린생활,closed,1340,30000,concept_mismatch,주변 수요와 업종 적합도 불일치 추정,mock_seed
+vh-0f5d207d-2026,0f5d207d-3e66-4934-92d9-75d56e501da5,2026-01-01,,현재 공실,,vacant,1400,30000,,,mock_seed
+vh-6351bf11-2018,6351bf11-e2b6-4bd8-9f7b-97e6b5a600ff,2018-01-01,2020-09-30,고깃집 운영,일반음식점,closed,1100,28000,demand_shift,회식 수요 감소와 야간 매출 둔화 추정,mock_seed
+vh-6351bf11-2021,6351bf11-e2b6-4bd8-9f7b-97e6b5a600ff,2021-02-01,2023-03-31,배달 겸용 음식점,기타음식점,closed,1260,32000,competition_pressure,동종 식당 밀집에 따른 가격 경쟁 추정,mock_seed
+vh-6351bf11-2023,6351bf11-e2b6-4bd8-9f7b-97e6b5a600ff,2023-06-01,2025-12-31,카페형 점포 운영,커피점/카페,closed,1360,35000,fixed_cost_burden,좌석 회전 대비 고정비 부담 추정,mock_seed
+vh-6351bf11-2026,6351bf11-e2b6-4bd8-9f7b-97e6b5a600ff,2026-01-01,,현재 공실,,vacant,1400,35000,,,mock_seed
