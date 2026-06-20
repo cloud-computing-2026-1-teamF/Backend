@@ -10,6 +10,10 @@ import com.sanggwonai.api.analysis.controller.response.AnalysisRecommendationsRe
 import com.sanggwonai.api.analysis.controller.response.AnalysisSectionTodoResponse
 import com.sanggwonai.api.analysis.controller.response.AnalysisStepResponse
 import com.sanggwonai.api.analysis.controller.response.CreateAnalysisResponse
+import com.sanggwonai.api.analysis.controller.response.VacancyHistoryResponse
+import com.sanggwonai.api.analysis.controller.response.VacancyHistorySummaryResponse
+import com.sanggwonai.api.analysis.controller.response.VacancyOccupancyHistoryResponse
+import com.sanggwonai.api.analysis.controller.response.VacancyScoreTrendPointResponse
 import com.sanggwonai.api.analysis.dto.AnalysisErrorDto
 import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
@@ -18,6 +22,10 @@ import com.sanggwonai.api.analysis.dto.AnalysisRecommendationsDto
 import com.sanggwonai.api.analysis.dto.AnalysisSectionTodoDto
 import com.sanggwonai.api.analysis.dto.AnalysisStepDto
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
+import com.sanggwonai.api.analysis.dto.VacancyHistoryDto
+import com.sanggwonai.api.analysis.dto.VacancyHistorySummaryDto
+import com.sanggwonai.api.analysis.dto.VacancyOccupancyHistoryDto
+import com.sanggwonai.api.analysis.dto.VacancyScoreTrendPointDto
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -327,7 +335,55 @@ class AnalysisController(
             busStopInfo = data.busStopInfo,
             subwayStationInfo = data.subwayStationInfo,
             parkingInfo = data.parkingInfo,
-            hourlyFloatingPopulation = data.hourlyFloatingPopulation
+            hourlyFloatingPopulation = data.hourlyFloatingPopulation,
+            history = toResponse(data.history)
+        )
+    }
+
+    private fun toResponse(data: VacancyHistoryDto?): VacancyHistoryResponse? {
+        if (data == null) return null
+        return VacancyHistoryResponse(
+            scoreTrend = data.scoreTrend.map(::toResponse),
+            occupancyTimeline = data.occupancyTimeline.map(::toResponse),
+            summary = toResponse(data.summary)
+        )
+    }
+
+    private fun toResponse(data: VacancyScoreTrendPointDto): VacancyScoreTrendPointResponse {
+        return VacancyScoreTrendPointResponse(
+            year = data.year,
+            score = data.score,
+            delta = data.delta,
+            confidenceLabel = data.confidenceLabel,
+            basis = data.basis,
+            source = data.source
+        )
+    }
+
+    private fun toResponse(data: VacancyOccupancyHistoryDto): VacancyOccupancyHistoryResponse {
+        return VacancyOccupancyHistoryResponse(
+            id = data.id,
+            startedOn = data.startedOn,
+            endedOn = data.endedOn,
+            tenantLabel = data.tenantLabel,
+            businessCategory = data.businessCategory,
+            status = data.status,
+            monthlyRent = data.monthlyRent,
+            deposit = data.deposit,
+            exitReasonCode = data.exitReasonCode,
+            exitReasonSummary = data.exitReasonSummary,
+            source = data.source
+        )
+    }
+
+    private fun toResponse(data: VacancyHistorySummaryDto): VacancyHistorySummaryResponse {
+        return VacancyHistorySummaryResponse(
+            scoreDirection = data.scoreDirection,
+            scoreDelta = data.scoreDelta,
+            scoreLabel = data.scoreLabel,
+            occupancyPatternLabel = data.occupancyPatternLabel,
+            lastExitReason = data.lastExitReason,
+            source = data.source
         )
     }
 }
