@@ -9,12 +9,17 @@ import com.sanggwonai.api.analysis.dto.AnalysisLinksDto
 import com.sanggwonai.api.analysis.dto.AnalysisPollingData
 import com.sanggwonai.api.analysis.dto.AnalysisSectionTodoDto
 import com.sanggwonai.api.analysis.dto.CreateAnalysisData
+import com.sanggwonai.api.analysis.dto.VacancyHistoryDto
+import com.sanggwonai.api.analysis.dto.VacancyHistorySummaryDto
+import com.sanggwonai.api.analysis.dto.VacancyOccupancyHistoryDto
+import com.sanggwonai.api.analysis.dto.VacancyScoreTrendPointDto
 import com.sanggwonai.api.analysis.entity.AnalysisEntity
 import com.sanggwonai.api.analysis.entity.AnalysisStatus
 import com.sanggwonai.api.analysis.entity.AnalysisVacancyRecommendationEntity
 import com.sanggwonai.api.analysis.mapper.AnalysisMapper
 import com.sanggwonai.api.analysis.repository.AnalysisRepository
 import com.sanggwonai.api.analysis.repository.AnalysisVacancyRecommendationRepository
+import com.sanggwonai.api.analysis.repository.VacancyHistoryRepository
 import com.sanggwonai.api.area.entity.AreaEntity
 import com.sanggwonai.api.area.repository.AreaRepository
 import com.sanggwonai.api.auth.entity.UserTier
@@ -40,6 +45,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.util.concurrent.Executors
 
 @Service
@@ -52,6 +58,7 @@ class AnalysisService(
     private val businessTypeRepository: BusinessTypeRepository,
     private val userRepository: UserRepository,
     private val analysisMapper: AnalysisMapper,
+    private val vacancyHistoryRepository: VacancyHistoryRepository,
     private val analysisProperties: AnalysisProperties,
     private val progressWorker: AnalysisProgressWorker,
     private val clock: Clock
@@ -158,7 +165,10 @@ class AnalysisService(
                 self = "/v1/analyses/${analysis.id}",
                 events = "/v1/analyses/${analysis.id}/events"
             ),
-            recommendations = rankedVacancies.map(::toRecommendationDto)
+            recommendations = rankedVacancies.let { ranked ->
+                val historyByVacancy = loadHistory(ranked.map { it.vacancy.id }, request.businessType)
+                ranked.map { toRecommendationDto(it, historyByVacancy[it.vacancy.id]) }
+            }
         )
     }
 
@@ -348,6 +358,7 @@ class AnalysisService(
             return legacyRecommendation(analysis)
         }
         val snapshot = vacancyDataset.snapshot()
+        val historyByVacancy = loadHistory(rows.map { it.vacancyId }, analysis.businessTypeKey)
         return rows.mapNotNull { row ->
             snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
                 val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
@@ -358,7 +369,8 @@ class AnalysisService(
                     common = snapshot.commonByProperty[vacancy.id],
                     spatial = snapshot.spatialFor(vacancy.id, score),
                     accessibility = snapshot.accessibilityByProperty[vacancy.id],
-                    categoryName = snapshot.categoryName(analysis.businessTypeKey)
+                    categoryName = snapshot.categoryName(analysis.businessTypeKey),
+                    history = historyByVacancy[vacancy.id]
                 )
             }
         }
@@ -373,12 +385,14 @@ class AnalysisService(
         val common = snapshot.commonByProperty[vacancy.id]
         val spatial = snapshot.spatialFor(vacancy.id, score)
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
+        val scorePercent = score?.scorePercent() ?: BigDecimal("0.00")
+        val categoryName = snapshot.categoryName(analysis.businessTypeKey)
         return listOf(
             AnalysisRecommendationDto(
                 rank = 1,
                 vacancyId = vacancy.id,
                 recommended = score?.recommended,
-                score = score?.scorePercent() ?: BigDecimal("0.00"),
+                score = scorePercent,
                 distanceM = 0,
                 areaId = common?.areaCode ?: vacancy.dong ?: "",
                 latitude = latitude,
@@ -404,12 +418,14 @@ class AnalysisService(
                 busStopInfo = accessibility?.busStopInfo,
                 subwayStationInfo = accessibility?.subwayStationInfo,
                 parkingInfo = accessibility?.parkingInfo,
-                hourlyFloatingPopulation = accessibility?.hourlyFoottraffic()
+                hourlyFloatingPopulation = accessibility?.hourlyFoottraffic(),
+                history = loadHistory(listOf(vacancy.id), analysis.businessTypeKey)[vacancy.id]
+                    ?: buildMockHistory(vacancy, categoryName, scorePercent)
             )
         )
     }
 
-    private fun toRecommendationDto(ranked: RankedVacancy): AnalysisRecommendationDto {
+    private fun toRecommendationDto(ranked: RankedVacancy, history: VacancyHistoryDto?): AnalysisRecommendationDto {
         return toRecommendationDto(
             rank = ranked.rank,
             vacancy = ranked.vacancy,
@@ -419,7 +435,8 @@ class AnalysisService(
             common = ranked.common,
             spatial = ranked.spatial,
             accessibility = vacancyDataset.snapshot().accessibilityByProperty[ranked.vacancy.id],
-            categoryName = ranked.categoryName
+            categoryName = ranked.categoryName,
+            history = history
         )
     }
 
@@ -430,7 +447,8 @@ class AnalysisService(
         common: VacancyCommonFeatureEntity?,
         spatial: VacancyCategorySpatialEntity?,
         accessibility: VacancyAccessibilityFoottrafficEntity?,
-        categoryName: String?
+        categoryName: String?,
+        history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return toRecommendationDto(
             rank = row.rank,
@@ -441,7 +459,8 @@ class AnalysisService(
             common = common,
             spatial = spatial,
             accessibility = accessibility,
-            categoryName = categoryName
+            categoryName = categoryName,
+            history = history
         )
     }
 
@@ -454,7 +473,8 @@ class AnalysisService(
         common: VacancyCommonFeatureEntity?,
         spatial: VacancyCategorySpatialEntity?,
         accessibility: VacancyAccessibilityFoottrafficEntity?,
-        categoryName: String?
+        categoryName: String?,
+        history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return AnalysisRecommendationDto(
             rank = rank,
@@ -486,8 +506,133 @@ class AnalysisService(
             busStopInfo = accessibility?.busStopInfo,
             subwayStationInfo = accessibility?.subwayStationInfo,
             parkingInfo = accessibility?.parkingInfo,
-            hourlyFloatingPopulation = accessibility?.hourlyFoottraffic()
+            hourlyFloatingPopulation = accessibility?.hourlyFoottraffic(),
+            history = history ?: buildMockHistory(vacancy, categoryName, score)
         )
+    }
+
+    private fun loadHistory(propertyIds: List<String>, categoryId: String): Map<String, VacancyHistoryDto> {
+        return vacancyHistoryRepository.findByVacancyIds(propertyIds, categoryId)
+    }
+
+    private fun buildMockHistory(
+        vacancy: VacancyEntity,
+        categoryName: String?,
+        currentScore: BigDecimal
+    ): VacancyHistoryDto {
+        val years = 2019..2026
+        val offsets = listOf("-8.2", "-7.1", "-5.6", "-3.2", "-1.4", "0.9", "2.0", "0.0")
+        val points = years.mapIndexed { index, year ->
+            val score = currentScore.add(BigDecimal(offsets[index])).clampScore()
+            val previousScore = index.takeIf { it > 0 }
+                ?.let { currentScore.add(BigDecimal(offsets[it - 1])).clampScore() }
+            VacancyScoreTrendPointDto(
+                year = year,
+                score = score,
+                delta = previousScore?.let { score.subtract(it).setScale(1, RoundingMode.HALF_UP) },
+                confidenceLabel = scoreLabel(score),
+                basis = if (year in 2020..2021) "코로나 충격 보정 포함" else "공공데이터 기반 모의 추세",
+                source = MOCK_HISTORY_SOURCE
+            )
+        }
+        val timeline = mockOccupancyTimeline(vacancy, categoryName)
+        val delta = points.last().score.subtract(points.first().score).setScale(1, RoundingMode.HALF_UP)
+
+        return VacancyHistoryDto(
+            scoreTrend = points,
+            occupancyTimeline = timeline,
+            summary = VacancyHistorySummaryDto(
+                scoreDirection = when {
+                    delta >= BigDecimal("3.0") -> "up"
+                    delta <= BigDecimal("-3.0") -> "down"
+                    else -> "flat"
+                },
+                scoreDelta = delta,
+                scoreLabel = points.last().confidenceLabel ?: "추세 데이터 준비 중",
+                occupancyPatternLabel = "업종 교체 이력 보유",
+                lastExitReason = timeline.asReversed().firstOrNull { !it.exitReasonSummary.isNullOrBlank() }?.exitReasonSummary,
+                source = MOCK_HISTORY_SOURCE
+            )
+        )
+    }
+
+    private fun mockOccupancyTimeline(vacancy: VacancyEntity, categoryName: String?): List<VacancyOccupancyHistoryDto> {
+        val currentCategory = categoryName ?: vacancy.middleBusinessCategory ?: "요식업"
+        return listOf(
+            VacancyOccupancyHistoryDto(
+                id = "${vacancy.id}-mock-2018",
+                startedOn = LocalDate.of(2018, 3, 1),
+                endedOn = LocalDate.of(2020, 12, 31),
+                tenantLabel = "이전 ${currentCategory} 운영",
+                businessCategory = currentCategory,
+                status = "closed",
+                monthlyRent = vacancy.monthlyRent.scaled("0.78"),
+                deposit = vacancy.deposit.scaled("0.80"),
+                exitReasonCode = "demand_shift",
+                exitReasonSummary = "코로나 이후 저녁·심야 수요 약화 추정",
+                source = MOCK_HISTORY_SOURCE
+            ),
+            VacancyOccupancyHistoryDto(
+                id = "${vacancy.id}-mock-2021",
+                startedOn = LocalDate.of(2021, 4, 1),
+                endedOn = LocalDate.of(2023, 8, 31),
+                tenantLabel = "근린생활 업종 재입점",
+                businessCategory = vacancy.middleBusinessCategory ?: "근린생활",
+                status = "closed",
+                monthlyRent = vacancy.monthlyRent.scaled("0.88"),
+                deposit = vacancy.deposit.scaled("0.90"),
+                exitReasonCode = "competition_pressure",
+                exitReasonSummary = "동종 경쟁과 임대료 부담이 겹친 이탈 가능성",
+                source = MOCK_HISTORY_SOURCE
+            ),
+            VacancyOccupancyHistoryDto(
+                id = "${vacancy.id}-mock-2024",
+                startedOn = LocalDate.of(2024, 1, 1),
+                endedOn = LocalDate.of(2025, 11, 30),
+                tenantLabel = "단기 운영 업종",
+                businessCategory = vacancy.majorBusinessCategory ?: currentCategory,
+                status = "closed",
+                monthlyRent = vacancy.monthlyRent.scaled("0.96"),
+                deposit = vacancy.deposit,
+                exitReasonCode = "fixed_cost_burden",
+                exitReasonSummary = "매출 대비 고정비 부담 추정",
+                source = MOCK_HISTORY_SOURCE
+            ),
+            VacancyOccupancyHistoryDto(
+                id = "${vacancy.id}-mock-2026",
+                startedOn = LocalDate.of(2026, 1, 1),
+                endedOn = null,
+                tenantLabel = "현재 공실",
+                businessCategory = null,
+                status = "vacant",
+                monthlyRent = vacancy.monthlyRent,
+                deposit = vacancy.deposit,
+                exitReasonCode = null,
+                exitReasonSummary = null,
+                source = MOCK_HISTORY_SOURCE
+            )
+        )
+    }
+
+    private fun Long?.scaled(factor: String): Long? {
+        return this?.let {
+            BigDecimal.valueOf(it)
+                .multiply(BigDecimal(factor))
+                .setScale(0, RoundingMode.HALF_UP)
+                .toLong()
+        }
+    }
+
+    private fun BigDecimal.clampScore(): BigDecimal {
+        return maxOf(BigDecimal("35.0"), minOf(BigDecimal("97.0"), this))
+            .setScale(1, RoundingMode.HALF_UP)
+    }
+
+    private fun scoreLabel(score: BigDecimal): String = when {
+        score >= BigDecimal("84") -> "강한 안정 신호"
+        score >= BigDecimal("75") -> "양호한 안정 신호"
+        score >= BigDecimal("65") -> "관찰 필요"
+        else -> "리스크 우선 점검"
     }
 
     private fun CreateAnalysisRequest.resolveSearchPoint(area: AreaEntity): SearchPoint {
@@ -506,6 +651,7 @@ class AnalysisService(
 
     companion object {
         private const val DEFAULT_RADIUS_M = 500
+        private const val MOCK_HISTORY_SOURCE = "mock_projection"
     }
 }
 

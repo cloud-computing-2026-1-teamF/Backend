@@ -1,0 +1,90 @@
+databaseChangeLog:
+  - changeSet:
+      id: 045-create-vacancy-history-tables
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              create table if not exists vacancy_score_history (
+                property_id        varchar(40) not null,
+                category_id        varchar(40) not null,
+                score_year         integer not null,
+                survival_score     numeric(5,2) not null,
+                score_delta        numeric(5,2),
+                confidence_label   varchar(80),
+                data_basis         varchar(120),
+                source             varchar(60) not null default 'data-team',
+                created_at         timestamp with time zone not null default now(),
+                primary key (property_id, category_id, score_year),
+                constraint fk_vacancy_score_history_property
+                  foreign key (property_id) references vacancies(property_id) on delete cascade
+              );
+
+              create index if not exists idx_vacancy_score_history_lookup
+                on vacancy_score_history (property_id, category_id, score_year);
+
+              create table if not exists vacancy_occupancy_history (
+                id                   varchar(80) primary key,
+                property_id          varchar(40) not null,
+                started_on           date,
+                ended_on             date,
+                tenant_label         varchar(160) not null,
+                business_category    varchar(120),
+                status               varchar(40) not null,
+                monthly_rent_man     integer,
+                deposit_man          integer,
+                exit_reason_code     varchar(80),
+                exit_reason_summary  text,
+                source               varchar(60) not null default 'data-team',
+                created_at           timestamp with time zone not null default now(),
+                constraint fk_vacancy_occupancy_history_property
+                  foreign key (property_id) references vacancies(property_id) on delete cascade
+              );
+
+              create index if not exists idx_vacancy_occupancy_history_lookup
+                on vacancy_occupancy_history (property_id, started_on);
+
+  - changeSet:
+      id: 046-load-mock-vacancy-score-history
+      author: codex
+      runOnChange: true
+      changes:
+        - loadUpdateData:
+            tableName: vacancy_score_history
+            file: db/data/vacancy_dataset/vacancy_score_history_mock.csv
+            primaryKey: "property_id,category_id,score_year"
+            columns:
+              - column: { name: property_id, type: STRING }
+              - column: { name: category_id, type: STRING }
+              - column: { name: score_year, type: NUMERIC }
+              - column: { name: survival_score, type: NUMERIC }
+              - column: { name: score_delta, type: NUMERIC }
+              - column: { name: confidence_label, type: STRING }
+              - column: { name: data_basis, type: STRING }
+              - column: { name: source, type: STRING }
+
+  - changeSet:
+      id: 047-load-mock-vacancy-occupancy-history
+      author: codex
+      runOnChange: true
+      changes:
+        - loadUpdateData:
+            tableName: vacancy_occupancy_history
+            file: db/data/vacancy_dataset/vacancy_occupancy_history_mock.csv
+            primaryKey: "id"
+            columns:
+              - column: { name: id, type: STRING }
+              - column: { name: property_id, type: STRING }
+              - column: { name: started_on, type: DATE }
+              - column: { name: ended_on, type: DATE }
+              - column: { name: tenant_label, type: STRING }
+              - column: { name: business_category, type: STRING }
+              - column: { name: status, type: STRING }
+              - column: { name: monthly_rent_man, type: NUMERIC }
+              - column: { name: deposit_man, type: NUMERIC }
+              - column: { name: exit_reason_code, type: STRING }
+              - column: { name: exit_reason_summary, type: STRING }
+              - column: { name: source, type: STRING }
