@@ -1,7 +1,6 @@
 name: Backend CI/CD
 
 on:
-  pull_request:
   push:
     branches:
       - main
