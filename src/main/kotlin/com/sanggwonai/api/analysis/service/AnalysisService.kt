@@ -32,6 +32,8 @@ import com.sanggwonai.api.common.util.IdGenerator
 import com.sanggwonai.api.vacancy.dto.RankedVacancy
 import com.sanggwonai.api.vacancy.dto.VacancySearchCriteria
 import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
+import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
@@ -362,6 +364,7 @@ class AnalysisService(
         return rows.mapNotNull { row ->
             snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
                 val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
+                val horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey)
                 toRecommendationDto(
                     row = row,
                     vacancy = vacancy,
@@ -370,6 +373,7 @@ class AnalysisService(
                     spatial = snapshot.spatialFor(vacancy.id, score),
                     accessibility = snapshot.accessibilityByProperty[vacancy.id],
                     categoryName = snapshot.categoryName(analysis.businessTypeKey),
+                    horizonScores = horizonScores,
                     history = historyByVacancy[vacancy.id]
                 )
             }
@@ -393,6 +397,7 @@ class AnalysisService(
                 vacancyId = vacancy.id,
                 recommended = score?.recommended,
                 score = scorePercent,
+                horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey).map(::toHorizonScoreDto),
                 distanceM = 0,
                 areaId = common?.areaCode ?: vacancy.dong ?: "",
                 latitude = latitude,
@@ -436,6 +441,7 @@ class AnalysisService(
             spatial = ranked.spatial,
             accessibility = vacancyDataset.snapshot().accessibilityByProperty[ranked.vacancy.id],
             categoryName = ranked.categoryName,
+            horizonScores = ranked.horizonScores,
             history = history
         )
     }
@@ -448,6 +454,7 @@ class AnalysisService(
         spatial: VacancyCategorySpatialEntity?,
         accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?,
+        horizonScores: List<VacancyCategoryHorizonScoreEntity>,
         history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return toRecommendationDto(
@@ -460,6 +467,7 @@ class AnalysisService(
             spatial = spatial,
             accessibility = accessibility,
             categoryName = categoryName,
+            horizonScores = horizonScores,
             history = history
         )
     }
@@ -474,6 +482,7 @@ class AnalysisService(
         spatial: VacancyCategorySpatialEntity?,
         accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?,
+        horizonScores: List<VacancyCategoryHorizonScoreEntity>,
         history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return AnalysisRecommendationDto(
@@ -481,6 +490,7 @@ class AnalysisService(
             vacancyId = vacancy.id,
             recommended = recommended,
             score = score,
+            horizonScores = horizonScores.map(::toHorizonScoreDto),
             distanceM = distanceM,
             areaId = common?.areaCode ?: vacancy.dong ?: "",
             latitude = vacancy.latitude ?: BigDecimal.ZERO,
@@ -508,6 +518,14 @@ class AnalysisService(
             parkingInfo = accessibility?.parkingInfo,
             hourlyFloatingPopulation = accessibility?.hourlyFoottraffic(),
             history = history ?: buildMockHistory(vacancy, categoryName, score)
+        )
+    }
+
+    private fun toHorizonScoreDto(entity: VacancyCategoryHorizonScoreEntity): VacancyHorizonScoreDto {
+        return VacancyHorizonScoreDto(
+            horizonYears = entity.id.horizonYears,
+            survivalScore = entity.scorePercent(),
+            recommended = entity.recommended
         )
     }
 
