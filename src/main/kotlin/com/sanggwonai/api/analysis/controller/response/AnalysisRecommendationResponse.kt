@@ -1,5 +1,6 @@
 package com.sanggwonai.api.analysis.controller.response
 
+import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreResponse
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -9,6 +10,7 @@ data class AnalysisRecommendationResponse(
     val vacancyId: String,
     val recommended: Boolean?,
     val score: BigDecimal,
+    val horizonScores: List<VacancyHorizonScoreResponse>,
     val distanceM: Int,
     val areaId: String,
     val latitude: BigDecimal,
