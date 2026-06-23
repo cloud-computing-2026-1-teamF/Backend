@@ -28,6 +28,8 @@ import com.sanggwonai.api.analysis.dto.VacancyOccupancyHistoryDto
 import com.sanggwonai.api.analysis.dto.VacancyScoreTrendPointDto
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreResponse
+import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -310,6 +312,7 @@ class AnalysisController(
             vacancyId = data.vacancyId,
             recommended = data.recommended,
             score = data.score,
+            horizonScores = data.horizonScores.map(::toResponse),
             distanceM = data.distanceM,
             areaId = data.areaId,
             latitude = data.latitude,
@@ -337,6 +340,14 @@ class AnalysisController(
             parkingInfo = data.parkingInfo,
             hourlyFloatingPopulation = data.hourlyFloatingPopulation,
             history = toResponse(data.history)
+        )
+    }
+
+    private fun toResponse(data: VacancyHorizonScoreDto): VacancyHorizonScoreResponse {
+        return VacancyHorizonScoreResponse(
+            horizonYears = data.horizonYears,
+            survivalScore = data.survivalScore,
+            recommended = data.recommended
         )
     }
 
