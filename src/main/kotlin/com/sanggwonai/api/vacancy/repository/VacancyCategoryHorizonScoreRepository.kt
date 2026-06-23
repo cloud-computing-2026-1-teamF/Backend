@@ -1,0 +1,7 @@
+package com.sanggwonai.api.vacancy.repository
+
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreKey
+import org.springframework.data.jpa.repository.JpaRepository
+
+interface VacancyCategoryHorizonScoreRepository : JpaRepository<VacancyCategoryHorizonScoreEntity, VacancyCategoryHorizonScoreKey>
