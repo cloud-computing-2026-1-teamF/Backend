@@ -465,6 +465,9 @@ databaseChangeLog:
   - changeSet:
       id: 031-load-processed-vacancy-csv-data
       author: codex
+      validCheckSum:
+        - 9:1cf133d7f0bc73fea069a775316cfbf3
+        - 9:3c724d7b063cc349ef685d3b789cb796
       changes:
         - loadData:
             tableName: categories
