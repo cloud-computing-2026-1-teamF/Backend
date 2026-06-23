@@ -47,3 +47,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-023-naver-crawl-stores.yaml
   - include:
       file: db/changelog/db.changelog-024-vacancy-history.yaml
+  - include:
+      file: db/changelog/db.changelog-025-vacancy-horizon-scores.yaml
