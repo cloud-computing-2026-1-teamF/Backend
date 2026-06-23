@@ -9,6 +9,7 @@ import com.sanggwonai.api.vacancy.controller.response.VacancyPromptParseResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyPromptSchemaResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyPromptSearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyMetricReferenceResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
@@ -19,6 +20,7 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
+import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
 import com.sanggwonai.api.vacancy.service.VacancyPromptSchema
@@ -267,6 +269,7 @@ class VacancyController(
             latitude = data.latitude,
             longitude = data.longitude,
             survivalScore = data.survivalScore,
+            horizonScores = data.horizonScores.map(::toResponse),
             listingId = data.listingId,
             listingNumber = data.listingNumber,
             roadAddress = data.roadAddress,
@@ -364,6 +367,14 @@ class VacancyController(
             commercialGrowthType = data.commercialGrowthType,
             createdAt = data.createdAt,
             updatedAt = data.updatedAt
+        )
+    }
+
+    private fun toResponse(data: VacancyHorizonScoreDto): VacancyHorizonScoreResponse {
+        return VacancyHorizonScoreResponse(
+            horizonYears = data.horizonYears,
+            survivalScore = data.survivalScore,
+            recommended = data.recommended
         )
     }
 

@@ -7,9 +7,11 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
+import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
@@ -111,7 +113,8 @@ class VacancyService(
         score: VacancyCategoryScoreEntity?,
         spatial: VacancyCategorySpatialEntity?,
         categoryName: String?,
-        accessibility: VacancyAccessibilityFoottrafficEntity?
+        accessibility: VacancyAccessibilityFoottrafficEntity?,
+        horizonScores: List<VacancyCategoryHorizonScoreEntity>
     ): VacancyDto {
         return VacancyDto(
             id = entity.id,
@@ -128,6 +131,7 @@ class VacancyService(
             latitude = entity.latitude,
             longitude = entity.longitude,
             survivalScore = score?.scorePercent(),
+            horizonScores = horizonScores.map(::toHorizonScoreDto),
             listingId = entity.listingId,
             listingNumber = entity.listingNumber,
             roadAddress = entity.roadAddress,
@@ -243,8 +247,17 @@ class VacancyService(
         val spatial = snapshot.spatialFor(vacancy.id, score)
         val categoryName = snapshot.categoryName(score.id.categoryId)
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
-        val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility)
+        val horizonScores = snapshot.horizonScoresFor(vacancy.id, score.id.categoryId)
+        val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility, horizonScores)
         return VacancySearchRow(dto = dto, searchText = searchText(dto))
+    }
+
+    private fun toHorizonScoreDto(entity: VacancyCategoryHorizonScoreEntity): VacancyHorizonScoreDto {
+        return VacancyHorizonScoreDto(
+            horizonYears = entity.id.horizonYears,
+            survivalScore = entity.scorePercent(),
+            recommended = entity.recommended
+        )
     }
 
     private fun matches(row: VacancySearchRow, criteria: VacancyExplorerCriteria, categoryId: String?): Boolean {
