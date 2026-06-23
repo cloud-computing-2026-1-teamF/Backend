@@ -2,12 +2,14 @@ package com.sanggwonai.api.vacancy.service
 
 import com.sanggwonai.api.business.repository.BusinessTypeRepository
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryKey
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import com.sanggwonai.api.vacancy.repository.VacancyAccessibilityFoottrafficRepository
+import com.sanggwonai.api.vacancy.repository.VacancyCategoryHorizonScoreRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategoryScoreRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategorySpatialRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCommonFeatureRepository
@@ -21,6 +23,7 @@ class VacancyDataset(
     private val vacancyRepository: VacancyRepository,
     private val commonFeatureRepository: VacancyCommonFeatureRepository,
     private val categoryScoreRepository: VacancyCategoryScoreRepository,
+    private val categoryHorizonScoreRepository: VacancyCategoryHorizonScoreRepository,
     private val categorySpatialRepository: VacancyCategorySpatialRepository,
     private val accessibilityFoottrafficRepository: VacancyAccessibilityFoottrafficRepository,
     private val businessTypeRepository: BusinessTypeRepository
@@ -38,6 +41,9 @@ class VacancyDataset(
 
     private fun loadSnapshot(): VacancyDatasetSnapshot {
         val scores = categoryScoreRepository.findAll()
+        val horizonScoresByKey = categoryHorizonScoreRepository.findAll()
+            .groupBy { VacancyCategoryKey(it.id.propertyId, it.id.categoryId) }
+            .mapValues { (_, scores) -> scores.sortedBy { it.id.horizonYears } }
         val bestScoresByProperty = scores
             .groupBy { it.id.propertyId }
             .mapValues { (_, propertyScores) -> bestScore(propertyScores) }
@@ -52,6 +58,7 @@ class VacancyDataset(
             commonByProperty = commonFeatureRepository.findAll().associateBy { it.propertyId },
             accessibilityByProperty = accessibilityFoottrafficRepository.findAll().associateBy { it.propertyId },
             scoreByKey = scores.associateBy { it.id },
+            horizonScoresByKey = horizonScoresByKey,
             bestScoreByProperty = bestScoresByProperty,
             spatialByKey = spatialsByKey,
             categoryNameById = businessTypeRepository.findAllByOrderByBusinessKeyAsc()
@@ -74,6 +81,7 @@ data class VacancyDatasetSnapshot(
     val commonByProperty: Map<String, VacancyCommonFeatureEntity>,
     val accessibilityByProperty: Map<String, VacancyAccessibilityFoottrafficEntity>,
     val scoreByKey: Map<VacancyCategoryKey, VacancyCategoryScoreEntity>,
+    val horizonScoresByKey: Map<VacancyCategoryKey, List<VacancyCategoryHorizonScoreEntity>>,
     val bestScoreByProperty: Map<String, VacancyCategoryScoreEntity>,
     val spatialByKey: Map<VacancyCategoryKey, VacancyCategorySpatialEntity>,
     val categoryNameById: Map<String, String>
@@ -84,6 +92,12 @@ data class VacancyDatasetSnapshot(
 
     fun categoryScoreFor(propertyId: String, categoryId: String): VacancyCategoryScoreEntity? {
         return scoreByKey[VacancyCategoryKey(propertyId, categoryId)]
+    }
+
+    fun horizonScoresFor(propertyId: String, categoryId: String?): List<VacancyCategoryHorizonScoreEntity> {
+        return categoryId
+            ?.let { horizonScoresByKey[VacancyCategoryKey(propertyId, it)] }
+            .orEmpty()
     }
 
     fun spatialFor(propertyId: String, score: VacancyCategoryScoreEntity?): VacancyCategorySpatialEntity? {
