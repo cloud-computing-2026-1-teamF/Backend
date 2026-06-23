@@ -1,6 +1,7 @@
 package com.sanggwonai.api.vacancy.dto
 
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
+import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import java.math.BigDecimal
@@ -12,6 +13,7 @@ data class RankedVacancy(
     val categoryId: String?,
     val categoryName: String?,
     val recommended: Boolean?,
+    val horizonScores: List<VacancyCategoryHorizonScoreEntity>,
     val rank: Int,
     val score: BigDecimal,
     val distanceM: Int
