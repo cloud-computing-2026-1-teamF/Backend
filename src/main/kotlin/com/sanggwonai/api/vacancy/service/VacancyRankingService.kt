@@ -51,6 +51,7 @@ class VacancyRankingService(
                     categoryId = candidate.scoreEntity.id.categoryId,
                     categoryName = snapshot.categoryName(candidate.scoreEntity.id.categoryId),
                     recommended = candidate.scoreEntity.recommended,
+                    horizonScores = snapshot.horizonScoresFor(candidate.vacancy.id, candidate.scoreEntity.id.categoryId),
                     rank = index + 1,
                     score = candidate.score,
                     distanceM = candidate.distanceM
