@@ -253,7 +253,11 @@ class VacancyService(
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         val horizonScores = snapshot.horizonScoresFor(vacancy.id, score.id.categoryId)
         val scoreExplanation = toScoreExplanationDto(
-            snapshot.scoreExplanationsFor(vacancy.id, score.id.categoryId)
+            entities = snapshot.scoreExplanationsFor(vacancy.id, score.id.categoryId),
+            benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+            vacancy = vacancy,
+            common = common,
+            spatial = spatial
         )
         val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility, horizonScores, scoreExplanation)
         return VacancySearchRow(dto = dto, searchText = searchText(dto))
