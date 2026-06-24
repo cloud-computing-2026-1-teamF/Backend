@@ -88,3 +88,78 @@ databaseChangeLog:
               - column: { name: exit_reason_code, type: STRING }
               - column: { name: exit_reason_summary, type: STRING }
               - column: { name: source, type: STRING }
+
+  - changeSet:
+      id: 048-constrain-normalized-vacancy-occupancy-history
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            stripComments: true
+            sql: |
+              create extension if not exists btree_gist;
+
+              do $$
+              begin
+                if not exists (
+                  select 1
+                  from pg_constraint
+                  where conname = 'chk_vacancy_occupancy_history_date_order'
+                ) then
+                  alter table vacancy_occupancy_history
+                    add constraint chk_vacancy_occupancy_history_date_order
+                    check (started_on is null or ended_on is null or ended_on >= started_on);
+                end if;
+              end $$;
+
+              do $$
+              begin
+                if not exists (
+                  select 1
+                  from pg_constraint
+                  where conname = 'chk_vacancy_occupancy_history_status'
+                ) then
+                  alter table vacancy_occupancy_history
+                    add constraint chk_vacancy_occupancy_history_status
+                    check (status in ('closed', 'vacant'));
+                end if;
+              end $$;
+
+              do $$
+              begin
+                if not exists (
+                  select 1
+                  from pg_constraint
+                  where conname = 'chk_vacancy_occupancy_history_vacant_open'
+                ) then
+                  alter table vacancy_occupancy_history
+                    add constraint chk_vacancy_occupancy_history_vacant_open
+                    check (status <> 'vacant' or ended_on is null);
+                end if;
+              end $$;
+
+              create unique index if not exists ux_vacancy_occupancy_history_one_open_vacancy
+                on vacancy_occupancy_history (property_id)
+                where status = 'vacant' and ended_on is null;
+
+              do $$
+              begin
+                if not exists (
+                  select 1
+                  from pg_constraint
+                  where conname = 'ex_vacancy_occupancy_history_no_overlap'
+                ) then
+                  alter table vacancy_occupancy_history
+                    add constraint ex_vacancy_occupancy_history_no_overlap
+                    exclude using gist (
+                      property_id with =,
+                      daterange(
+                        started_on,
+                        coalesce(ended_on + 1, date '9999-12-31'),
+                        '[)'
+                      ) with &&
+                    )
+                    where (started_on is not null);
+                end if;
+              end $$;
