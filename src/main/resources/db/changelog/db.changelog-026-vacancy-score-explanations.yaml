@@ -18,6 +18,8 @@ databaseChangeLog:
                 calculated_at         timestamp with time zone not null default now()
               );
 
+              drop table if exists vacancy_category_score_explanations cascade;
+
               create table if not exists vacancy_category_score_explanations (
                 property_id           varchar(40) not null,
                 category_id           varchar(40) not null,
