@@ -3,9 +3,10 @@
 
 The source CSV is kept outside the repository because it is large. This loader
 maps CSV `매물번호` values to `vacancies."매물번호"`, replaces
-`vacancy_occupancy_history`, keeps legitimate building-level overlapping permit
-periods, drops exact duplicate natural rows, and adds one current vacant row per
-vacancy so listings without food-permit history still have a usable timeline.
+`vacancy_occupancy_history`, normalizes building-level permit overlaps into a
+single chronological vacancy timeline, drops exact duplicate natural rows, and
+adds one current vacant row per vacancy so listings without food-permit history
+still have a usable timeline.
 
 Usage:
   python3 scripts/load_vacancy_occupancy_history.py --dry-run
@@ -34,6 +35,7 @@ DEFAULT_CSV_DIR = Path.home() / "Downloads" / "drive-download-20260624T181049Z-3
 DEFAULT_TIMELINE_PATH = DEFAULT_CSV_DIR / "자리이력_타임라인.csv"
 DEFAULT_README_PATH = DEFAULT_CSV_DIR / "README_자리이력.md"
 SOURCE = "seat_history_lot_permit"
+NORMALIZED_SOURCE = "seat_history_normalized"
 VACANT_SOURCE = "seat_history_current_vacancy"
 CURRENT_VACANT_LABEL = "현재 공실"
 CURRENT_VACANT_CATEGORY = "공실"
@@ -505,6 +507,73 @@ def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, in
     cursor.execute("delete from vacancy_occupancy_history")
     cursor.execute(
         """
+        with mapped as (
+          select
+            s.id,
+            v.property_id,
+            s.started_on,
+            s.ended_on,
+            s.tenant_label,
+            s.business_category,
+            coalesce(nullif(left(v."등록일", 10), '')::date, current_date) as vacant_started_on
+          from stage_vacancy_occupancy_history s
+          join vacancies v on v."매물번호" = s.listing_number
+        ),
+        bounded as (
+          select
+            id,
+            property_id,
+            started_on,
+            least(coalesce(ended_on, vacant_started_on - 1), vacant_started_on - 1) as effective_ended_on,
+            tenant_label,
+            business_category,
+            case
+              when ended_on is null or ended_on >= vacant_started_on then 'current_vacancy_superseded'
+              else 'permit_closed'
+            end as exit_reason_code,
+            case
+              when ended_on is null or ended_on >= vacant_started_on then '공실 등록 전 영업 기록'
+              else '폐업 기록'
+            end as exit_reason_summary
+          from mapped
+          where started_on < vacant_started_on
+        ),
+        same_start_ranked as (
+          select
+            *,
+            row_number() over (
+              partition by property_id, started_on
+              order by effective_ended_on desc, id
+            ) as start_rank
+          from bounded
+          where effective_ended_on >= started_on
+        ),
+        sequenced as (
+          select
+            *,
+            lead(started_on) over (
+              partition by property_id
+              order by started_on, effective_ended_on desc, id
+            ) as next_started_on
+          from same_start_ranked
+          where start_rank = 1
+        ),
+        normalized as (
+          select
+            id,
+            property_id,
+            started_on,
+            case
+              when next_started_on is not null and next_started_on <= effective_ended_on
+                then next_started_on - 1
+              else effective_ended_on
+            end as ended_on,
+            tenant_label,
+            business_category,
+            exit_reason_code,
+            exit_reason_summary
+          from sequenced
+        )
         insert into vacancy_occupancy_history (
           id,
           property_id,
@@ -520,22 +589,23 @@ def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, in
           source
         )
         select
-          s.id,
-          v.property_id,
-          s.started_on,
-          s.ended_on,
-          s.tenant_label,
-          s.business_category,
-          s.status,
+          id,
+          property_id,
+          started_on,
+          ended_on,
+          tenant_label,
+          business_category,
+          'closed',
           null,
           null,
-          s.exit_reason_code,
-          s.exit_reason_summary,
-          s.source
-        from stage_vacancy_occupancy_history s
-        join vacancies v on v."매물번호" = s.listing_number
-        order by v.property_id, s.started_on, s.id
-        """
+          exit_reason_code,
+          exit_reason_summary,
+          %s
+        from normalized
+        where ended_on >= started_on
+        order by property_id, started_on, id
+        """,
+        (NORMALIZED_SOURCE,),
     )
     inserted_real_rows = cursor.rowcount
 
@@ -568,7 +638,7 @@ def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, in
               v."월세_만원",
               v."보증금_만원",
               null,
-              '현재 등록 매물 기준 공실',
+              null,
               %s
             from vacancies v
             on conflict (id) do nothing
@@ -591,6 +661,50 @@ def print_db_summary(cursor) -> None:
     )
     for source, status, count, min_date, max_date in cursor.fetchall():
         print(f"DB {source} {status}: {count:,} rows, dates {min_date}-{max_date}")
+
+
+def print_db_quality_summary(cursor) -> None:
+    cursor.execute(
+        """
+        with ordered as (
+          select
+            property_id,
+            started_on,
+            coalesce(ended_on, date '9999-12-31') as ended_on,
+            lag(coalesce(ended_on, date '9999-12-31')) over (
+              partition by property_id
+              order by started_on, id
+            ) as previous_ended_on
+          from vacancy_occupancy_history
+        )
+        select count(*)
+        from ordered
+        where previous_ended_on is not null
+          and previous_ended_on >= started_on
+        """
+    )
+    overlap_rows = cursor.fetchone()[0]
+    cursor.execute("select count(*) from vacancy_occupancy_history where status = 'active'")
+    active_rows = cursor.fetchone()[0]
+    cursor.execute(
+        """
+        select count(*)
+        from (
+          select property_id
+          from vacancy_occupancy_history
+          where status = 'vacant' and ended_on is null
+          group by property_id
+          having count(*) = 1
+        ) ok_properties
+        """
+    )
+    one_current_vacancy_properties = cursor.fetchone()[0]
+    print(
+        "DB quality: "
+        f"{overlap_rows:,} overlapping rows, "
+        f"{active_rows:,} active rows, "
+        f"{one_current_vacancy_properties:,} properties with exactly one open vacancy row."
+    )
 
 
 def load_database(args: argparse.Namespace) -> None:
@@ -619,6 +733,7 @@ def load_database(args: argparse.Namespace) -> None:
                     f"{inserted_vacant_rows:,} current-vacancy rows."
                 )
                 print_db_summary(cursor)
+                print_db_quality_summary(cursor)
                 if staged_count != inserted_real_rows:
                     print(
                         f"Note: staged {staged_count:,} rows; DB inserted {inserted_real_rows:,} "
