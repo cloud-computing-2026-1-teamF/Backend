@@ -18,6 +18,7 @@ data class VacancyResponse(
     val longitude: BigDecimal?,
     val survivalScore: BigDecimal?,
     val horizonScores: List<VacancyHorizonScoreResponse>,
+    val scoreExplanation: VacancyScoreExplanationResponse?,
     val listingId: String?,
     val listingNumber: String?,
     val roadAddress: String?,
@@ -121,4 +122,20 @@ data class VacancyHorizonScoreResponse(
     val horizonYears: Int,
     val survivalScore: BigDecimal,
     val recommended: Boolean?
+)
+
+data class VacancyScoreExplanationResponse(
+    val features: List<VacancyScoreFeatureResponse>,
+    val source: String?
+)
+
+data class VacancyScoreFeatureResponse(
+    val rank: Int,
+    val featureKey: String,
+    val featureLabel: String,
+    val effect: String,
+    val currentValue: BigDecimal?,
+    val averageValue: BigDecimal?,
+    val displayUnit: String?,
+    val higherIsPositive: Boolean?
 )

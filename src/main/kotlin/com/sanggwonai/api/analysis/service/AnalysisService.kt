@@ -33,6 +33,8 @@ import com.sanggwonai.api.vacancy.dto.RankedVacancy
 import com.sanggwonai.api.vacancy.dto.VacancySearchCriteria
 import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
+import com.sanggwonai.api.vacancy.dto.toScoreExplanationDto
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
@@ -365,15 +367,25 @@ class AnalysisService(
             snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
                 val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
                 val horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey)
+                val common = snapshot.commonByProperty[vacancy.id]
+                val spatial = snapshot.spatialFor(vacancy.id, score)
+                val scoreExplanation = toScoreExplanationDto(
+                    entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+                    benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                    vacancy = vacancy,
+                    common = common,
+                    spatial = spatial
+                )
                 toRecommendationDto(
                     row = row,
                     vacancy = vacancy,
                     recommended = score?.recommended,
-                    common = snapshot.commonByProperty[vacancy.id],
-                    spatial = snapshot.spatialFor(vacancy.id, score),
+                    common = common,
+                    spatial = spatial,
                     accessibility = snapshot.accessibilityByProperty[vacancy.id],
                     categoryName = snapshot.categoryName(analysis.businessTypeKey),
                     horizonScores = horizonScores,
+                    scoreExplanation = scoreExplanation,
                     history = historyByVacancy[vacancy.id]
                 )
             }
@@ -391,6 +403,13 @@ class AnalysisService(
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         val scorePercent = score?.scorePercent() ?: BigDecimal("0.00")
         val categoryName = snapshot.categoryName(analysis.businessTypeKey)
+        val scoreExplanation = toScoreExplanationDto(
+            entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+            benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+            vacancy = vacancy,
+            common = common,
+            spatial = spatial
+        )
         return listOf(
             AnalysisRecommendationDto(
                 rank = 1,
@@ -398,6 +417,7 @@ class AnalysisService(
                 recommended = score?.recommended,
                 score = scorePercent,
                 horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey).map(::toHorizonScoreDto),
+                scoreExplanation = scoreExplanation,
                 distanceM = 0,
                 areaId = common?.areaCode ?: vacancy.dong ?: "",
                 latitude = latitude,
@@ -431,6 +451,7 @@ class AnalysisService(
     }
 
     private fun toRecommendationDto(ranked: RankedVacancy, history: VacancyHistoryDto?): AnalysisRecommendationDto {
+        val snapshot = vacancyDataset.snapshot()
         return toRecommendationDto(
             rank = ranked.rank,
             vacancy = ranked.vacancy,
@@ -439,9 +460,16 @@ class AnalysisService(
             distanceM = ranked.distanceM,
             common = ranked.common,
             spatial = ranked.spatial,
-            accessibility = vacancyDataset.snapshot().accessibilityByProperty[ranked.vacancy.id],
+            accessibility = snapshot.accessibilityByProperty[ranked.vacancy.id],
             categoryName = ranked.categoryName,
             horizonScores = ranked.horizonScores,
+            scoreExplanation = toScoreExplanationDto(
+                entities = snapshot.scoreExplanationsFor(ranked.vacancy.id, ranked.categoryId),
+                benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                vacancy = ranked.vacancy,
+                common = ranked.common,
+                spatial = ranked.spatial
+            ),
             history = history
         )
     }
@@ -455,6 +483,7 @@ class AnalysisService(
         accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?,
         horizonScores: List<VacancyCategoryHorizonScoreEntity>,
+        scoreExplanation: VacancyScoreExplanationDto?,
         history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return toRecommendationDto(
@@ -468,6 +497,7 @@ class AnalysisService(
             accessibility = accessibility,
             categoryName = categoryName,
             horizonScores = horizonScores,
+            scoreExplanation = scoreExplanation,
             history = history
         )
     }
@@ -483,6 +513,7 @@ class AnalysisService(
         accessibility: VacancyAccessibilityFoottrafficEntity?,
         categoryName: String?,
         horizonScores: List<VacancyCategoryHorizonScoreEntity>,
+        scoreExplanation: VacancyScoreExplanationDto?,
         history: VacancyHistoryDto?
     ): AnalysisRecommendationDto {
         return AnalysisRecommendationDto(
@@ -491,6 +522,7 @@ class AnalysisService(
             recommended = recommended,
             score = score,
             horizonScores = horizonScores.map(::toHorizonScoreDto),
+            scoreExplanation = scoreExplanation,
             distanceM = distanceM,
             areaId = common?.areaCode ?: vacancy.dong ?: "",
             latitude = vacancy.latitude ?: BigDecimal.ZERO,

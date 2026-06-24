@@ -29,7 +29,11 @@ import com.sanggwonai.api.analysis.dto.VacancyScoreTrendPointDto
 import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreExplanationResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureResponse
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -313,6 +317,7 @@ class AnalysisController(
             recommended = data.recommended,
             score = data.score,
             horizonScores = data.horizonScores.map(::toResponse),
+            scoreExplanation = toResponse(data.scoreExplanation),
             distanceM = data.distanceM,
             areaId = data.areaId,
             latitude = data.latitude,
@@ -348,6 +353,27 @@ class AnalysisController(
             horizonYears = data.horizonYears,
             survivalScore = data.survivalScore,
             recommended = data.recommended
+        )
+    }
+
+    private fun toResponse(data: VacancyScoreExplanationDto?): VacancyScoreExplanationResponse? {
+        if (data == null) return null
+        return VacancyScoreExplanationResponse(
+            features = data.features.map(::toResponse),
+            source = data.source
+        )
+    }
+
+    private fun toResponse(data: VacancyScoreFeatureDto): VacancyScoreFeatureResponse {
+        return VacancyScoreFeatureResponse(
+            rank = data.rank,
+            featureKey = data.featureKey,
+            featureLabel = data.featureLabel,
+            effect = data.effect,
+            currentValue = data.currentValue,
+            averageValue = data.averageValue,
+            displayUnit = data.displayUnit,
+            higherIsPositive = data.higherIsPositive
         )
     }
 
