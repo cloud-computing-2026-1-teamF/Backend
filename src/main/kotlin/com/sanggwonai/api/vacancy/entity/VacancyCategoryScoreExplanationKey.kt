@@ -12,9 +12,6 @@ data class VacancyCategoryScoreExplanationKey(
     @Column(name = "category_id", nullable = false, length = 40)
     var categoryId: String = "",
 
-    @Column(name = "contribution_direction", nullable = false, length = 16)
-    var contributionDirection: String = "",
-
-    @Column(name = "contribution_rank", nullable = false)
-    var contributionRank: Short = 0
+    @Column(name = "feature_rank", nullable = false)
+    var featureRank: Short = 0
 ) : Serializable
