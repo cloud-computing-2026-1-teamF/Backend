@@ -14,7 +14,7 @@ import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyScoreExplanationResponse
-import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureContributionResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureResponse
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyDto
@@ -25,7 +25,7 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
-import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureContributionDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureDto
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
 import com.sanggwonai.api.vacancy.service.VacancyPromptSchema
 import io.swagger.v3.oas.annotations.Operation
@@ -386,21 +386,21 @@ class VacancyController(
     private fun toResponse(data: VacancyScoreExplanationDto?): VacancyScoreExplanationResponse? {
         if (data == null) return null
         return VacancyScoreExplanationResponse(
-            positive = data.positive.map(::toResponse),
-            negative = data.negative.map(::toResponse),
+            features = data.features.map(::toResponse),
             source = data.source
         )
     }
 
-    private fun toResponse(data: VacancyScoreFeatureContributionDto): VacancyScoreFeatureContributionResponse {
-        return VacancyScoreFeatureContributionResponse(
-            direction = data.direction,
+    private fun toResponse(data: VacancyScoreFeatureDto): VacancyScoreFeatureResponse {
+        return VacancyScoreFeatureResponse(
             rank = data.rank,
             featureKey = data.featureKey,
             featureLabel = data.featureLabel,
-            featureDisplayValue = data.featureDisplayValue,
-            impactValue = data.impactValue,
-            impactPercent = data.impactPercent
+            effect = data.effect,
+            currentValue = data.currentValue,
+            averageValue = data.averageValue,
+            displayUnit = data.displayUnit,
+            higherIsPositive = data.higherIsPositive
         )
     }
 
