@@ -49,3 +49,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-024-vacancy-history.yaml
   - include:
       file: db/changelog/db.changelog-025-vacancy-horizon-scores.yaml
+  - include:
+      file: db/changelog/db.changelog-026-vacancy-score-explanations.yaml
