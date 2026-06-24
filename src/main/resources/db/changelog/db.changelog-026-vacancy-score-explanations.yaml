@@ -2,6 +2,7 @@ databaseChangeLog:
   - changeSet:
       id: 051-create-vacancy-score-feature-explanations
       author: codex
+      runOnChange: true
       changes:
         - sql:
             dbms: postgresql
@@ -53,6 +54,7 @@ databaseChangeLog:
   - changeSet:
       id: 052-store-vacancy-score-feature-benchmarks
       author: codex
+      runOnChange: true
       changes:
         - sqlFile:
             dbms: postgresql
@@ -64,6 +66,7 @@ databaseChangeLog:
   - changeSet:
       id: 053-load-mock-vacancy-category-score-explanations
       author: codex
+      runOnChange: true
       changes:
         - sqlFile:
             dbms: postgresql
