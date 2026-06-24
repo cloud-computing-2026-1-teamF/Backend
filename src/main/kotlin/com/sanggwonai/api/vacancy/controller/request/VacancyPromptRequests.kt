@@ -15,3 +15,7 @@ data class VacancyPromptSearchRequest(
     val page: Int? = null,
     val size: Int? = null
 )
+
+data class MenuPriceEstimateRequest(
+    val menuName: String
+)

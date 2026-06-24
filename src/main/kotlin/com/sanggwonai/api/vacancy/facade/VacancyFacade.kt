@@ -32,6 +32,9 @@ class VacancyFacade(
     fun metricReference(categoryId: String?, vacancyId: String?) =
         vacancyService.metricReference(categoryId, vacancyId)
 
+    fun estimateMenuPrice(vacancyId: String, menuName: String) =
+        vacancyService.estimateMenuPrice(vacancyId, menuName)
+
     private fun canUseLlmPrompt(authorizationHeader: String?): Boolean {
         val authContext = authContextResolver.resolveOrNull(authorizationHeader) ?: return false
         val user = userRepository.findById(authContext.userId).orElse(null) ?: return false

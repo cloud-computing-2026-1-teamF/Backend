@@ -2,6 +2,7 @@ package com.sanggwonai.api.vacancy.service
 
 import com.sanggwonai.api.common.error.ApiException
 import com.sanggwonai.api.common.error.ErrorType
+import com.sanggwonai.api.vacancy.dto.MenuPriceEstimateDto
 import com.sanggwonai.api.vacancy.dto.VacancyDto
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerCriteria
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerResult
@@ -106,6 +107,40 @@ class VacancyService(
             footTrafficDaily = emptyMetricDistribution(),
             competition500m = emptyMetricDistribution(),
             averageSalesMonthly = emptyMetricDistribution()
+        )
+    }
+
+    fun estimateMenuPrice(vacancyId: String, menuName: String): MenuPriceEstimateDto {
+        val normalizedMenu = menuName.trim()
+        if (normalizedMenu.length < MIN_MENU_NAME_LENGTH) {
+            throw ApiException.of(ErrorType.VALIDATION_FAILED, mapOf("menu_name" to "메뉴 이름을 입력해 주세요"))
+        }
+
+        val vacancy = get(vacancyId)
+        val hash = stableHash("${vacancy.id}|${vacancy.categoryId}|$normalizedMenu")
+        val latencyMs = SIMULATED_MODEL_DELAY_MIN_MS + Math.floorMod(hash, SIMULATED_MODEL_DELAY_SPREAD_MS).toLong()
+        Thread.sleep(latencyMs)
+
+        val basePrice = baseMenuPrice(normalizedMenu)
+        val multiplier = priceMultiplier(vacancy, hash)
+        val recommended = roundPrice(basePrice * multiplier)
+        val minPrice = roundPrice(recommended * PRICE_RANGE_LOW)
+        val maxPrice = roundPrice(recommended * PRICE_RANGE_HIGH)
+        val confidence = confidenceLabel(vacancy)
+        val positioning = positioningLabel(multiplier)
+
+        return MenuPriceEstimateDto(
+            vacancyId = vacancy.id,
+            menuName = normalizedMenu,
+            recommendedPrice = recommended,
+            minPrice = minPrice.coerceAtMost(recommended),
+            maxPrice = maxPrice.coerceAtLeast(recommended),
+            currency = "KRW",
+            confidence = confidence,
+            positioning = positioning,
+            signals = priceSignals(vacancy, multiplier),
+            estimatedLatencyMs = latencyMs,
+            source = "mock_menu_price_model"
         )
     }
 
@@ -440,12 +475,114 @@ class VacancyService(
         return (earthRadiusM * c).toInt()
     }
 
+    private fun baseMenuPrice(menuName: String): Double {
+        val normalized = menuName.lowercase(Locale.KOREA)
+        return when {
+            normalized.contains("아메리카노") || normalized.contains("coffee") || normalized.contains("커피") -> 4_800.0
+            normalized.contains("라떼") || normalized.contains("latte") -> 5_800.0
+            normalized.contains("디저트") || normalized.contains("케이크") || normalized.contains("cake") -> 7_200.0
+            normalized.contains("샐러드") || normalized.contains("salad") -> 11_500.0
+            normalized.contains("파스타") || normalized.contains("pasta") -> 17_000.0
+            normalized.contains("피자") || normalized.contains("pizza") -> 19_500.0
+            normalized.contains("버거") || normalized.contains("burger") -> 10_500.0
+            normalized.contains("치킨") || normalized.contains("chicken") -> 22_000.0
+            normalized.contains("삼겹") || normalized.contains("고기") || normalized.contains("스테이크") -> 18_000.0
+            normalized.contains("떡볶") -> 7_500.0
+            normalized.contains("김밥") -> 5_000.0
+            normalized.contains("국밥") || normalized.contains("찌개") || normalized.contains("덮밥") -> 9_500.0
+            normalized.contains("라멘") || normalized.contains("쌀국수") || normalized.contains("면") -> 11_000.0
+            normalized.contains("맥주") || normalized.contains("beer") -> 6_500.0
+            normalized.contains("칵테일") || normalized.contains("와인") -> 12_000.0
+            else -> 12_000.0
+        }
+    }
+
+    private fun priceMultiplier(vacancy: VacancyDto, hash: Int): Double {
+        val score = vacancy.survivalScore?.toDouble() ?: 70.0
+        val scoreFactor = ((score - 70.0) / 100.0).coerceIn(-0.12, 0.18)
+
+        val sales = vacancy.averageSalesPerStore?.toDouble()
+        val salesFactor = sales?.let { ((it / 3_500.0) - 1.0) * 0.14 }?.coerceIn(-0.10, 0.16) ?: 0.0
+
+        val dailyFootTraffic = vacancy.floatingPopulationAnnualTotal?.let { it / 365.0 }
+        val footFactor = dailyFootTraffic?.let { ((it / 70_000.0) - 1.0) * 0.08 }?.coerceIn(-0.08, 0.12) ?: 0.0
+
+        val rentFactor = vacancy.monthlyRent?.let { ((it / 280.0) - 1.0) * 0.06 }?.coerceIn(-0.06, 0.10) ?: 0.0
+        val areaFactor = vacancy.locationArea?.toDouble()?.let { ((it / 80.0) - 1.0) * 0.03 }?.coerceIn(-0.04, 0.05) ?: 0.0
+        val jitter = ((Math.floorMod(hash, 15) - 7) / 100.0)
+
+        return (1.0 + scoreFactor + salesFactor + footFactor + rentFactor + areaFactor + jitter)
+            .coerceIn(0.74, 1.48)
+    }
+
+    private fun priceSignals(vacancy: VacancyDto, multiplier: Double): List<String> {
+        val signals = mutableListOf<String>()
+        val score = vacancy.survivalScore?.toDouble()
+        if (score != null) {
+            signals += if (score >= 78.0) "상권 점수가 높아 가격 수용력이 좋아 보여요" else "상권 점수를 감안해 보수적으로 잡았어요"
+        }
+        val sales = vacancy.averageSalesPerStore?.toDouble()
+        if (sales != null) {
+            signals += if (sales >= 3_500.0) "주변 매출 기준이 높게 형성돼 있어요" else "주변 매출 기준은 무리한 가격을 피하는 쪽이에요"
+        }
+        val dailyFootTraffic = vacancy.floatingPopulationAnnualTotal?.let { it / 365.0 }
+        if (dailyFootTraffic != null) {
+            signals += if (dailyFootTraffic >= 70_000.0) "유동인구가 가격 테스트에 유리해요" else "유동인구 기준으로는 접근성 있는 가격이 좋아 보여요"
+        }
+        if (signals.size < 3 && vacancy.monthlyRent != null) {
+            signals += if (vacancy.monthlyRent >= 280L) "임대료 부담을 반영해 객단가를 조금 높게 봤어요" else "임대료 여유가 있어 진입 가격을 낮출 수 있어요"
+        }
+        if (signals.size < 3) {
+            signals += if (multiplier >= 1.04) "이 입지는 평균보다 높은 가격 실험이 가능해 보여요" else "이 입지는 빠른 회전을 우선한 가격이 어울려요"
+        }
+        return signals.take(3)
+    }
+
+    private fun confidenceLabel(vacancy: VacancyDto): String {
+        val availableSignals = listOfNotNull(
+            vacancy.survivalScore,
+            vacancy.averageSalesPerStore,
+            vacancy.floatingPopulationAnnualTotal,
+            vacancy.monthlyRent,
+            vacancy.locationArea
+        ).size
+        return when {
+            availableSignals >= 4 -> "높음"
+            availableSignals >= 2 -> "보통"
+            else -> "낮음"
+        }
+    }
+
+    private fun positioningLabel(multiplier: Double): String {
+        return when {
+            multiplier >= 1.12 -> "프리미엄 가격 가능"
+            multiplier >= 0.96 -> "상권 평균권"
+            else -> "접근성 가격 권장"
+        }
+    }
+
+    private fun roundPrice(value: Double): Long {
+        return (kotlin.math.round(value / PRICE_ROUNDING_UNIT) * PRICE_ROUNDING_UNIT).toLong()
+            .coerceAtLeast(MIN_RECOMMENDED_PRICE)
+    }
+
+    private fun stableHash(value: String): Int {
+        return Math.floorMod(value.fold(0) { acc, char -> (acc * 31) + char.code }, Int.MAX_VALUE)
+    }
+
     companion object {
         private const val MIN_PAGE_SIZE = 1
         private const val MAX_PAGE_SIZE = 600
         private const val MIN_RADIUS_M = 1
         private const val MAX_RADIUS_M = 5000
         private const val SUMMARY_SCALE = 2
+        private const val MIN_MENU_NAME_LENGTH = 1
+        private const val SIMULATED_MODEL_DELAY_MIN_MS = 2200L
+        private const val SIMULATED_MODEL_DELAY_SPREAD_MS = 1200
+        private const val PRICE_RANGE_LOW = 0.9
+        private const val PRICE_RANGE_HIGH = 1.12
+        private const val PRICE_ROUNDING_UNIT = 500.0
+        private const val MIN_RECOMMENDED_PRICE = 1_000L
     }
 }
 
