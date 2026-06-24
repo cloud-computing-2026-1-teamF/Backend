@@ -30,10 +30,10 @@ import com.sanggwonai.api.analysis.facade.AnalysisFacade
 import com.sanggwonai.api.common.api.ApiResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyScoreExplanationResponse
-import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureContributionResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureResponse
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
-import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureContributionDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -359,21 +359,21 @@ class AnalysisController(
     private fun toResponse(data: VacancyScoreExplanationDto?): VacancyScoreExplanationResponse? {
         if (data == null) return null
         return VacancyScoreExplanationResponse(
-            positive = data.positive.map(::toResponse),
-            negative = data.negative.map(::toResponse),
+            features = data.features.map(::toResponse),
             source = data.source
         )
     }
 
-    private fun toResponse(data: VacancyScoreFeatureContributionDto): VacancyScoreFeatureContributionResponse {
-        return VacancyScoreFeatureContributionResponse(
-            direction = data.direction,
+    private fun toResponse(data: VacancyScoreFeatureDto): VacancyScoreFeatureResponse {
+        return VacancyScoreFeatureResponse(
             rank = data.rank,
             featureKey = data.featureKey,
             featureLabel = data.featureLabel,
-            featureDisplayValue = data.featureDisplayValue,
-            impactValue = data.impactValue,
-            impactPercent = data.impactPercent
+            effect = data.effect,
+            currentValue = data.currentValue,
+            averageValue = data.averageValue,
+            displayUnit = data.displayUnit,
+            higherIsPositive = data.higherIsPositive
         )
     }
 
