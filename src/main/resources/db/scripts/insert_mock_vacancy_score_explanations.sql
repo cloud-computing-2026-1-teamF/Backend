@@ -109,7 +109,15 @@ cross join lateral (
   values
     (1, coalesce(favorable_feature.feature_key, case when mock_base.score_rank % 3 = 0 then 'monthly_rent' else 'daily_floating_population' end)),
     (2, coalesce(caution_feature.feature_key, case when mock_base.score_rank % 4 = 0 then 'premium' else 'exclusive_area' end)),
-    (3, case when mock_base.score_rank % 5 = 0 then 'sales_per_store' else 'industry_growth_500m' end),
+    (3, case
+      when favorable_feature.feature_key is distinct from 'industry_growth_500m'
+        and caution_feature.feature_key is distinct from 'industry_growth_500m'
+        then 'industry_growth_500m'
+      when favorable_feature.feature_key is distinct from 'sales_per_store'
+        and caution_feature.feature_key is distinct from 'sales_per_store'
+        then 'sales_per_store'
+      else 'daily_floating_population'
+    end),
     (4, case when mock_base.score_rank % 2 = 0 then 'same_category_competition_500m' else 'evening_foot_traffic' end),
     (5, case when mock_base.score_rank % 7 = 0 then 'maintenance_fee' else 'weekend_population_ratio' end)
 ) as feature(feature_rank, feature_key)
