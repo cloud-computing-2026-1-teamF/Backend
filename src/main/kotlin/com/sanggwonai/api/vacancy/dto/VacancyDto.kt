@@ -18,6 +18,7 @@ data class VacancyDto(
     val longitude: BigDecimal?,
     val survivalScore: BigDecimal?,
     val horizonScores: List<VacancyHorizonScoreDto>,
+    val scoreExplanation: VacancyScoreExplanationDto?,
     val listingId: String?,
     val listingNumber: String?,
     val roadAddress: String?,
@@ -121,4 +122,20 @@ data class VacancyHorizonScoreDto(
     val horizonYears: Int,
     val survivalScore: BigDecimal,
     val recommended: Boolean?
+)
+
+data class VacancyScoreExplanationDto(
+    val positive: List<VacancyScoreFeatureContributionDto>,
+    val negative: List<VacancyScoreFeatureContributionDto>,
+    val source: String?
+)
+
+data class VacancyScoreFeatureContributionDto(
+    val direction: String,
+    val rank: Int,
+    val featureKey: String,
+    val featureLabel: String,
+    val featureDisplayValue: String?,
+    val impactValue: BigDecimal,
+    val impactPercent: BigDecimal
 )
