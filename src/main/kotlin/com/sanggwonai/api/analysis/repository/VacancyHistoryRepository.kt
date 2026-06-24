@@ -68,6 +68,7 @@ class VacancyHistoryRepository(
                    exit_reason_summary, source
             from vacancy_occupancy_history
             where property_id in (:propertyIds)
+              and status <> 'active'
             order by property_id, started_on nulls first, id
             """.trimIndent(),
             mapOf("propertyIds" to propertyIds)
@@ -102,12 +103,12 @@ class VacancyHistoryRepository(
             delta <= BigDecimal("-3.0") -> "down"
             else -> "flat"
         }
-        val activeYears = timeline.count { it.status != "vacant" }
+        val closedEvents = timeline.filter { it.status == "closed" }
         val vacancyYears = timeline.count { it.status == "vacant" }
-        val lastExitReason = timeline
+        val lastExitReason = closedEvents
             .asReversed()
-            .firstOrNull { !it.exitReasonSummary.isNullOrBlank() }
-            ?.exitReasonSummary
+            .firstOrNull { it.endedOn != null }
+            ?.displayExitReason()
 
         return VacancyHistorySummaryDto(
             scoreDirection = direction,
@@ -115,8 +116,9 @@ class VacancyHistoryRepository(
             scoreLabel = trend.lastOrNull()?.confidenceLabel ?: "추세 데이터 준비 중",
             occupancyPatternLabel = when {
                 timeline.isEmpty() -> "점유 이력 준비 중"
-                vacancyYears == 0 -> "장기 점유형 매물"
-                activeYears >= 2 -> "업종 교체 이력 보유"
+                vacancyYears == 0 -> "공실 전환 이력 준비 중"
+                closedEvents.size >= 3 -> "업종 변동 이력 다수"
+                closedEvents.isNotEmpty() -> "최근 공실 전환"
                 else -> "최근 공실 전환"
             },
             lastExitReason = lastExitReason,
@@ -169,7 +171,19 @@ private data class OccupancyHistoryRow(
         monthlyRent = monthlyRent,
         deposit = deposit,
         exitReasonCode = exitReasonCode,
-        exitReasonSummary = exitReasonSummary,
+        exitReasonSummary = displayExitReason(),
         source = source
     )
+
+    fun displayExitReason(): String? {
+        if (status == "vacant") return null
+        if (exitReasonCode == "current_vacancy_superseded") return "공실 전환 전 영업 기록"
+        if (exitReasonCode == "permit_closed") return "폐업 기록"
+        val reason = exitReasonSummary?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if ("지번 단위 매칭" in reason || "인허가상 영업중" in reason) {
+            return "공실 전환 전 영업 기록"
+        }
+        if ("인허가 폐업 기록" in reason) return "폐업 기록"
+        return reason
+    }
 }
