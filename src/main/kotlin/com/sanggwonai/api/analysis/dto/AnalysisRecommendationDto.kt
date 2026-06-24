@@ -1,6 +1,7 @@
 package com.sanggwonai.api.analysis.dto
 
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -11,6 +12,7 @@ data class AnalysisRecommendationDto(
     val recommended: Boolean?,
     val score: BigDecimal,
     val horizonScores: List<VacancyHorizonScoreDto>,
+    val scoreExplanation: VacancyScoreExplanationDto?,
     val distanceM: Int,
     val areaId: String,
     val latitude: BigDecimal,
