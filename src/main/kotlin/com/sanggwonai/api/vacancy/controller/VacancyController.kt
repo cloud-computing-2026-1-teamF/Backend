@@ -13,6 +13,8 @@ import com.sanggwonai.api.vacancy.controller.response.VacancyHorizonScoreRespons
 import com.sanggwonai.api.vacancy.controller.response.VacancyResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreExplanationResponse
+import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureContributionResponse
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyDto
@@ -22,6 +24,8 @@ import com.sanggwonai.api.vacancy.dto.VacancyExplorerSort
 import com.sanggwonai.api.vacancy.dto.VacancyExplorerSummary
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
+import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
+import com.sanggwonai.api.vacancy.dto.VacancyScoreFeatureContributionDto
 import com.sanggwonai.api.vacancy.facade.VacancyFacade
 import com.sanggwonai.api.vacancy.service.VacancyPromptSchema
 import io.swagger.v3.oas.annotations.Operation
@@ -270,6 +274,7 @@ class VacancyController(
             longitude = data.longitude,
             survivalScore = data.survivalScore,
             horizonScores = data.horizonScores.map(::toResponse),
+            scoreExplanation = toResponse(data.scoreExplanation),
             listingId = data.listingId,
             listingNumber = data.listingNumber,
             roadAddress = data.roadAddress,
@@ -375,6 +380,27 @@ class VacancyController(
             horizonYears = data.horizonYears,
             survivalScore = data.survivalScore,
             recommended = data.recommended
+        )
+    }
+
+    private fun toResponse(data: VacancyScoreExplanationDto?): VacancyScoreExplanationResponse? {
+        if (data == null) return null
+        return VacancyScoreExplanationResponse(
+            positive = data.positive.map(::toResponse),
+            negative = data.negative.map(::toResponse),
+            source = data.source
+        )
+    }
+
+    private fun toResponse(data: VacancyScoreFeatureContributionDto): VacancyScoreFeatureContributionResponse {
+        return VacancyScoreFeatureContributionResponse(
+            direction = data.direction,
+            rank = data.rank,
+            featureKey = data.featureKey,
+            featureLabel = data.featureLabel,
+            featureDisplayValue = data.featureDisplayValue,
+            impactValue = data.impactValue,
+            impactPercent = data.impactPercent
         )
     }
 
