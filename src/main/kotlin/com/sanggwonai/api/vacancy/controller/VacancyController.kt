@@ -1,9 +1,11 @@
 package com.sanggwonai.api.vacancy.controller
 
 import com.sanggwonai.api.common.api.ApiResponse
+import com.sanggwonai.api.vacancy.controller.request.MenuPriceEstimateRequest
 import com.sanggwonai.api.vacancy.controller.request.VacancyPromptParseRequest
 import com.sanggwonai.api.vacancy.controller.request.VacancyPromptSearchRequest
 import com.sanggwonai.api.vacancy.controller.request.VacancyStructuredSearchRequest
+import com.sanggwonai.api.vacancy.controller.response.MenuPriceEstimateResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyMetricDistributionResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyPromptParseResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyPromptSchemaResponse
@@ -15,6 +17,7 @@ import com.sanggwonai.api.vacancy.controller.response.VacancySearchResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancySearchSummaryResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyScoreExplanationResponse
 import com.sanggwonai.api.vacancy.controller.response.VacancyScoreFeatureResponse
+import com.sanggwonai.api.vacancy.dto.MenuPriceEstimateDto
 import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyDto
@@ -195,6 +198,18 @@ class VacancyController(
         return ResponseEntity.ok(ApiResponse(toMetricReferenceResponse(vacancyFacade.metricReference(categoryId, vacancyId))))
     }
 
+    @PostMapping("/{id}/menu-price-estimate")
+    @Operation(
+        summary = "공실 메뉴 판매가를 추정함",
+        description = "메뉴명과 공실 상권 지표를 기반으로 AI 모델 호출처럼 지연된 모의 판매가를 반환함."
+    )
+    fun estimateMenuPrice(
+        @PathVariable id: String,
+        @RequestBody request: MenuPriceEstimateRequest
+    ): ResponseEntity<ApiResponse<MenuPriceEstimateResponse>> {
+        return ResponseEntity.ok(ApiResponse(toResponse(vacancyFacade.estimateMenuPrice(id, request.menuName))))
+    }
+
     @GetMapping("/{id}")
     @Operation(
         summary = "공실 상세 조회함",
@@ -254,6 +269,22 @@ class VacancyController(
             p75 = data.p75,
             p90 = data.p90,
             percentile = data.percentile
+        )
+    }
+
+    private fun toResponse(data: MenuPriceEstimateDto): MenuPriceEstimateResponse {
+        return MenuPriceEstimateResponse(
+            vacancyId = data.vacancyId,
+            menuName = data.menuName,
+            recommendedPrice = data.recommendedPrice,
+            minPrice = data.minPrice,
+            maxPrice = data.maxPrice,
+            currency = data.currency,
+            confidence = data.confidence,
+            positioning = data.positioning,
+            signals = data.signals,
+            estimatedLatencyMs = data.estimatedLatencyMs,
+            source = data.source
         )
     }
 
