@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 051-create-vacancy-category-score-explanations
+      id: 051-create-vacancy-score-feature-explanations
       author: codex
       changes:
         - sql:
@@ -8,31 +8,37 @@ databaseChangeLog:
             splitStatements: true
             stripComments: true
             sql: |
+              create table if not exists vacancy_score_feature_benchmarks (
+                feature_key           varchar(80) not null primary key,
+                feature_label         varchar(120) not null,
+                average_value         numeric(20,6) not null,
+                display_unit          varchar(24) not null default '',
+                higher_is_positive    boolean not null,
+                source                varchar(80) not null default 'dataset_average',
+                calculated_at         timestamp with time zone not null default now()
+              );
+
               create table if not exists vacancy_category_score_explanations (
-                property_id              varchar(40) not null,
-                category_id              varchar(40) not null,
-                contribution_direction   varchar(16) not null,
-                contribution_rank        smallint not null,
-                feature_key              varchar(80) not null,
-                feature_label            varchar(120) not null,
-                feature_display_value    varchar(160),
-                impact_value             numeric(12,6) not null,
-                impact_percent           numeric(6,2) not null,
-                source                   varchar(80) not null default 'model_explanation',
-                created_at               timestamp with time zone not null default now(),
+                property_id           varchar(40) not null,
+                category_id           varchar(40) not null,
+                feature_rank          smallint not null,
+                feature_key           varchar(80) not null,
+                source                varchar(80) not null default 'model_top_features',
+                created_at            timestamp with time zone not null default now(),
                 primary key (
                   property_id,
                   category_id,
-                  contribution_direction,
-                  contribution_rank
+                  feature_rank
                 ),
-                constraint ck_vacancy_category_score_explanations_direction
-                  check (contribution_direction in ('positive', 'negative')),
                 constraint ck_vacancy_category_score_explanations_rank
-                  check (contribution_rank between 1 and 3),
+                  check (feature_rank between 1 and 5),
                 constraint fk_vacancy_category_score_explanations_score
                   foreign key (property_id, category_id)
                   references vacancy_category_scores(property_id, category_id)
+                  on delete cascade,
+                constraint fk_vacancy_category_score_explanations_feature
+                  foreign key (feature_key)
+                  references vacancy_score_feature_benchmarks(feature_key)
                   on delete cascade
               );
 
@@ -43,7 +49,18 @@ databaseChangeLog:
                 on vacancy_category_score_explanations (source);
 
   - changeSet:
-      id: 052-load-mock-vacancy-category-score-explanations
+      id: 052-store-vacancy-score-feature-benchmarks
+      author: codex
+      changes:
+        - sqlFile:
+            dbms: postgresql
+            path: db/scripts/upsert_vacancy_score_feature_benchmarks.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
+
+  - changeSet:
+      id: 053-load-mock-vacancy-category-score-explanations
       author: codex
       changes:
         - sqlFile:
