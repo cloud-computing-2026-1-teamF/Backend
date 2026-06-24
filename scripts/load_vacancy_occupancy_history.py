@@ -36,6 +36,7 @@ DEFAULT_TIMELINE_PATH = DEFAULT_CSV_DIR / "자리이력_타ᄋ
 DEFAULT_README_PATH = DEFAULT_CSV_DIR / "README_자리이력.md"
 SOURCE = "seat_history_lot_permit"
 NORMALIZED_SOURCE = "seat_history_normalized"
+INFERRED_SOURCE = "seat_history_inferred"
 VACANT_SOURCE = "seat_history_current_vacancy"
 CURRENT_VACANT_LABEL = "현재 공실"
 CURRENT_VACANT_CATEGORY = "공실"
@@ -384,6 +385,50 @@ def create_stage(cursor) -> None:
     )
 
 
+def create_vacancy_basis(cursor) -> None:
+    cursor.execute(
+        """
+        create temp table stage_vacancy_history_basis on commit drop as
+        with raw as (
+          select
+            property_id,
+            "매물번호" as listing_number,
+            nullif(left("등록일", 10), '')::date as registered_on,
+            "월세_만원" as monthly_rent_man,
+            "보증금_만원" as deposit_man,
+            coalesce(nullif("업종중분류", ''), nullif("업종대분류", ''), '요식업') as base_category
+          from vacancies
+        )
+        select
+          property_id,
+          listing_number,
+          case
+            when registered_on between date '2025-01-01' and current_date then registered_on
+            when registered_on > current_date then current_date
+            else date '2025-01-01' + (
+              (('x' || substr(md5(property_id), 1, 6))::bit(24)::int % 485)
+            )
+          end as vacant_started_on,
+          monthly_rent_man,
+          deposit_man,
+          case
+            when base_category like '%커피%' or base_category like '%카페%' then '카페'
+            when base_category like '%한식%' then '한식'
+            when base_category like '%치킨%' then '치킨'
+            when base_category like '%분식%' then '분식'
+            when base_category like '%일식%' then '일식'
+            when base_category like '%중국%' or base_category like '%중식%' then '중식'
+            when base_category like '%주점%' or base_category like '%호프%' or base_category like '%바%' then '주점'
+            when base_category like '%레스토랑%' or base_category like '%양식%' then '양식'
+            else '요식업'
+          end as inferred_category
+        from raw
+        """
+    )
+    cursor.execute("create index on stage_vacancy_history_basis (listing_number)")
+    cursor.execute("create index on stage_vacancy_history_basis (property_id)")
+
+
 def copy_rows_psycopg3(cursor, rows: Iterable[OccupancySourceRow]) -> int:
     count = 0
     with cursor.copy(
@@ -503,21 +548,21 @@ def validate_stage(cursor, allow_unmapped: bool) -> None:
         )
 
 
-def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, int]:
+def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, int, int]:
     cursor.execute("delete from vacancy_occupancy_history")
     cursor.execute(
         """
         with mapped as (
           select
             s.id,
-            v.property_id,
+            b.property_id,
             s.started_on,
             s.ended_on,
             s.tenant_label,
             s.business_category,
-            coalesce(nullif(left(v."등록일", 10), '')::date, current_date) as vacant_started_on
+            b.vacant_started_on
           from stage_vacancy_occupancy_history s
-          join vacancies v on v."매물번호" = s.listing_number
+          join stage_vacancy_history_basis b on b.listing_number = s.listing_number
         ),
         bounded as (
           select
@@ -608,6 +653,7 @@ def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, in
         (NORMALIZED_SOURCE,),
     )
     inserted_real_rows = cursor.rowcount
+    inserted_inferred_rows = insert_inferred_history(cursor)
 
     inserted_vacant_rows = 0
     if include_current_vacancy_rows:
@@ -628,26 +674,182 @@ def replace_history(cursor, include_current_vacancy_rows: bool) -> tuple[int, in
               source
             )
             select
-              concat('seatvac-', substr(md5(v.property_id), 1, 24)),
-              v.property_id,
-              coalesce(nullif(left(v."등록일", 10), '')::date, current_date),
+              concat('seatvac-', substr(md5(b.property_id), 1, 24)),
+              b.property_id,
+              b.vacant_started_on,
               null,
               %s,
               %s,
               'vacant',
-              v."월세_만원",
-              v."보증금_만원",
+              b.monthly_rent_man,
+              b.deposit_man,
               null,
               null,
               %s
-            from vacancies v
+            from stage_vacancy_history_basis b
             on conflict (id) do nothing
             """,
             (CURRENT_VACANT_LABEL, CURRENT_VACANT_CATEGORY, VACANT_SOURCE),
         )
         inserted_vacant_rows = cursor.rowcount
 
-    return inserted_real_rows, inserted_vacant_rows
+    return inserted_real_rows, inserted_inferred_rows, inserted_vacant_rows
+
+
+def insert_inferred_history(cursor) -> int:
+    cursor.execute(
+        """
+        with basis as (
+          select
+            *,
+            (('x' || substr(md5(property_id), 1, 6))::bit(24)::int) as seed
+          from stage_vacancy_history_basis
+        ),
+        closed_stats as (
+          select
+            property_id,
+            count(*) as closed_count,
+            min(started_on) as first_started_on,
+            max(ended_on) as last_ended_on
+          from vacancy_occupancy_history
+          where status = 'closed'
+          group by property_id
+        ),
+        empty_windows as (
+          select
+            b.*,
+            greatest(
+              date '2024-01-01' + (b.seed %% 150),
+              (b.vacant_started_on - ((10 + (b.seed %% 9)) * interval '1 month'))::date
+            ) as second_started_on
+          from basis b
+          left join closed_stats c on c.property_id = b.property_id
+          where coalesce(c.closed_count, 0) = 0
+            and b.vacant_started_on >= date '2025-01-01'
+        ),
+        empty_candidates as (
+          select
+            property_id,
+            1 as slot,
+            greatest(
+              date '2022-01-01' + (seed %% 180),
+              (second_started_on - ((15 + ((seed / 10) %% 10)) * interval '1 month'))::date
+            ) as started_on,
+            second_started_on - 1 as ended_on,
+            concat('이전 ', inferred_category, ' 운영') as tenant_label,
+            inferred_category as business_category,
+            case when monthly_rent_man is null then null else greatest(round(monthly_rent_man * 0.82)::int, 0) end as monthly_rent_man,
+            case when deposit_man is null then null else greatest(round(deposit_man * 0.82)::int, 0) end as deposit_man,
+            'demand_shift' as exit_reason_code,
+            '상권 수요 변화에 따른 업종 전환 추정' as exit_reason_summary
+          from empty_windows
+
+          union all
+
+          select
+            property_id,
+            2 as slot,
+            second_started_on as started_on,
+            vacant_started_on - 1 as ended_on,
+            concat('단기 ', inferred_category, ' 운영') as tenant_label,
+            inferred_category as business_category,
+            case when monthly_rent_man is null then null else greatest(round(monthly_rent_man * 0.94)::int, 0) end as monthly_rent_man,
+            case when deposit_man is null then null else greatest(round(deposit_man * 0.95)::int, 0) end as deposit_man,
+            'fixed_cost_burden' as exit_reason_code,
+            '매출 대비 고정비 부담 추정' as exit_reason_summary
+          from empty_windows
+        ),
+        sparse_candidates as (
+          select
+            b.property_id,
+            3 as slot,
+            greatest(
+              c.last_ended_on + 1,
+              (b.vacant_started_on - ((9 + (b.seed %% 8)) * interval '1 month'))::date
+            ) as started_on,
+            b.vacant_started_on - 1 as ended_on,
+            concat('공실 전 ', b.inferred_category, ' 운영') as tenant_label,
+            b.inferred_category as business_category,
+            case when b.monthly_rent_man is null then null else greatest(round(b.monthly_rent_man * 0.96)::int, 0) end as monthly_rent_man,
+            case when b.deposit_man is null then null else greatest(round(b.deposit_man * 0.96)::int, 0) end as deposit_man,
+            'fixed_cost_burden' as exit_reason_code,
+            '매출 대비 고정비 부담 추정' as exit_reason_summary
+          from basis b
+          join closed_stats c on c.property_id = b.property_id
+          where c.closed_count = 1
+            and c.last_ended_on is not null
+            and c.last_ended_on < b.vacant_started_on - 90
+        ),
+        sparse_pre_candidates as (
+          select
+            b.property_id,
+            4 as slot,
+            greatest(
+              date '2022-01-01' + (b.seed %% 160),
+              (c.first_started_on - ((14 + (b.seed %% 8)) * interval '1 month'))::date
+            ) as started_on,
+            c.first_started_on - 1 as ended_on,
+            concat('이전 ', b.inferred_category, ' 운영') as tenant_label,
+            b.inferred_category as business_category,
+            case when b.monthly_rent_man is null then null else greatest(round(b.monthly_rent_man * 0.84)::int, 0) end as monthly_rent_man,
+            case when b.deposit_man is null then null else greatest(round(b.deposit_man * 0.84)::int, 0) end as deposit_man,
+            'demand_shift' as exit_reason_code,
+            '상권 수요 변화에 따른 업종 전환 추정' as exit_reason_summary
+          from basis b
+          join closed_stats c on c.property_id = b.property_id
+          where c.closed_count = 1
+            and c.first_started_on is not null
+            and c.first_started_on > date '2022-04-01'
+            and not (c.last_ended_on is not null and c.last_ended_on < b.vacant_started_on - 90)
+        ),
+        candidates as (
+          select * from empty_candidates
+          union all
+          select * from sparse_candidates
+          union all
+          select * from sparse_pre_candidates
+        )
+        insert into vacancy_occupancy_history (
+          id,
+          property_id,
+          started_on,
+          ended_on,
+          tenant_label,
+          business_category,
+          status,
+          monthly_rent_man,
+          deposit_man,
+          exit_reason_code,
+          exit_reason_summary,
+          source
+        )
+        select
+          concat('seatinf-', substr(md5(property_id || ':' || slot || ':' || started_on::text), 1, 32)),
+          property_id,
+          started_on,
+          ended_on,
+          tenant_label,
+          business_category,
+          'closed',
+          monthly_rent_man,
+          deposit_man,
+          exit_reason_code,
+          exit_reason_summary,
+          %s
+        from candidates c
+        where c.ended_on >= c.started_on
+          and not exists (
+            select 1
+            from vacancy_occupancy_history h
+            where h.property_id = c.property_id
+              and daterange(h.started_on, h.ended_on + 1, '[)') &&
+                  daterange(c.started_on, c.ended_on + 1, '[)')
+          )
+        order by property_id, started_on, slot
+        """,
+        (INFERRED_SOURCE,),
+    )
+    return cursor.rowcount
 
 
 def print_db_summary(cursor) -> None:
@@ -723,13 +925,15 @@ def load_database(args: argparse.Namespace) -> None:
                     _, execute_values = driver
                     staged_count = copy_rows_psycopg2(cursor, execute_values, rows)
                 validate_stage(cursor, args.allow_unmapped)
-                inserted_real_rows, inserted_vacant_rows = replace_history(
+                create_vacancy_basis(cursor)
+                inserted_real_rows, inserted_inferred_rows, inserted_vacant_rows = replace_history(
                     cursor,
                     include_current_vacancy_rows=not args.skip_current_vacancy_rows,
                 )
                 compute_overlap_audit(stats)
                 print(
-                    f"Loaded {inserted_real_rows:,} permit rows and "
+                    f"Loaded {inserted_real_rows:,} permit rows, "
+                    f"{inserted_inferred_rows:,} inferred rows, and "
                     f"{inserted_vacant_rows:,} current-vacancy rows."
                 )
                 print_db_summary(cursor)
