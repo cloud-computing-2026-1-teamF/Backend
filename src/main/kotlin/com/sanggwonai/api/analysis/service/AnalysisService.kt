@@ -367,15 +367,21 @@ class AnalysisService(
             snapshot.vacancyById[row.vacancyId]?.let { vacancy ->
                 val score = snapshot.categoryScoreFor(vacancy.id, analysis.businessTypeKey)
                 val horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey)
+                val common = snapshot.commonByProperty[vacancy.id]
+                val spatial = snapshot.spatialFor(vacancy.id, score)
                 val scoreExplanation = toScoreExplanationDto(
-                    snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey)
+                    entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+                    benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                    vacancy = vacancy,
+                    common = common,
+                    spatial = spatial
                 )
                 toRecommendationDto(
                     row = row,
                     vacancy = vacancy,
                     recommended = score?.recommended,
-                    common = snapshot.commonByProperty[vacancy.id],
-                    spatial = snapshot.spatialFor(vacancy.id, score),
+                    common = common,
+                    spatial = spatial,
                     accessibility = snapshot.accessibilityByProperty[vacancy.id],
                     categoryName = snapshot.categoryName(analysis.businessTypeKey),
                     horizonScores = horizonScores,
@@ -398,7 +404,11 @@ class AnalysisService(
         val scorePercent = score?.scorePercent() ?: BigDecimal("0.00")
         val categoryName = snapshot.categoryName(analysis.businessTypeKey)
         val scoreExplanation = toScoreExplanationDto(
-            snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey)
+            entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+            benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+            vacancy = vacancy,
+            common = common,
+            spatial = spatial
         )
         return listOf(
             AnalysisRecommendationDto(
@@ -454,7 +464,11 @@ class AnalysisService(
             categoryName = ranked.categoryName,
             horizonScores = ranked.horizonScores,
             scoreExplanation = toScoreExplanationDto(
-                snapshot.scoreExplanationsFor(ranked.vacancy.id, ranked.categoryId)
+                entities = snapshot.scoreExplanationsFor(ranked.vacancy.id, ranked.categoryId),
+                benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                vacancy = ranked.vacancy,
+                common = ranked.common,
+                spatial = ranked.spatial
             ),
             history = history
         )
