@@ -349,6 +349,44 @@ def iter_top_feature_rows(path: Path) -> tuple[list[TopFeatureRow], JsonStats]:
     return rows, stats
 
 
+def validate_feature_specs(top_rows: Sequence[TopFeatureRow]) -> None:
+    errors: list[str] = []
+    raw_names = [spec.raw_name for spec in FEATURE_SPECS]
+    feature_keys = [spec.feature_key for spec in FEATURE_SPECS]
+    duplicate_raw = sorted(name for name, count in Counter(raw_names).items() if count > 1)
+    duplicate_keys = sorted(key for key, count in Counter(feature_keys).items() if count > 1)
+    if duplicate_raw:
+        errors.append(f"duplicate raw feature names: {', '.join(duplicate_raw)}")
+    if duplicate_keys:
+        errors.append(f"duplicate feature keys: {', '.join(duplicate_keys)}")
+
+    for spec in FEATURE_SPECS:
+        if not spec.feature_key.strip():
+            errors.append(f"{spec.raw_name}: missing feature_key")
+        if not spec.feature_label.strip():
+            errors.append(f"{spec.raw_name}: missing user-facing feature_label")
+        if type(spec.higher_is_positive) is not bool:
+            errors.append(f"{spec.raw_name}: higher_is_positive must be a boolean")
+        if spec.feature_key not in SQL_FEATURE_EXPRESSIONS:
+            errors.append(f"{spec.raw_name}: missing SQL feature expression")
+
+    used_raw_names = {row.raw_feature_name for row in top_rows}
+    missing_specs = sorted(used_raw_names - set(raw_names))
+    if missing_specs:
+        errors.append(f"JSON features without catalog definitions: {', '.join(missing_specs)}")
+
+    if errors:
+        raise ValueError("Invalid feature direction catalog. " + "; ".join(errors))
+
+
+def feature_direction_counts(top_rows: Sequence[TopFeatureRow]) -> tuple[int, int]:
+    used_feature_keys = {row.feature_key for row in top_rows}
+    used_specs = [spec for spec in FEATURE_SPECS if spec.feature_key in used_feature_keys]
+    higher_positive = sum(1 for spec in used_specs if spec.higher_is_positive)
+    lower_positive = sum(1 for spec in used_specs if not spec.higher_is_positive)
+    return higher_positive, lower_positive
+
+
 def parse_decimal(value: str | None) -> Decimal | None:
     text = (value or "").strip()
     if not text:
@@ -887,6 +925,7 @@ def apply_load(cursor) -> dict[str, int]:
 
 def run(args: argparse.Namespace) -> int:
     top_rows, json_stats = iter_top_feature_rows(args.top_features_json)
+    validate_feature_specs(top_rows)
     source_data = read_source_csv(args.feature_csv, top_rows)
 
     kind, driver = import_driver()
@@ -908,12 +947,12 @@ def run(args: argparse.Namespace) -> int:
 
             if args.dry_run:
                 conn.rollback()
-                print_summary(json_stats, source_data, stage_summary, None)
+                print_summary(json_stats, source_data, stage_summary, None, top_rows)
                 return 0
 
             load_summary = apply_load(cursor)
             conn.commit()
-            print_summary(json_stats, source_data, stage_summary, load_summary)
+            print_summary(json_stats, source_data, stage_summary, load_summary, top_rows)
     return 0
 
 
@@ -922,12 +961,17 @@ def print_summary(
     source_data: SourceCsvData,
     stage_summary: dict[str, int | list[str]],
     load_summary: dict[str, int] | None,
+    top_rows: Sequence[TopFeatureRow],
 ) -> None:
     print("Top-feature JSON")
     print(f"  vacancies: {json_stats.vacancies:,}")
     print(f"  rows: {json_stats.rows:,}")
     print(f"  categories: {dict(json_stats.categories or {})}")
     print(f"  unique features: {len(json_stats.raw_features or {})}")
+    higher_positive, lower_positive = feature_direction_counts(top_rows)
+    print("Feature direction audit")
+    print(f"  higher than average is favorable: {higher_positive:,} features")
+    print(f"  lower than average is favorable: {lower_positive:,} features")
     print("Feature source")
     print(f"  csv rows: {source_data.source_rows:,}")
     print(f"  csv current values: {len(source_data.value_rows):,}")
