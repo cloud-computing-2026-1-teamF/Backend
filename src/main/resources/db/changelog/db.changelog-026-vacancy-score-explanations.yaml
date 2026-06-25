@@ -62,15 +62,3 @@ databaseChangeLog:
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
-
-  - changeSet:
-      id: 053-load-mock-vacancy-category-score-explanations
-      author: codex
-      runOnChange: true
-      changes:
-        - sqlFile:
-            dbms: postgresql
-            path: db/scripts/insert_mock_vacancy_score_explanations.sql
-            relativeToChangelogFile: false
-            splitStatements: true
-            stripComments: true
