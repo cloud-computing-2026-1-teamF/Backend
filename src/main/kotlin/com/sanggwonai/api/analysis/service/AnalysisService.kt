@@ -372,6 +372,7 @@ class AnalysisService(
                 val scoreExplanation = toScoreExplanationDto(
                     entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
                     benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                    featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, analysis.businessTypeKey),
                     vacancy = vacancy,
                     common = common,
                     spatial = spatial
@@ -406,6 +407,7 @@ class AnalysisService(
         val scoreExplanation = toScoreExplanationDto(
             entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
             benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+            featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, analysis.businessTypeKey),
             vacancy = vacancy,
             common = common,
             spatial = spatial
@@ -466,6 +468,7 @@ class AnalysisService(
             scoreExplanation = toScoreExplanationDto(
                 entities = snapshot.scoreExplanationsFor(ranked.vacancy.id, ranked.categoryId),
                 benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                featureValuesByKey = snapshot.scoreFeatureValuesFor(ranked.vacancy.id, ranked.categoryId),
                 vacancy = ranked.vacancy,
                 common = ranked.common,
                 spatial = ranked.spatial
