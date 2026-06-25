@@ -290,6 +290,7 @@ class VacancyService(
         val scoreExplanation = toScoreExplanationDto(
             entities = snapshot.scoreExplanationsFor(vacancy.id, score.id.categoryId),
             benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+            featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, score.id.categoryId),
             vacancy = vacancy,
             common = common,
             spatial = spatial
