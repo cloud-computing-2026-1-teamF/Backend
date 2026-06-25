@@ -14,6 +14,7 @@ Always keep this flow:
 
 ## Engineering Quality Standards
 
+- Always reply to the user in English unless the user explicitly asks for another language.
 - Maintain strict, production-grade code quality and readability.
 - After any backend code change, `./gradlew build` must succeed before reporting completion.
 - If the user explicitly says they will check CI/CD, do not wait for post-merge GitHub Actions, ECS deployment, or other CI/CD completion before reporting the task state; stop polling and leave CI/CD follow-up to the user.
