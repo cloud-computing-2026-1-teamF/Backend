@@ -64,7 +64,10 @@ class LoadStats:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Replace vacancy_score_history from local scores_YYYY.csv files."
+        description=(
+            "Replace vacancy_score_history and refresh current/horizon score "
+            "tables from local scores_YYYY.csv files."
+        )
     )
     parser.add_argument(
         "--csv-dir",
@@ -306,7 +309,7 @@ def validate_stage(cursor, allow_unmapped: bool) -> None:
         )
 
 
-def replace_history(cursor, current_year: int) -> tuple[int, int]:
+def replace_history(cursor, current_year: int) -> tuple[int, int, int]:
     cursor.execute("delete from vacancy_score_history")
     cursor.execute(
         """
@@ -406,7 +409,74 @@ def replace_history(cursor, current_year: int) -> tuple[int, int]:
         (current_year,),
     )
     refreshed_current_scores = cursor.rowcount
-    return inserted_history, refreshed_current_scores
+
+    cursor.execute("delete from vacancy_category_horizon_scores")
+    cursor.execute(
+        """
+        with mapped as (
+          select
+            v.property_id,
+            s.category_id,
+            s.score_year,
+            s.survival_score,
+            s.recommended
+          from stage_yearwise_scores s
+          join vacancies v on v."매물번호" = s.listing_number
+        ),
+        latest as (
+          select distinct on (property_id, category_id)
+            property_id,
+            category_id,
+            survival_score,
+            recommended
+          from mapped
+          where score_year = %s
+          order by property_id, category_id, score_year desc
+        ),
+        five_year as (
+          select
+            property_id,
+            category_id,
+            avg(survival_score)::numeric(8,6) as survival_score,
+            max(recommended)::smallint as recommended
+          from mapped
+          group by property_id, category_id
+        ),
+        horizons as (
+          select property_id, category_id, 1 as horizon_years, survival_score, recommended
+          from latest
+          union all
+          select property_id, category_id, 3 as horizon_years, survival_score, recommended
+          from latest
+          union all
+          select property_id, category_id, 5 as horizon_years, survival_score, recommended
+          from five_year
+        )
+        insert into vacancy_category_horizon_scores (
+          property_id,
+          category_id,
+          horizon_years,
+          survival_score,
+          recommended,
+          source
+        )
+        select
+          property_id,
+          category_id,
+          horizon_years,
+          survival_score,
+          recommended,
+          %s
+        from horizons
+        on conflict (property_id, category_id, horizon_years) do update set
+          survival_score = excluded.survival_score,
+          recommended = excluded.recommended,
+          source = excluded.source
+        """,
+        (current_year, SOURCE),
+    )
+    refreshed_horizon_scores = cursor.rowcount
+    return inserted_history, refreshed_current_scores, refreshed_horizon_scores
 
 
 def print_db_summary(cursor) -> None:
@@ -440,10 +510,11 @@ def load_database(args: argparse.Namespace, files: Sequence[tuple[int, Path]]) -
                     _, execute_values = driver
                     insert_stage_rows_psycopg2(cursor, execute_values, rows, stats)
                 validate_stage(cursor, args.allow_unmapped)
-                inserted_history, refreshed_scores = replace_history(cursor, args.current_year)
+                inserted_history, refreshed_scores, refreshed_horizon_scores = replace_history(cursor, args.current_year)
                 print(
-                    f"Loaded {inserted_history:,} score history rows and refreshed "
-                    f"{refreshed_scores:,} current-year category scores."
+                    f"Loaded {inserted_history:,} score history rows, refreshed "
+                    f"{refreshed_scores:,} current-year category scores, and refreshed "
+                    f"{refreshed_horizon_scores:,} horizon scores."
                 )
                 print_db_summary(cursor)
     finally:
