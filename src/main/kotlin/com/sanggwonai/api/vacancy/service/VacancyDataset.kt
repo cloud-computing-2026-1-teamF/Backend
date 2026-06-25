@@ -10,6 +10,7 @@ import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureBenchmarkEntity
+import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureValueEntity
 import com.sanggwonai.api.vacancy.repository.VacancyAccessibilityFoottrafficRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategoryHorizonScoreRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCategoryScoreRepository
@@ -18,6 +19,7 @@ import com.sanggwonai.api.vacancy.repository.VacancyCategorySpatialRepository
 import com.sanggwonai.api.vacancy.repository.VacancyCommonFeatureRepository
 import com.sanggwonai.api.vacancy.repository.VacancyRepository
 import com.sanggwonai.api.vacancy.repository.VacancyScoreFeatureBenchmarkRepository
+import com.sanggwonai.api.vacancy.repository.VacancyScoreFeatureValueRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -30,6 +32,7 @@ class VacancyDataset(
     private val categoryHorizonScoreRepository: VacancyCategoryHorizonScoreRepository,
     private val categoryScoreExplanationRepository: VacancyCategoryScoreExplanationRepository,
     private val scoreFeatureBenchmarkRepository: VacancyScoreFeatureBenchmarkRepository,
+    private val scoreFeatureValueRepository: VacancyScoreFeatureValueRepository,
     private val categorySpatialRepository: VacancyCategorySpatialRepository,
     private val accessibilityFoottrafficRepository: VacancyAccessibilityFoottrafficRepository,
     private val businessTypeRepository: BusinessTypeRepository
@@ -59,6 +62,9 @@ class VacancyDataset(
             }
         val scoreFeatureBenchmarksByKey = scoreFeatureBenchmarkRepository.findAll()
             .associateBy { it.featureKey }
+        val scoreFeatureValuesByKey = scoreFeatureValueRepository.findAll()
+            .groupBy { VacancyCategoryKey(it.id.propertyId, it.id.categoryId) }
+            .mapValues { (_, values) -> values.associateBy { it.id.featureKey } }
         val bestScoresByProperty = scores
             .groupBy { it.id.propertyId }
             .mapValues { (_, propertyScores) -> bestScore(propertyScores) }
@@ -76,6 +82,7 @@ class VacancyDataset(
             horizonScoresByKey = horizonScoresByKey,
             scoreExplanationsByKey = scoreExplanationsByKey,
             scoreFeatureBenchmarksByKey = scoreFeatureBenchmarksByKey,
+            scoreFeatureValuesByKey = scoreFeatureValuesByKey,
             bestScoreByProperty = bestScoresByProperty,
             spatialByKey = spatialsByKey,
             categoryNameById = businessTypeRepository.findAllByOrderByBusinessKeyAsc()
@@ -101,6 +108,7 @@ data class VacancyDatasetSnapshot(
     val horizonScoresByKey: Map<VacancyCategoryKey, List<VacancyCategoryHorizonScoreEntity>>,
     val scoreExplanationsByKey: Map<VacancyCategoryKey, List<VacancyCategoryScoreExplanationEntity>>,
     val scoreFeatureBenchmarksByKey: Map<String, VacancyScoreFeatureBenchmarkEntity>,
+    val scoreFeatureValuesByKey: Map<VacancyCategoryKey, Map<String, VacancyScoreFeatureValueEntity>>,
     val bestScoreByProperty: Map<String, VacancyCategoryScoreEntity>,
     val spatialByKey: Map<VacancyCategoryKey, VacancyCategorySpatialEntity>,
     val categoryNameById: Map<String, String>
@@ -122,6 +130,12 @@ data class VacancyDatasetSnapshot(
     fun scoreExplanationsFor(propertyId: String, categoryId: String?): List<VacancyCategoryScoreExplanationEntity> {
         return categoryId
             ?.let { scoreExplanationsByKey[VacancyCategoryKey(propertyId, it)] }
+            .orEmpty()
+    }
+
+    fun scoreFeatureValuesFor(propertyId: String, categoryId: String?): Map<String, VacancyScoreFeatureValueEntity> {
+        return categoryId
+            ?.let { scoreFeatureValuesByKey[VacancyCategoryKey(propertyId, it)] }
             .orEmpty()
     }
 
