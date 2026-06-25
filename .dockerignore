@@ -1,0 +1,18 @@
+.git
+.github
+.gradle
+.idea
+.kotlin
+.vscode
+build
+out
+*.iml
+*.ipr
+*.iws
+
+.env*
+application-local.yml
+
+HELP.md
+UX_UI Figjam.pdf
+api_baseline.txt
