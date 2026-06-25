@@ -5,12 +5,14 @@ import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureBenchmarkEntity
+import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureValueEntity
 import java.math.BigDecimal
 import java.math.RoundingMode
 
 fun toScoreExplanationDto(
     entities: List<VacancyCategoryScoreExplanationEntity>,
     benchmarksByKey: Map<String, VacancyScoreFeatureBenchmarkEntity>,
+    featureValuesByKey: Map<String, VacancyScoreFeatureValueEntity> = emptyMap(),
     vacancy: VacancyEntity,
     common: VacancyCommonFeatureEntity?,
     spatial: VacancyCategorySpatialEntity?
@@ -22,7 +24,8 @@ fun toScoreExplanationDto(
         .take(5)
         .map { entity ->
             val benchmark = benchmarksByKey[entity.featureKey]
-            val currentValue = currentFeatureValue(entity.featureKey, vacancy, common, spatial)
+            val currentValue = featureValuesByKey[entity.featureKey]?.currentValue
+                ?: currentFeatureValue(entity.featureKey, vacancy, common, spatial)
             VacancyScoreFeatureDto(
                 rank = entity.id.featureRank.toInt(),
                 featureKey = entity.featureKey,
