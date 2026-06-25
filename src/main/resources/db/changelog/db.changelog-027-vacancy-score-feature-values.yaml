@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 054-create-vacancy-score-feature-values
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              create table if not exists vacancy_score_feature_values (
+                property_id        varchar(40) not null,
+                category_id        varchar(40) not null,
+                feature_key        varchar(80) not null,
+                current_value      numeric(20,6),
+                raw_feature_name   varchar(160),
+                source             varchar(80) not null default 'model_top_features_2026',
+                calculated_at      timestamp with time zone not null default now(),
+                primary key (property_id, category_id, feature_key),
+                constraint fk_vacancy_score_feature_values_score
+                  foreign key (property_id, category_id)
+                  references vacancy_category_scores(property_id, category_id)
+                  on delete cascade,
+                constraint fk_vacancy_score_feature_values_feature
+                  foreign key (feature_key)
+                  references vacancy_score_feature_benchmarks(feature_key)
+                  on delete cascade
+              );
+
+              create index if not exists idx_vacancy_score_feature_values_lookup
+                on vacancy_score_feature_values (property_id, category_id);
+
+              delete from vacancy_category_score_explanations
+              where source = 'mock_score_top_features';
+
+  - changeSet:
+      id: 055-stop-liquibase-mock-score-feature-load
+      author: codex
+      runOnChange: true
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              delete from vacancy_category_score_explanations
+              where source = 'mock_score_top_features';
