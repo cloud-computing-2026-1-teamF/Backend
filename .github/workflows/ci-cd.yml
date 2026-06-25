@@ -10,6 +10,11 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  # ECS has one mutable service; overlapping main pushes can fight the same rollout.
+  group: backend-ci-cd-${{ github.repository }}
+  cancel-in-progress: false
+
 env:
   JAVA_VERSION: "25"
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
@@ -61,9 +66,6 @@ jobs:
       - name: Run tests and build jar
         run: ./gradlew test bootJar --no-daemon
 
-      - name: Build Docker image
-        run: docker build --pull --platform linux/amd64 -t backend-ci:${{ github.sha }} .
-
   deploy:
     name: Push image and deploy ECS
     runs-on: ubuntu-latest
@@ -97,6 +99,8 @@ jobs:
           # provenance/sbom attestation을 끄면 single-platform manifest로 푸시되어 안전.
           provenance: false
           sbom: false
+          cache-from: type=gha,scope=backend-service-image
+          cache-to: type=gha,mode=max,scope=backend-service-image
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.APP_ECR_REPOSITORY }}:latest
