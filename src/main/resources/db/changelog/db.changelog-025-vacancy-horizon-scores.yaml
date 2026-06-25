@@ -29,72 +29,7 @@ databaseChangeLog:
               create index if not exists idx_vacancy_category_horizon_scores_rank
                 on vacancy_category_horizon_scores (horizon_years, category_id, survival_score desc);
 
-  - changeSet:
-      id: 049a-load-vacancy-category-horizon-scores
-      author: codex
-      changes:
-        - sql:
-            dbms: postgresql
-            sql: delete from vacancy_category_horizon_scores;
-        - loadData:
-            tableName: vacancy_category_horizon_scores
-            file: db/data/vacancy_dataset/vacancy_category_horizon_scores_liquibase.csv
-            encoding: UTF-8
-            separator: ","
-            quotchar: '"'
-            columns:
-              - column: { name: property_id, type: STRING }
-              - column: { name: category_id, type: STRING }
-              - column: { name: horizon_years, type: NUMERIC }
-              - column: { name: survival_score, type: NUMERIC }
-              - column: { name: recommended, type: NUMERIC }
-
-  - changeSet:
-      id: 050-refresh-vacancy-category-scores-3y
-      author: codex
-      changes:
-        - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              create table if not exists vacancy_category_scores_refresh (
-                property_id  varchar(40) not null,
-                category_id  varchar(40) not null,
-                생존점수      numeric(8,6),
-                추천여부      smallint
-              );
-              delete from vacancy_category_scores_refresh;
-        - loadData:
-            tableName: vacancy_category_scores_refresh
-            file: db/data/vacancy_dataset/scores.csv
-            encoding: UTF-8
-            separator: ","
-            quotchar: '"'
-            columns:
-              - column: { name: property_id, type: STRING }
-              - column: { name: category_id, type: STRING }
-              - column: { name: 생존점수, type: NUMERIC }
-              - column: { name: 추천여부, type: NUMERIC }
-        - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              insert into vacancy_category_scores (
-                property_id,
-                category_id,
-                생존점수,
-                추천여부
-              )
-              select
-                property_id,
-                category_id,
-                생존점수,
-                추천여부
-              from vacancy_category_scores_refresh
-              on conflict (property_id, category_id) do update set
-                생존점수 = excluded.생존점수,
-                추천여부 = excluded.추천여부;
-
-              drop table if exists vacancy_category_scores_refresh;
+  # Score data is intentionally loaded from local CSVs with
+  # scripts/load_yearwise_score_history.py through the RDS proxy.
+  # Keep Liquibase responsible for schema only so ECS startup never streams
+  # the large score datasets during application boot.
