@@ -34,13 +34,13 @@ import com.sanggwonai.api.vacancy.dto.VacancySearchCriteria
 import com.sanggwonai.api.vacancy.entity.VacancyAccessibilityFoottrafficEntity
 import com.sanggwonai.api.vacancy.dto.VacancyHorizonScoreDto
 import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
-import com.sanggwonai.api.vacancy.dto.toScoreExplanationDto
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCommonFeatureEntity
 import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import com.sanggwonai.api.vacancy.service.VacancyDataset
 import com.sanggwonai.api.vacancy.service.VacancyRankingService
+import com.sanggwonai.api.vacancy.service.VacancyScoreExplanationService
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -58,6 +58,7 @@ class AnalysisService(
     private val recommendationRepository: AnalysisVacancyRecommendationRepository,
     private val vacancyRankingService: VacancyRankingService,
     private val vacancyDataset: VacancyDataset,
+    private val scoreExplanationService: VacancyScoreExplanationService,
     private val areaRepository: AreaRepository,
     private val businessTypeRepository: BusinessTypeRepository,
     private val userRepository: UserRepository,
@@ -369,10 +370,10 @@ class AnalysisService(
                 val horizonScores = snapshot.horizonScoresFor(vacancy.id, analysis.businessTypeKey)
                 val common = snapshot.commonByProperty[vacancy.id]
                 val spatial = snapshot.spatialFor(vacancy.id, score)
-                val scoreExplanation = toScoreExplanationDto(
-                    entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+                val scoreExplanation = scoreExplanationService.resolve(
+                    propertyId = vacancy.id,
+                    categoryId = analysis.businessTypeKey,
                     benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
-                    featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, analysis.businessTypeKey),
                     vacancy = vacancy,
                     common = common,
                     spatial = spatial
@@ -404,10 +405,10 @@ class AnalysisService(
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         val scorePercent = score?.scorePercent() ?: BigDecimal("0.00")
         val categoryName = snapshot.categoryName(analysis.businessTypeKey)
-        val scoreExplanation = toScoreExplanationDto(
-            entities = snapshot.scoreExplanationsFor(vacancy.id, analysis.businessTypeKey),
+        val scoreExplanation = scoreExplanationService.resolve(
+            propertyId = vacancy.id,
+            categoryId = analysis.businessTypeKey,
             benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
-            featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, analysis.businessTypeKey),
             vacancy = vacancy,
             common = common,
             spatial = spatial
@@ -465,10 +466,10 @@ class AnalysisService(
             accessibility = snapshot.accessibilityByProperty[ranked.vacancy.id],
             categoryName = ranked.categoryName,
             horizonScores = ranked.horizonScores,
-            scoreExplanation = toScoreExplanationDto(
-                entities = snapshot.scoreExplanationsFor(ranked.vacancy.id, ranked.categoryId),
+            scoreExplanation = scoreExplanationService.resolve(
+                propertyId = ranked.vacancy.id,
+                categoryId = ranked.categoryId,
                 benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
-                featureValuesByKey = snapshot.scoreFeatureValuesFor(ranked.vacancy.id, ranked.categoryId),
                 vacancy = ranked.vacancy,
                 common = ranked.common,
                 spatial = ranked.spatial
