@@ -5,4 +5,9 @@ import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureValueKey
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface VacancyScoreFeatureValueRepository :
-    JpaRepository<VacancyScoreFeatureValueEntity, VacancyScoreFeatureValueKey>
+    JpaRepository<VacancyScoreFeatureValueEntity, VacancyScoreFeatureValueKey> {
+    fun findByIdPropertyIdAndIdCategoryId(
+        propertyId: String,
+        categoryId: String
+    ): List<VacancyScoreFeatureValueEntity>
+}
