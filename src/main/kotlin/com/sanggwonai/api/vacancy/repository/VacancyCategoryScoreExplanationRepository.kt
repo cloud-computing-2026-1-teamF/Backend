@@ -5,4 +5,9 @@ import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreExplanationKey
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface VacancyCategoryScoreExplanationRepository :
-    JpaRepository<VacancyCategoryScoreExplanationEntity, VacancyCategoryScoreExplanationKey>
+    JpaRepository<VacancyCategoryScoreExplanationEntity, VacancyCategoryScoreExplanationKey> {
+    fun findByIdPropertyIdAndIdCategoryIdOrderByIdFeatureRankAsc(
+        propertyId: String,
+        categoryId: String
+    ): List<VacancyCategoryScoreExplanationEntity>
+}
