@@ -13,7 +13,6 @@ import com.sanggwonai.api.vacancy.dto.VacancyMetricDistribution
 import com.sanggwonai.api.vacancy.dto.VacancyMetricReference
 import com.sanggwonai.api.vacancy.dto.VacancyScoreMode
 import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
-import com.sanggwonai.api.vacancy.dto.toScoreExplanationDto
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryHorizonScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategoryScoreEntity
 import com.sanggwonai.api.vacancy.entity.VacancyCategorySpatialEntity
@@ -35,6 +34,7 @@ import kotlin.math.sqrt
 @Service
 class VacancyService(
     private val vacancyDataset: VacancyDataset,
+    private val scoreExplanationService: VacancyScoreExplanationService,
     private val metricReferenceRepository: VacancyMetricReferenceRepository
 ) {
     @Transactional(readOnly = true)
@@ -84,7 +84,13 @@ class VacancyService(
         val snapshot = vacancyDataset.snapshot()
         val vacancy = snapshot.vacancyById[id]
             ?: throw ApiException.of(ErrorType.VACANCY_NOT_FOUND)
-        return toSearchRow(vacancy, snapshot, categoryId = null, scoreMode = VacancyScoreMode.Best)!!.dto
+        return toSearchRow(
+            vacancy = vacancy,
+            snapshot = snapshot,
+            categoryId = null,
+            scoreMode = VacancyScoreMode.Best,
+            includeScoreExplanation = true
+        )!!.dto
     }
 
     @Transactional(readOnly = true)
@@ -275,7 +281,8 @@ class VacancyService(
         vacancy: VacancyEntity,
         snapshot: VacancyDatasetSnapshot,
         categoryId: String?,
-        scoreMode: VacancyScoreMode
+        scoreMode: VacancyScoreMode,
+        includeScoreExplanation: Boolean = false
     ): VacancySearchRow? {
         val common = snapshot.commonByProperty[vacancy.id]
         val score = when (scoreMode) {
@@ -287,14 +294,18 @@ class VacancyService(
         val categoryName = snapshot.categoryName(score.id.categoryId)
         val accessibility = snapshot.accessibilityByProperty[vacancy.id]
         val horizonScores = snapshot.horizonScoresFor(vacancy.id, score.id.categoryId)
-        val scoreExplanation = toScoreExplanationDto(
-            entities = snapshot.scoreExplanationsFor(vacancy.id, score.id.categoryId),
-            benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
-            featureValuesByKey = snapshot.scoreFeatureValuesFor(vacancy.id, score.id.categoryId),
-            vacancy = vacancy,
-            common = common,
-            spatial = spatial
-        )
+        val scoreExplanation = if (includeScoreExplanation) {
+            scoreExplanationService.resolve(
+                propertyId = vacancy.id,
+                categoryId = score.id.categoryId,
+                benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
+                vacancy = vacancy,
+                common = common,
+                spatial = spatial
+            )
+        } else {
+            null
+        }
         val dto = toDto(vacancy, common, score, spatial, categoryName, accessibility, horizonScores, scoreExplanation)
         return VacancySearchRow(dto = dto, searchText = searchText(dto))
     }
