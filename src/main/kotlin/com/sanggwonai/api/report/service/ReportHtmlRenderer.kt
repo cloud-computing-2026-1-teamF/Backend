@@ -417,7 +417,7 @@ class ReportHtmlRenderer {
         val commercial = asMap(top1["commercial"]) ?: emptyMap<Any?, Any?>()
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "6", "동네 상권 특징", "공실 상세 지표 기반")
+        secHead(sb, "6", "상권 수요·경쟁 시그널", "공실 상세 지표 기반")
 
         sb.append("<div class=\"signal-layout\">")
         sb.append("<section class=\"info-card accent-blue\"><h3>인구 구성</h3><div class=\"tile-grid compact\">")
