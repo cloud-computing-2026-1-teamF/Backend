@@ -631,10 +631,11 @@ class ReportHtmlRenderer {
     /** report.property_reports(매물별 해석) 를 input.top3 와 rank 로 짝지어 점수 내림차순 정렬. */
     private fun orderedReports(report: Map<String, Any?>, input: Map<String, Any?>): List<Pair<Map<*, *>, Map<*, *>>> {
         val top3 = top3Of(input)
-        return asList(report["property_reports"]).mapNotNull { asMap(it) }.mapNotNull { pr ->
+        return asList(report["property_reports"]).mapNotNull { asMap(it) }.mapIndexedNotNull { i, pr ->
             val rank = intOf(pr["rank"])
-            val prop = top3.firstOrNull { intOf(it["rank"]) == rank } ?: return@mapNotNull null
-            pr to prop
+            // top3 항목에 rank 가 없을 수 있어(과거 assembler) rank 매칭 실패 시 인덱스로 폴백.
+            val prop = top3.firstOrNull { intOf(it["rank"]) == rank } ?: top3.getOrNull(i)
+            if (prop == null) null else pr to prop
         }.sortedByDescending { intOf(it.second["score"]) ?: 0 }
     }
 

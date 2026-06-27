@@ -138,6 +138,7 @@ class ReportContextAssembler(
         val floor = vacancy?.floor
         val compFallback = (rec.restaurantCount500m ?: 0) + (rec.cafeCount500m ?: 0)
         return linkedMapOf(
+            "rank" to rec.rank,
             "vacancyId" to rec.vacancyId,
             "categoryId" to categoryId,
             "addr" to rec.roadAddress,
