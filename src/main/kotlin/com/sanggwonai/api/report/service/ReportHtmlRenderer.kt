@@ -105,7 +105,7 @@ class ReportHtmlRenderer {
         // KPI cards from input
         sb.append("<table class=\"kpis\"><tr>")
         kpi(sb, "하루 유동인구", commaOrDash(top1["foot"]), "명")
-        kpi(sb, "동네 월평균 매출", wonShort(dbl(top1["rev"])), "")
+        kpi(sb, "동네 월평균 매출" + (str(sa["category"]).ifBlank { null }?.let { "($it)" } ?: ""), wonShort(dbl(top1["rev"])), "")
         kpi(sb, "500m 경쟁점", commaOrDash(top1["comp"]), "곳")
         sb.append("</tr></table>")
         str(ch1["한_줄_결론"]).ifBlank { str(ch1["의사결정_권장"]) }.ifBlank { null }
@@ -417,7 +417,7 @@ class ReportHtmlRenderer {
         val commercial = asMap(top1["commercial"]) ?: emptyMap<Any?, Any?>()
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "6", "상권 수요·경쟁 시그널", "공실 상세 지표 기반")
+        secHead(sb, "6", "동네 상권 특징", "공실 상세 지표 기반")
 
         sb.append("<div class=\"signal-layout\">")
         sb.append("<section class=\"info-card accent-blue\"><h3>인구 구성</h3><div class=\"tile-grid compact\">")
@@ -440,8 +440,8 @@ class ReportHtmlRenderer {
         comment(sb, str(ch6["경쟁_성장_코멘트"]))
         sb.append("</section>")
 
-        sb.append("<section class=\"info-card accent-teal\"><h3>매출과 리스크</h3><div class=\"tile-grid compact\">")
-        metricTile(sb, "가게당 평균 매출", dbl(commercial["averageSalesPerStore"])?.let { wonRaw(it) } ?: wonShort(dbl(top1["rev"])), "월 추정")
+        sb.append("<section class=\"info-card accent-teal\"><h3>매출과 안정성</h3><div class=\"tile-grid compact\">")
+        metricTile(sb, "가게당 평균 매출(전체 업종)", dbl(commercial["averageSalesPerStore"])?.let { wonRaw(it) } ?: wonShort(dbl(top1["rev"])), "월 추정")
         metricTile(sb, "개업률", percentText(dbl(commercial["openingRate"])), "진입 활력")
         metricTile(sb, "폐업률", percentText(dbl(commercial["closureRate"])), "안정성")
         metricTile(sb, "저녁 매출", percentText(dbl(commercial["eveningSalesRatio"])), "저녁 수요")
@@ -730,7 +730,9 @@ class ReportHtmlRenderer {
         cmpRow(sb, "보증금", cols, lowGood = true, cmp = { dbl(it["deposit"]).takeIf { v -> (v ?: 0.0) > 0 } }) { priceText(it, "deposit") }
         cmpRow(sb, "전용면적", cols, highlight = false) { pyeong(dbl(it["area"])) }
         cmpRow(sb, "회수기간", cols, lowGood = true, cmp = { dbl(payByRank(input, intOf(it["rank"]) ?: 0, str(it["vacancyId"]))?.get("투자회수기간_개월")) }) { t ->
-            intOf(payByRank(input, intOf(t["rank"]) ?: 0, str(t["vacancyId"]))?.get("투자회수기간_개월"))?.let { "${it}개월" } ?: "적자/미정"
+            val pay = payByRank(input, intOf(t["rank"]) ?: 0, str(t["vacancyId"]))
+            intOf(pay?.get("투자회수기간_개월"))?.let { "${it}개월" }
+                ?: if (str(pay?.get("투자회수평가")).contains("미확인")) "미확인" else "적자/미정"
         }
         cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { floorText(str(it["floor"])) }
         sb.append("</tbody></table>")
