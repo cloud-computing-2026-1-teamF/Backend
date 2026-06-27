@@ -452,7 +452,7 @@ class ReportContextAssembler(
         val sale = rec.salePrice
         // 매매(거래유형 '매매' 또는 매매가 존재)인데 매매가가 미적재면 초기투자비를 계산할 수 없다.
         // 이전엔 else 로 빠져 (월세+관리비)×3 만 잡혀 '초기투자비 수십만원·회수 0개월' 같은 오값이 나왔음 → '매매가 미확인'.
-        val isSale = rec.transactionType == "매매" || (sale != null && sale > 0)
+        val isSale = (rec.transactionType ?: "").contains("매매") || (sale != null && sale > 0)
         if (isSale && (sale == null || sale <= 0)) {
             return Payback(null, null, null, null, "매매가 미확인", "매매가 미적재로 회수 계산 불가")
         }

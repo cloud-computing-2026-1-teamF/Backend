@@ -210,6 +210,7 @@ class ReportHtmlRenderer {
         infoRow(sb, "건물용도", str(property["buildingUse"]))
         infoRow(sb, "거래유형", str(property["transactionType"]).ifBlank { str(top1["transactionType"]) })
         infoRow(sb, "공시지가", wonRaw(dbl(lease["officialLandPrice"])))
+        infoRow(sb, "관심도", "조회 ${commaOrDash(property["viewCount"])} · 찜 ${commaOrDash(property["favoriteCount"])}")
         sb.append("</div>")
         comment(sb, str(ch2["현장_체크_코멘트"]))
         sb.append("</section>")
@@ -427,6 +428,8 @@ class ReportHtmlRenderer {
         metricTile(sb, "2030 비율", percentText(dbl(pop["age2030PopulationRatio"])), "젊은 수요")
         metricTile(sb, "여성 비율", percentText(dbl(pop["femalePopulationRatio"])), "타깃 성향")
         metricTile(sb, "직장/유동", percentText(dbl(pop["workerToFloatingRatio"])), "오피스 의존도")
+        metricTile(sb, "저녁 인구", percentText(dbl(pop["eveningPopulationRatio"])), "저녁 체류")
+        metricTile(sb, "주말 인구", percentText(dbl(pop["weekendPopulationRatio"])), "주말 유입")
         sb.append("</div>")
         comment(sb, str(ch6["수요_구성_코멘트"]))
         sb.append("</section>")
@@ -446,7 +449,11 @@ class ReportHtmlRenderer {
         metricTile(sb, "폐업률", percentText(dbl(commercial["closureRate"])), "안정성")
         metricTile(sb, "저녁 매출", percentText(dbl(commercial["eveningSalesRatio"])), "저녁 수요")
         metricTile(sb, "심야 매출", percentText(dbl(commercial["lateNightSalesRatio"])), "야간 수요")
-        metricTile(sb, "음식 지출", wonRaw(dbl(commercial["foodSpending"])), "상권 소비")
+        metricTile(sb, "주말 매출", percentText(dbl(commercial["weekendSalesRatio"])), "주말 수요")
+        metricTile(sb, "2030 매출", percentText(dbl(commercial["age2030SalesRatio"])), "젊은 소비")
+        metricTile(sb, "여성 매출", percentText(dbl(commercial["femaleSalesRatio"])), "여성 소비")
+        metricTile(sb, "음식 지출", wonRaw(dbl(commercial["foodSpending"])), "상권 음식 소비")
+        metricTile(sb, "가게당 지출", wonRaw(dbl(commercial["spendingPerStore"])), "구매력")
         sb.append("</div>")
         val mode = listOf(
             if (commercial["commercialGrowthType"] == true) "성장형 상권" else null,
@@ -735,8 +742,11 @@ class ReportHtmlRenderer {
                 ?: if (str(pay?.get("투자회수평가")).contains("미확인")) "미확인" else "적자/미정"
         }
         cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { floorText(str(it["floor"])) }
+        cmpRow(sb, "관심도(조회·찜)", cols, highlight = false) {
+            "조회 ${commaOrDash(path(it, "property", "viewCount"))} · 찜 ${commaOrDash(path(it, "property", "favoriteCount"))}"
+        }
         sb.append("</tbody></table>")
-        sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물</p>")
+        sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물 · 관심도(조회·찜)가 높을수록 인기 — 결정을 미루면 선점될 수 있습니다</p>")
         str(ov["종합_비교평"]).ifBlank { null }?.let { sb.append("<div class=\"callout\">").append(esc(it)).append("</div>") }
         sb.append("</div></div>")
     }
