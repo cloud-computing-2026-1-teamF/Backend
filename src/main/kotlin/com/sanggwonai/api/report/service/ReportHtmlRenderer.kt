@@ -651,8 +651,12 @@ class ReportHtmlRenderer {
             val score = intOf(prop["score"]) ?: 0
             val addr = shortAddr(str(prop["addr"])).ifBlank { "매물 ${idx + 1}" }
             sb.append("<button type=\"button\" class=\"ptab").append(if (idx == 0) " on" else "")
-                .append("\" data-pp=\"").append(idx).append("\">").append(esc(addr))
-                .append("<span class=\"ptscore\">").append(score).append("점</span></button>")
+                .append("\" data-pp=\"").append(idx).append("\">")
+            if (isRecommended(prop, score)) sb.append("<span class=\"ptrec\">추천</span>")
+            sb.append("<span class=\"ptaddr\">").append(esc(addr)).append("</span>")
+            sb.append("<span class=\"ptmeta\">월세 ").append(wonShort(dbl(prop["rent"])))
+                .append(" · ").append(pyeong(dbl(prop["area"]))).append("</span>")
+            sb.append("</button>")
         }
         sb.append("</div></div></div>")
 
@@ -681,7 +685,6 @@ class ReportHtmlRenderer {
             .append("var i=b.getAttribute('data-pp');")
             .append("document.querySelectorAll('.ptab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-pp')===i)});")
             .append("document.querySelectorAll('.pppanel').forEach(function(p){p.style.display=(p.getAttribute('data-pp')===i)?'':'none'});")
-            .append("window.scrollTo({top:0,behavior:'smooth'});")
             .append("})});</script>")
     }
 
@@ -721,11 +724,11 @@ class ReportHtmlRenderer {
         sb.append("<table class=\"cmp3\"><thead><tr><th>지표</th>")
         cols.forEach { sb.append("<th>").append(esc(shortAddr(str(it["addr"])))).append("</th>") }
         sb.append("</tr></thead><tbody>")
-        cmpRow(sb, "입지 점수", cols, cmp = { dbl(it["score"]) }) { "${intOf(it["score"]) ?: 0}점" }
         cmpRow(sb, "하루 유동", cols, cmp = { dbl(it["foot"]) }) { commaOrDash(it["foot"]) }
         cmpRow(sb, "500m 경쟁", cols, lowGood = true, cmp = { dbl(it["comp"]) }) { intOf(it["comp"])?.toString() ?: "-" }
         cmpRow(sb, "월세", cols, lowGood = true, cmp = { dbl(it["rent"]) }) { wonShort(dbl(it["rent"])) }
         cmpRow(sb, "보증금", cols, lowGood = true, cmp = { dbl(it["deposit"]) }) { wonShort(dbl(it["deposit"])) }
+        cmpRow(sb, "전용면적", cols, highlight = false) { pyeong(dbl(it["area"])) }
         cmpRow(sb, "회수기간", cols, lowGood = true, cmp = { dbl(payByRank(input, intOf(it["rank"]) ?: 0, str(it["vacancyId"]))?.get("투자회수기간_개월")) }) { t ->
             intOf(payByRank(input, intOf(t["rank"]) ?: 0, str(t["vacancyId"]))?.get("투자회수기간_개월"))?.let { "${it}개월" } ?: "적자/미정"
         }
@@ -758,11 +761,11 @@ class ReportHtmlRenderer {
         return props.firstOrNull { str(it["vacancy_id"]) == vid } ?: props.firstOrNull { intOf(it["rank"]) == rank }
     }
 
-    private fun cmpRow(sb: StringBuilder, label: String, cols: List<Map<*, *>>, lowGood: Boolean = false, cmp: ((Map<*, *>) -> Double?)? = null, value: (Map<*, *>) -> String) {
+    private fun cmpRow(sb: StringBuilder, label: String, cols: List<Map<*, *>>, lowGood: Boolean = false, cmp: ((Map<*, *>) -> Double?)? = null, highlight: Boolean = true, value: (Map<*, *>) -> String) {
         val vals = cols.map { value(it) }
         // 비교는 cmp(원본 숫자)가 있으면 그걸로 — '1억'/'2,000만' 처럼 단위가 섞인 표시 문자열은 파싱이 깨지므로.
         val nums = if (cmp != null) cols.map { cmp(it) } else vals.map { it.replace(Regex("[^0-9.-]"), "").toDoubleOrNull() }
-        val best = nums.filterNotNull().let { if (it.isEmpty()) null else if (lowGood) it.min() else it.max() }
+        val best = if (!highlight) null else nums.filterNotNull().let { if (it.isEmpty()) null else if (lowGood) it.min() else it.max() }
         sb.append("<tr><td class=\"cmpk\">").append(esc(label)).append("</td>")
         vals.forEachIndexed { i, v ->
             val isBest = best != null && nums[i] != null && nums[i] == best
@@ -770,6 +773,13 @@ class ReportHtmlRenderer {
         }
         sb.append("</tr>")
     }
+
+    /** 전용면적(㎡) → 평 표기. */
+    private fun pyeong(areaM2: Double?): String = areaM2?.takeIf { it > 0 }?.let { "${(it / 3.305785).roundToInt()}평" } ?: "-"
+
+    /** 추천 매물 판정 — 백엔드 recommended 플래그 우선, 없으면 입지 점수 임계값(>=). */
+    private fun isRecommended(prop: Map<*, *>, score: Int): Boolean =
+        (prop["recommended"] as? Boolean) ?: (score >= RECOMMEND_THRESHOLD)
 
     /** 층 비교용 점수 — 1층이 가장 유리, 그다음 저층, 지하가 최하. */
     private fun floorScore(floor: String): Double? {
@@ -1071,6 +1081,8 @@ class ReportHtmlRenderer {
         .replace("\"", "&quot;").replace("\n", "<br/>")
 
     companion object {
+        // 입지 점수가 이 값 이상이면 '추천' 배지 (백엔드 recommended 플래그가 없을 때 폴백).
+        private const val RECOMMEND_THRESHOLD = 65
         private const val ORANGE = "#E85D1F"
         private const val GREEN = "#1A8F4C"
         private const val RED = "#D33A3A"
@@ -1296,12 +1308,15 @@ class ReportHtmlRenderer {
             .cmp3 td.win { background:#FFF7F2; color:var(--orange); font-weight:950; }
             .ptag { background:#E9F7EF; color:var(--green); font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; }
             .charcard .ptscore.big { display:block; margin-top:9px; font-size:13px; font-weight:950; color:var(--orange); }
-            /* 매물 전환 탭 */
-            .ptabs { display:flex; flex-wrap:wrap; gap:10px; margin-top:6px; }
-            .ptab { flex:1 1 0; min-width:130px; display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:13px 16px; border:1.5px solid var(--line); border-radius:14px; background:#fff; cursor:pointer; font-size:15px; font-weight:900; color:var(--muted); transition:all .15s; }
-            .ptab:hover { border-color:#F0A877; }
-            .ptab.on { border-color:var(--orange); background:#FFF7F2; color:var(--ink); box-shadow:0 2px 10px rgba(232,93,31,.12); }
-            .ptab .ptscore { font-size:12px; font-weight:900; color:var(--orange); }
+            /* 매물 전환 탭 — 카드형 */
+            .ptabs { display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; }
+            .ptab { position:relative; flex:1 1 0; min-width:170px; display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:16px 18px; border:1.5px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#fff,#FAFBFD); cursor:pointer; text-align:left; transition:transform .15s, box-shadow .15s, border-color .15s; }
+            .ptab:hover { border-color:#F0A877; transform:translateY(-1px); box-shadow:0 8px 20px rgba(15,23,42,.07); }
+            .ptab.on { border-color:var(--orange); background:linear-gradient(180deg,#FFF7F2,#fff); box-shadow:0 6px 18px rgba(232,93,31,.16); }
+            .ptab .ptaddr { font-size:16px; font-weight:950; color:var(--ink); line-height:1.2; }
+            .ptab .ptmeta { font-size:12.5px; font-weight:800; color:var(--muted); }
+            .ptab.on .ptmeta { color:#A85B36; }
+            .ptrec { position:absolute; top:12px; right:12px; background:var(--orange); color:#fff; font-size:11px; font-weight:950; padding:3px 9px; border-radius:999px; box-shadow:0 2px 6px rgba(232,93,31,.25); }
             .pppanel { display:block; }
             /* 점수 분해 3열 */
             .ccols { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }

@@ -275,7 +275,7 @@ class ReportHtmlRendererRenderTest {
                  {"tenant":"사케하우스","category":"일식","from":"2023-02-01","to":"","status":"open"}]},
                "review":{"rank":2,"주소_간략":"서울 마포구 동교로 195","demand_tags":[
                  {"tag":"분위기가 좋아요","score":16.7},{"tag":"데이트하기 좋아요","score":12.9},{"tag":"술이 다양해요","score":9.4},{"tag":"친절해요","score":7.0},{"tag":"매장이 청결해요","score":5.2}]}},
-              {"rank":3,"vacancyId":"v3","addr":"서울 마포구 동교로25길 34","score":69,
+              {"rank":3,"vacancyId":"v3","addr":"서울 마포구 동교로25길 34","score":69,"recommended":false,
                "rent":550,"deposit":5000,"mgmt":30,"premium":9000,"area":90,"floor":"2층","foot":110000,"comp":120,"rev":1467,
                "footHourly":[10,8,6,4,3,4,8,20,30,28,26,38,55,44,36,42,52,60,70,78,74,50,28,14],
                "nearby":{"subway":"홍대입구(2호선)","bus":"서교동; 동교동삼거리","parking":"인근 공영"},
