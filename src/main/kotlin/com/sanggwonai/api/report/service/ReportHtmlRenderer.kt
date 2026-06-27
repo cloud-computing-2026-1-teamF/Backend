@@ -649,9 +649,10 @@ class ReportHtmlRenderer {
         // 매물 탭 네비
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
         secHead(sb, "★", "매물별 상세 보고서", "탭으로 매물을 전환하세요")
+        val dup = dupAddrs(ordered)
         sb.append("<div class=\"ptabs\">")
         ordered.forEachIndexed { idx, (_, prop) ->
-            val addr = str(prop["addr"]).ifBlank { "매물 ${idx + 1}" }
+            val addr = propLabel(prop, full = true, dup = dup).ifBlank { "매물 ${idx + 1}" }
             sb.append("<button type=\"button\" class=\"ptab").append(if (idx == 0) " on" else "")
                 .append("\" data-pp=\"").append(idx).append("\"><span class=\"ptaddr\">")
                 .append(esc(addr)).append("</span></button>")
@@ -705,6 +706,7 @@ class ReportHtmlRenderer {
         val ov = asMap(report["comparison_overview"]) ?: emptyMap<Any?, Any?>()
         val chars = asList(ov["매물_성격"]).mapNotNull { asMap(it) }
         val cols = ordered.map { it.second }
+        val dup = dupAddrs(ordered)
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
         secHead(sb, "1", "세 매물 한눈 비교", "본인 우선순위로 고르세요")
         str(ov["인트로"]).ifBlank { null }?.let { sb.append("<p class=\"body\">").append(esc(it)).append("</p>") }
@@ -714,13 +716,13 @@ class ReportHtmlRenderer {
             val ch = chars.firstOrNull { intOf(it["rank"]) == rank }
             val score = intOf(prop["score"]) ?: 0
             sb.append("<div class=\"charcard\"><span class=\"ptag\">").append(esc(str(ch?.get("성격")).ifBlank { "매물" })).append("</span>")
-            sb.append("<b>").append(esc(shortAddr(str(prop["addr"])).ifBlank { "-" })).append("</b>")
+            sb.append("<b>").append(esc(propLabel(prop, full = false, dup = dup))).append("</b>")
             sb.append("<small>").append(esc(str(ch?.get("한줄")).ifBlank { "-" })).append("</small>")
             sb.append("<span class=\"ptscore big\">입지 점수 ").append(score).append("점</span></div>")
         }
         sb.append("</div>")
         sb.append("<table class=\"cmp3\"><thead><tr><th>지표</th>")
-        cols.forEach { sb.append("<th>").append(esc(shortAddr(str(it["addr"])))).append("</th>") }
+        cols.forEach { sb.append("<th>").append(esc(propLabel(it, full = false, dup = dup))).append("</th>") }
         sb.append("</tr></thead><tbody>")
         cmpRow(sb, "하루 유동", cols, cmp = { dbl(it["foot"]) }) { commaOrDash(it["foot"]) }
         cmpRow(sb, "500m 경쟁", cols, lowGood = true, cmp = { dbl(it["comp"]) }) { intOf(it["comp"])?.toString() ?: "-" }
@@ -787,6 +789,17 @@ class ReportHtmlRenderer {
     private fun floorText(floor: String): String {
         val n = floorToInt(floor) ?: return floor.ifBlank { "-" }
         return when { n < 0 -> "지하${-n}층"; n == 0 -> "-"; else -> "${n}층" }
+    }
+
+    /** ordered 안에서 주소가 겹치는 매물 집합(같은 건물 다른 층). 라벨에 층을 덧붙여 구분. */
+    private fun dupAddrs(ordered: List<Pair<Map<*, *>, Map<*, *>>>): Set<String> =
+        ordered.map { str(it.second["addr"]) }.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+
+    /** 매물 라벨 — 주소(full=풀주소/false=축약). 같은 주소가 둘 이상이면 '… (지하1층)' 식으로 층 병기. */
+    private fun propLabel(prop: Map<*, *>, full: Boolean, dup: Set<String>): String {
+        val raw = str(prop["addr"])
+        val base = (if (full) raw else shortAddr(raw)).ifBlank { "-" }
+        return if (raw in dup) "$base (${floorText(str(prop["floor"]))})" else base
     }
 
     /** 층 비교용 점수 — 1층이 가장 유리, 그다음 저층, 지하·0층이 최하. */
