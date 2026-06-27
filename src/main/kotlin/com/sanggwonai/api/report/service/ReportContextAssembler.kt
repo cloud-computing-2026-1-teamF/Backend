@@ -429,6 +429,13 @@ class ReportContextAssembler(
     )
 
     private fun payback(rec: AnalysisRecommendationDto, categoryId: String, margin: Double): Payback {
+        val sale = rec.salePrice
+        // 매매(거래유형 '매매' 또는 매매가 존재)인데 매매가가 미적재면 초기투자비를 계산할 수 없다.
+        // 가영 선계산 테이블도 매매가 없이 계산된 값(초기투자비 수십만원·회수 0개월)일 수 있으므로,
+        // 가영 조회·백엔드 추정보다 '먼저' 차단해 '매매가 미확인'으로 일관 처리한다.
+        if ((rec.transactionType ?: "").contains("매매") && (sale == null || sale <= 0)) {
+            return Payback(null, null, null, null, "매매가 미확인", "매매가 미적재로 회수 계산 불가")
+        }
         // 가영 실데이터 우선 (vacancy_investment_payback, property_id 일치). 미적재면 아래 백엔드 추정 폴백.
         paybackRepository.find(rec.vacancyId, categoryId)?.let { p ->
             return Payback(
@@ -449,13 +456,8 @@ class ReportContextAssembler(
         val rent = rec.monthlyRent ?: 0
         val maint = rec.maintenanceFee ?: 0
         val brokerage = ((deposit + rent * 100).toDouble() * a.brokerageRate).roundToLong() // 만원
-        val sale = rec.salePrice
-        // 매매(거래유형 '매매' 또는 매매가 존재)인데 매매가가 미적재면 초기투자비를 계산할 수 없다.
-        // 이전엔 else 로 빠져 (월세+관리비)×3 만 잡혀 '초기투자비 수십만원·회수 0개월' 같은 오값이 나왔음 → '매매가 미확인'.
+        // 여기 도달 시점: 매매가 없는 매매 매물은 위에서 이미 차단됨. 매매면 sale>0 이 보장된다.
         val isSale = (rec.transactionType ?: "").contains("매매") || (sale != null && sale > 0)
-        if (isSale && (sale == null || sale <= 0)) {
-            return Payback(null, null, null, null, "매매가 미확인", "매매가 미적재로 회수 계산 불가")
-        }
         val initial = if (isSale) {
             sale!! + brokerage
         } else {

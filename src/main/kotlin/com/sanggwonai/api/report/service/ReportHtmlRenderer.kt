@@ -742,11 +742,8 @@ class ReportHtmlRenderer {
                 ?: if (str(pay?.get("투자회수평가")).contains("미확인")) "미확인" else "적자/미정"
         }
         cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { floorText(str(it["floor"])) }
-        cmpRow(sb, "관심도(조회·찜)", cols, highlight = false) {
-            "조회 ${commaOrDash(path(it, "property", "viewCount"))} · 찜 ${commaOrDash(path(it, "property", "favoriteCount"))}"
-        }
         sb.append("</tbody></table>")
-        sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물 · 관심도(조회·찜)가 높을수록 인기 — 결정을 미루면 선점될 수 있습니다</p>")
+        sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물</p>")
         str(ov["종합_비교평"]).ifBlank { null }?.let { sb.append("<div class=\"callout\">").append(esc(it)).append("</div>") }
         sb.append("</div></div>")
     }
