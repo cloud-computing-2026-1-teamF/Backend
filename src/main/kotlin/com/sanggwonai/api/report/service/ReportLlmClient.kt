@@ -22,20 +22,20 @@ import java.time.Duration
 class ReportLlmClient(
     private val properties: ReportProperties,
     private val objectMapper: ObjectMapper
-) {
+) : LlmTextClient {
     private val logger = LoggerFactory.getLogger(ReportLlmClient::class.java)
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(properties.openai.timeoutSeconds.coerceAtLeast(1)))
         .build()
     private val mapType = object : TypeReference<Map<String, Any?>>() {}
 
-    fun isAvailable(): Boolean {
+    override fun isAvailable(): Boolean {
         val o = properties.openai
         return o.enabled && o.apiKey.isNotBlank()
     }
 
     /** system+user 프롬프트로 OpenAI 호출. 성공 시 출력 텍스트(보고서 JSON 문자열) 반환, 실패 null. */
-    fun generate(systemPrompt: String, userPrompt: String, temperature: Double): String? {
+    override fun generate(systemPrompt: String, userPrompt: String, temperature: Double): String? {
         val o = properties.openai
         if (!isAvailable()) return null
         val body = mapOf(

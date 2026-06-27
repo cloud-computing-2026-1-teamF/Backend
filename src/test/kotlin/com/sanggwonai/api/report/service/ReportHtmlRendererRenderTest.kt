@@ -29,11 +29,50 @@ class ReportHtmlRendererRenderTest {
         assertTrue(html.contains("공실 운영 조건"), "공실 운영 조건 섹션이 렌더되지 않음")
         assertTrue(html.contains("상권 수요·경쟁 시그널"), "상권 수요·경쟁 시그널 섹션이 렌더되지 않음")
         assertTrue(html.contains("주변 리뷰 인사이트"), "리뷰 인사이트 섹션이 렌더되지 않음")
+        assertTrue(html.contains("이 자리의 내력"), "v6.3 내력 섹션이 렌더되지 않음")
+        assertTrue(html.contains("왜 이 입지 점수인가"), "v6.3 점수 분해가 렌더되지 않음")
+        assertTrue(html.contains("미래 전망"), "v6.3 미래 전망이 렌더되지 않음")
 
         val out = File("build/report_sample.html")
         out.parentFile.mkdirs()
         out.writeBytes(bytes)
         println("[RENDER] wrote ${out.absolutePath} (${bytes.size} bytes)")
+    }
+
+    @Test
+    fun `v6_5 매물별 탭 보고서 HTML 렌더`() {
+        val report = mapper.readValue(REPORT_JSON_V65, tr)
+        val input = mapper.readValue(INPUT_JSON_V65, tr)
+
+        val bytes = ReportHtmlRenderer().render(report, input)
+        val html = bytes.toString(Charsets.UTF_8)
+
+        assertTrue(html.startsWith("<!DOCTYPE html>"), "HTML 헤더 아님")
+        // 상단 공통 비교
+        assertTrue(html.contains("세 매물 한눈 비교"), "상단 한눈 비교 누락")
+        assertTrue(html.contains("입지 점수"), "입지 점수 용어 누락")
+        assertTrue(!html.contains("생존율") || html.contains("생존 확률"), "생존율 용어가 남아있음(라벨 통일 위반)")
+        // 매물 탭
+        assertTrue(html.contains("매물별 상세 보고서"), "탭 섹션 누락")
+        assertTrue(html.contains("class=\"ptab"), "탭 버튼 누락")
+        assertTrue(html.contains("data-pp=\"0\"") && html.contains("data-pp=\"1\"") && html.contains("data-pp=\"2\""), "매물 3개 패널 누락")
+        assertTrue(html.contains("동교로 194") && html.contains("동교로 195"), "주소 탭 라벨 누락")
+        // 탭 안 풀 보고서 (매물별 AI 텍스트)
+        assertTrue(html.contains("임원 요약"), "탭 내 요약 누락")
+        assertTrue(html.contains("공실 운영 조건"), "탭 내 운영조건 누락")
+        assertTrue(html.contains("상권 수요·경쟁 시그널"), "탭 내 시장 누락")
+        assertTrue(html.contains("이 자리의 내력"), "탭 내 내력 누락")
+        assertTrue(html.contains("투자 회수 분석"), "탭 내 수익성 누락")
+        assertTrue(html.contains("당신에게 맞는 선택"), "하단 선택 가이드 누락")
+        // 매물별로 다른 AI 텍스트가 실제로 들어갔는지
+        assertTrue(html.contains("고정비가 가장 낮아"), "2번 매물 고유 코멘트 누락")
+        // JS 토글 스크립트
+        assertTrue(html.contains("querySelectorAll('.ptab')"), "탭 전환 스크립트 누락")
+
+        val out = File("build/report_v64.html")
+        out.parentFile.mkdirs()
+        out.writeBytes(bytes)
+        println("[RENDER v6.5] wrote ${out.absolutePath} (${bytes.size} bytes)")
     }
 
     companion object {
@@ -42,10 +81,17 @@ class ReportHtmlRendererRenderTest {
           "saved_analysis": {
             "id": "an_demo", "date": "2026.06.01", "region": "서교동", "radius": 500,
             "category": "일식", "categoryEmoji": "🍣", "topScore": 64,
+            "horizon_forecast": [{"years":1,"score":78},{"years":3,"score":64},{"years":5,"score":52}],
             "top3": [
               {"rank":1,"vacancyId":"v1","addr":"서울 마포구 동교로 194","recommended":false,"score":64,
                "rent":1400,"deposit":10000,"mgmt":50,"floor":"1층","foot":126607,"comp":134,"rev":1467,"growth":-1.2,
                "footHourly":[12,9,6,4,3,4,9,22,33,30,28,40,58,46,38,44,55,62,72,80,76,52,30,16],
+               "scoreExplanation":{"source":"model_top_features","top_features":[
+                 {"rank":1,"label":"동종 경쟁점포","effect":"negative","current":134,"average":34,"unit":"곳"},
+                 {"rank":2,"label":"일평균 유동인구","effect":"positive","current":126607,"average":95000,"unit":"명/일"},
+                 {"rank":3,"label":"점포당 평균매출","effect":"positive","current":1467,"average":1180,"unit":"만원"},
+                 {"rank":4,"label":"월세","effect":"negative","current":1400,"average":620,"unit":"만원"},
+                 {"rank":5,"label":"폐업률","effect":"negative","current":13,"average":11,"unit":"%"}]},
                "nearby":{"subway":"홍대입구(2호선)·합정(2,6호선)","bus":"성수동차고지(2014, 2224, 2412, 2413); 성수동진주타운(2014); 뚝도시장구길(2014, 2224); 서울숲지구대앞(2014, 2224, 2412); 성수두산위브아파트(2014); 성수1가새마을금고(2014, 2224)","parking":"인근 공영주차장"}},
               {"rank":2,"vacancyId":"v2","addr":"서울 마포구 동교로 195","recommended":true,"score":64,
                "rent":190,"deposit":2000,"mgmt":20,"floor":"지하1층","foot":126607,"comp":134,"rev":1467,
@@ -94,6 +140,19 @@ class ReportHtmlRendererRenderTest {
                 {"tag":"음식이 맛있어요","score":15.1},{"tag":"재료가 신선해요","score":10.8},
                 {"tag":"웨이팅 짧아요","score":7.7},{"tag":"좌석이 편해요","score":5.5},{"tag":"양이 많아요","score":4.0}]}
             ]
+          },
+          "section_07_location_history": {
+            "score_trend": [
+              {"year":2019,"score":60,"delta":null},{"year":2020,"score":56,"delta":-4},
+              {"year":2021,"score":59,"delta":3},{"year":2022,"score":62,"delta":3},
+              {"year":2023,"score":63,"delta":1},{"year":2024,"score":64,"delta":1}],
+            "occupancy": {
+              "tenant_count":4,"closed_count":3,"pattern_label":"업종 변동 이력 다수","score_direction":"up",
+              "timeline":[
+                {"tenant":"스시노바","category":"일식","from":"2014-03-01","to":"2017-08-01","status":"closed"},
+                {"tenant":"홍대돈부리","category":"일식","from":"2017-10-01","to":"2020-05-01","status":"closed"},
+                {"tenant":"마라공방","category":"중식","from":"2020-07-01","to":"2023-02-01","status":"closed"},
+                {"tenant":"오마카세 키","category":"일식","from":"2023-04-01","to":"","status":"open"}]}
           }
         }
         """.trimIndent()
@@ -109,6 +168,8 @@ class ReportHtmlRendererRenderTest {
           "chapter_1_executive_summary": {
             "한_줄_결론": {"값":"서교동은 수요가 있으나, 임대조건 대비 수익성 점검이 핵심입니다."},
             "요약_본문": {"값":"유동인구가 두텁고(동일 업종 상위 30%) 매출 기반도 형성돼 있습니다. 다만 동일 업종 경쟁이 평균 대비 약 4배로 과밀하고, 1순위 매물은 월 순이익이 적자로 추정되어 임대조건·객단가·피크 운영 설계의 점검이 권장됩니다. 단순 일식집보다 신선도·혼밥 수요를 흡수하는 대표 메뉴 중심의 1인 일식 콘셉트가 차별화 방향입니다."},
+            "점수_분해": {"값":"생존율 64는 풍부한 유동인구와 평균을 웃도는 매출에서 올라왔지만, 평균의 약 4배에 달하는 동종 경쟁과 높은 월세가 점수를 끌어내렸습니다."},
+            "미래_전망": {"값":"1년 생존 전망은 높은 편이나 5년으로 갈수록 낮아져, 경쟁 과밀 속 중장기 차별화가 관건입니다."},
             "리스크_요인": [
               {"리스크":"동일 업종 경쟁 과밀","심각도":"높음","발생_확률":"높음","대응_방안":"500m 내 134곳(평균 34). 메뉴·가격·회전 차별화로 대체 가능성을 낮춰야 합니다."},
               {"리스크":"투자수익성 불리 가능","심각도":"높음","발생_확률":"중간","대응_방안":"1순위 매물 월순이익 적자. 월세·층 조건별로 회수기간이 상이합니다."}
@@ -138,6 +199,11 @@ class ReportHtmlRendererRenderTest {
             "선택_카테고리_평가": {"해석": {"값":"이 입지에 일식(64)은 무난하나, 카페·디저트(71)·주점(66)이 더 높게 나옵니다. 일식을 선택한다면 저녁 술·안주를 결합한 콘셉트가 점수 차를 메우는 전략이 됩니다."}},
             "best_3_카테고리": {"값":"카페·디저트(71) > 주점(66) > 일식(64)"}
           },
+          "chapter_5_location_history": {
+            "점수_추세_해석": {"값":"이 일대 생존율은 2020년 코로나기에 56까지 내렸다가 2024년 64로 회복했습니다. 하락이 아닌 완만한 회복 국면입니다."},
+            "업종_교체_패턴_해석": {"값":"거쳐간 가게가 일식·중식에 몰려 있고 대부분 3년 안팎에 교체된 점은, 이 자리에서 해당 업태가 오래 자리 잡기 어려웠음을 시사합니다."},
+            "종합_판정": {"값":"입지 자체는 회복 중이지만 짧은 존속이 반복된 자리입니다. 기존에 단명했던 업태를 피하고 콘셉트를 좁히면 과거 패턴을 비껴갈 여지가 있습니다."}
+          },
           "chapter_7_appendix": {
             "본_보고서의_한계": {"값":"가게 자체 특성(맛·서비스·운영 역량)은 분석에 반영되지 않습니다.\n매출·순이익은 동네 평균 추정치로, 개별 매물의 실제 매출과 다를 수 있습니다.\n본 보고서는 참고용이며, 최종 결정 전 현장 실사·전문가 상담을 권장합니다."}
           },
@@ -155,6 +221,160 @@ class ReportHtmlRendererRenderTest {
               {"순위":3,"코멘트":"동교로25길은 맛과 신선도 만족이 핵심이고 웨이팅 부담이 적습니다. 빠른 회전과 대표 메뉴 품질로 재방문을 노릴 수 있습니다."}
             ],
             "리뷰_종합_해석": "세 매물 모두 신선도가 공통 강점이나, 194는 혼밥, 195는 분위기·술, 25길은 회전이 차별 포인트입니다. 매물별 수요에 맞춘 좌석·메뉴 설계가 승부처입니다."
+          }
+        }
+        """.trimIndent()
+
+        // ───────────────── v6.5 매물별 탭 샘플 ─────────────────
+        private val INPUT_JSON_V65 = """
+        {
+          "saved_analysis": {
+            "id":"an_v65","date":"2026.06.20","region":"서교동","radius":800,"category":"일식","categoryEmoji":"🍣","topScore":78,
+            "top3":[
+              {"rank":1,"vacancyId":"v1","addr":"서울 마포구 동교로 194","score":78,
+               "rent":1400,"deposit":10000,"mgmt":50,"premium":19000,"area":281,"floor":"1층","foot":126607,"comp":134,"rev":1467,
+               "footHourly":[12,9,6,4,3,4,9,22,33,30,28,40,58,46,38,44,55,62,72,80,76,52,30,16],
+               "nearby":{"subway":"홍대입구(2호선)·합정(2,6호선)","bus":"동교동삼거리; 홍대입구역; 서교동","parking":"인근 공영주차장 2곳"},
+               "horizon":[{"years":1,"score":85},{"years":3,"score":78},{"years":5,"score":64}],
+               "scoreExplanation":{"top_features":[
+                 {"label":"동종 경쟁점포","effect":"negative","current":134,"average":34},
+                 {"label":"일평균 유동인구","effect":"positive","current":126607,"average":95000},
+                 {"label":"점포당 평균매출","effect":"positive","current":1467,"average":1180},
+                 {"label":"월세","effect":"negative","current":1400,"average":620}]},
+               "property":{"roadAddress":"서울 마포구 동교로 194","lotAddress":"서교동 357-1","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"1층","totalFloors":"5층"},
+               "lease":{"deposit":10000,"monthlyRent":1400,"maintenanceFee":50,"premium":19000,"dedicatedArea":281,"officialLandPrice":42000000},
+               "facilities":{"parkingAvailable":true,"parkingCount":3,"elevatorAvailable":true,"elevatorCount":1,"restroomType":"남녀구분","restroomCount":2,"heatingType":"중앙난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":false,"priceNegotiable":true,"rentAdjustable":true,"rentFreePeriodAvailable":false,"terrace":false,"rooftop":false,"interior":true,"storage":true},
+               "population":{"floatingQuarterly":2280000,"residentQuarterly":34000,"workerQuarterly":51000,"age2030PopulationRatio":0.369,"femalePopulationRatio":0.52,"workerToFloatingRatio":0.22},
+               "commercial":{"restaurantCount250m":120,"cafeCount250m":64,"sameCategoryRestaurantCount250m":48,"industryGrowthRate250m":-0.012,"restaurantCount500m":260,"cafeCount500m":150,"sameCategoryRestaurantCount500m":134,"industryGrowthRate500m":-0.01,"restaurantCount1000m":540,"cafeCount1000m":300,"sameCategoryRestaurantCount1000m":280,"industryGrowthRate1000m":0.004,"averageSalesPerStore":1467,"openingRate":0.2,"closureRate":0.019,"eveningSalesRatio":0.41,"lateNightSalesRatio":0.12,"foodSpending":38000000,"commercialGrowthType":true,"commercialTurnoverType":true},
+               "history":[{"year":2019,"score":70},{"year":2020,"score":62},{"year":2021,"score":68},{"year":2022,"score":73},{"year":2023,"score":76},{"year":2024,"score":78}],
+               "occupancy":{"tenant_count":4,"closed_count":3,"score_direction":"up","timeline":[
+                 {"tenant":"스시노바","category":"일식","from":"2014-03-01","to":"2017-08-01","status":"closed"},
+                 {"tenant":"홍대돈부리","category":"일식","from":"2017-10-01","to":"2020-05-01","status":"closed"},
+                 {"tenant":"마라공방","category":"중식","from":"2020-07-01","to":"2023-02-01","status":"closed"},
+                 {"tenant":"오마카세 키","category":"일식","from":"2023-04-01","to":"","status":"open"}]},
+               "review":{"rank":1,"주소_간략":"서울 마포구 동교로 194","demand_tags":[
+                 {"tag":"재료가 신선해요","score":18.4},{"tag":"혼밥하기 좋아요","score":14.2},{"tag":"가성비가 좋아요","score":11.0},{"tag":"양이 많아요","score":8.3},{"tag":"친절해요","score":6.1}]}},
+              {"rank":2,"vacancyId":"v2","addr":"서울 마포구 동교로 195","score":72,
+               "rent":190,"deposit":2000,"mgmt":20,"premium":5000,"area":60,"floor":"지하1층","foot":126607,"comp":134,"rev":1467,
+               "footHourly":[12,9,6,4,3,4,9,22,33,30,28,40,58,46,38,44,55,62,72,80,76,52,30,16],
+               "nearby":{"subway":"홍대입구(2호선)","bus":"홍대입구역; 서교동","parking":"없음"},
+               "horizon":[{"years":1,"score":80},{"years":3,"score":72},{"years":5,"score":61}],
+               "scoreExplanation":{"top_features":[
+                 {"label":"월세","effect":"positive","current":190,"average":620},
+                 {"label":"일평균 유동인구","effect":"positive","current":126607,"average":95000},
+                 {"label":"동종 경쟁점포","effect":"negative","current":134,"average":34}]},
+               "property":{"roadAddress":"서울 마포구 동교로 195","lotAddress":"서교동 358-2","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"지하1층","totalFloors":"4층"},
+               "lease":{"deposit":2000,"monthlyRent":190,"maintenanceFee":20,"premium":5000,"dedicatedArea":60,"officialLandPrice":38000000},
+               "facilities":{"parkingAvailable":false,"elevatorAvailable":false,"restroomType":"공용","restroomCount":1,"heatingType":"개별난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":true,"priceNegotiable":true,"rentAdjustable":true,"rentFreePeriodAvailable":true,"terrace":false,"rooftop":false,"interior":false,"storage":false},
+               "population":{"floatingQuarterly":2280000,"residentQuarterly":34000,"workerQuarterly":51000,"age2030PopulationRatio":0.34,"femalePopulationRatio":0.53,"workerToFloatingRatio":0.22},
+               "commercial":{"restaurantCount250m":120,"cafeCount250m":64,"sameCategoryRestaurantCount250m":48,"industryGrowthRate250m":-0.012,"restaurantCount500m":260,"cafeCount500m":150,"sameCategoryRestaurantCount500m":134,"industryGrowthRate500m":-0.01,"averageSalesPerStore":1467,"openingRate":0.21,"closureRate":0.022,"eveningSalesRatio":0.44,"lateNightSalesRatio":0.18,"foodSpending":38000000,"commercialGrowthType":true,"commercialTurnoverType":true},
+               "history":[{"year":2019,"score":66},{"year":2020,"score":58},{"year":2021,"score":63},{"year":2022,"score":68},{"year":2023,"score":70},{"year":2024,"score":72}],
+               "occupancy":{"tenant_count":3,"closed_count":2,"score_direction":"up","timeline":[
+                 {"tenant":"와인바 로","category":"주점","from":"2016-05-01","to":"2019-09-01","status":"closed"},
+                 {"tenant":"이자카야 하루","category":"일식","from":"2019-11-01","to":"2022-12-01","status":"closed"},
+                 {"tenant":"사케하우스","category":"일식","from":"2023-02-01","to":"","status":"open"}]},
+               "review":{"rank":2,"주소_간략":"서울 마포구 동교로 195","demand_tags":[
+                 {"tag":"분위기가 좋아요","score":16.7},{"tag":"데이트하기 좋아요","score":12.9},{"tag":"술이 다양해요","score":9.4},{"tag":"친절해요","score":7.0},{"tag":"매장이 청결해요","score":5.2}]}},
+              {"rank":3,"vacancyId":"v3","addr":"서울 마포구 동교로25길 34","score":69,"recommended":false,
+               "rent":550,"deposit":5000,"mgmt":30,"premium":9000,"area":90,"floor":"2층","foot":110000,"comp":120,"rev":1467,
+               "footHourly":[10,8,6,4,3,4,8,20,30,28,26,38,55,44,36,42,52,60,70,78,74,50,28,14],
+               "nearby":{"subway":"홍대입구(2호선)","bus":"서교동; 동교동삼거리","parking":"인근 공영"},
+               "horizon":[{"years":1,"score":76},{"years":3,"score":69},{"years":5,"score":58}],
+               "scoreExplanation":{"top_features":[
+                 {"label":"월세","effect":"positive","current":550,"average":620},
+                 {"label":"일평균 유동인구","effect":"positive","current":110000,"average":95000},
+                 {"label":"동종 경쟁점포","effect":"negative","current":120,"average":34}]},
+               "property":{"roadAddress":"서울 마포구 동교로25길 34","lotAddress":"서교동 360-5","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"2층","totalFloors":"6층"},
+               "lease":{"deposit":5000,"monthlyRent":550,"maintenanceFee":30,"premium":9000,"dedicatedArea":90,"officialLandPrice":36000000},
+               "facilities":{"parkingAvailable":true,"parkingCount":2,"elevatorAvailable":false,"restroomType":"남녀구분","restroomCount":2,"heatingType":"개별난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":false,"priceNegotiable":false,"rentAdjustable":false,"rentFreePeriodAvailable":false,"terrace":true,"rooftop":false,"interior":true,"storage":true},
+               "population":{"floatingQuarterly":1980000,"residentQuarterly":36000,"workerQuarterly":44000,"age2030PopulationRatio":0.31,"femalePopulationRatio":0.51,"workerToFloatingRatio":0.21},
+               "commercial":{"restaurantCount250m":104,"cafeCount250m":58,"sameCategoryRestaurantCount250m":42,"industryGrowthRate250m":0.002,"restaurantCount500m":240,"cafeCount500m":138,"sameCategoryRestaurantCount500m":120,"industryGrowthRate500m":0.004,"averageSalesPerStore":1467,"openingRate":0.19,"closureRate":0.018,"eveningSalesRatio":0.4,"lateNightSalesRatio":0.1,"foodSpending":36000000,"commercialGrowthType":true,"commercialTurnoverType":false},
+               "history":[{"year":2019,"score":64},{"year":2020,"score":57},{"year":2021,"score":61},{"year":2022,"score":65},{"year":2023,"score":67},{"year":2024,"score":69}],
+               "occupancy":{"tenant_count":2,"closed_count":1,"score_direction":"up","timeline":[
+                 {"tenant":"파스타공방","category":"양식","from":"2018-04-01","to":"2022-06-01","status":"closed"},
+                 {"tenant":"우동상회","category":"일식","from":"2022-09-01","to":"","status":"open"}]},
+               "review":{"rank":3,"주소_간략":"서울 마포구 동교로25길 34","demand_tags":[
+                 {"tag":"음식이 맛있어요","score":15.1},{"tag":"재료가 신선해요","score":10.8},{"tag":"웨이팅 짧아요","score":7.7},{"tag":"좌석이 편해요","score":5.5},{"tag":"양이 많아요","score":4.0}]}}
+            ]
+          },
+          "vacancy_metric_reference":{
+            "peerCount":40,
+            "footTrafficDaily":{"selected":126607,"average":95000,"median":92000,"min":40000,"max":180000,"percentile":70},
+            "competition500m":{"selected":134,"average":34,"median":30,"min":5,"max":150,"percentile":95},
+            "averageSalesMonthly":{"selected":1467,"average":1180,"median":1180,"min":620,"max":1950,"percentile":70}
+          },
+          "selected_vacancy_extra":{
+            "vacancy_id":"v1","selected_category":"일식","selected_score_percent":78,
+            "nine_category_scores":{"한식":62,"중식":51,"일식":78,"서양식":63,"기타":47,"구내식당및뷔페":40,"패스트푸드":54,"주점업":69,"카페디저트":74},
+            "ranking_in_9_categories":1
+          },
+          "section_06_investment_payback":{
+            "vacancy_id":"v1","matched_category":"일식",
+            "초기투자비_만원":26000,"월순이익_만원":-652,"투자회수기간_개월":null,"투자회수평가":"적자",
+            "bep_action":{"객단가원":12000,"피크_손익분기_잔수":38},
+            "properties":[
+              {"rank":1,"vacancy_id":"v1","주소_간략":"동교로 194","초기투자비_만원":26000,"월순이익_만원":-652,"투자회수기간_개월":null,"투자회수평가":"적자"},
+              {"rank":2,"vacancy_id":"v2","주소_간략":"동교로 195","초기투자비_만원":6000,"월순이익_만원":558,"투자회수기간_개월":11,"투자회수평가":"3년 이내"},
+              {"rank":3,"vacancy_id":"v3","주소_간략":"동교로25길 34","초기투자비_만원":12000,"월순이익_만원":210,"투자회수기간_개월":57,"투자회수평가":"3년 이상"}]
+          }
+        }
+        """.trimIndent()
+
+        private val REPORT_JSON_V65 = """
+        {
+          "report_metadata":{"보고서_제목":"[서교동] 일식 매물 비교 분석","보고서_부제":"세 매물을 비교해 당신에게 맞는 자리를 찾으세요","보고서_등급":"B"},
+          "comparison_overview":{
+            "인트로":"서교동 일대에서 추린 세 매물입니다. 입지 점수는 69~78점으로 기본 수요는 비슷하지만, 월세·층·수익성에서 성격이 크게 갈립니다. 하나가 정답이라기보다, 본인의 예산·콘셉트·리스크 성향에 맞는 자리를 고르는 관점으로 보시면 좋습니다.",
+            "매물_성격":[
+              {"rank":1,"성격":"노출형·고비용","한줄":"1층 코너로 유동 노출 최고, 대신 월세가 가장 비쌉니다"},
+              {"rank":2,"성격":"저비용·흑자형","한줄":"월세 190만으로 흑자 전환이 가장 빠른 자리"},
+              {"rank":3,"성격":"균형·테라스형","한줄":"중간 임대에 2층 테라스를 갖춘 균형형"}],
+            "종합_비교평":"초기 비용을 최우선으로 본다면 동교로 195가, 유동 노출과 인지도를 본다면 동교로 194가, 비용과 공간·콘셉트의 균형을 본다면 동교로25길 34가 유리합니다. 세 자리 모두 같은 상권이라 입지 여건은 비슷하므로, 결정은 매물 자체의 조건에서 갈립니다."
+          },
+          "property_reports":[
+            {"rank":1,
+             "요약":{"한_줄_평가":"1층 코너로 노출은 최고지만 고정비 부담이 큰 자리입니다.","종합_해석":"동교로 194는 1층 코너 입지로 유동 노출이 세 매물 중 가장 좋아 초기 인지도 확보에 유리합니다. 다만 월세 1,400만원으로 고정비가 과다해 현재 추정 매출로는 월 순이익이 적자로 잡힙니다. 풍부한 유동을 회전으로 바꾸는 점심 정식·테이크아웃 설계가 흑자 전환의 관건입니다.","점수_분해":"입지 점수 78점은 풍부한 유동인구와 평균을 웃도는 점포당 매출이 끌어올렸고, 평균의 약 4배에 달하는 동종 경쟁과 높은 월세가 일부 깎았습니다.","미래_전망":"1년 전망은 85점으로 높지만 5년으로 갈수록 64점까지 낮아져, 경쟁 과밀 속 중장기 차별화가 관건입니다.",
+               "리스크_요인":[{"리스크":"월세가 높아 적자 위험이 있습니다","심각도":"높음","대응_방안":"임대인과 월세·렌트프리를 협의해 고정비를 낮춘 뒤 회수기간을 다시 계산하세요."},{"리스크":"반경 500m 동종 경쟁이 평균의 4배입니다","심각도":"높음","대응_방안":"대표 메뉴와 회전 전략으로 차별화해 대체 가능성을 낮추세요."}],
+               "액션_아이템":[{"우선순위":1,"할_일":"저녁 6~8시 실제 보행 흐름을 현장에서 확인하세요","이유":"유동이 강해도 피크 흡수가 매출 성패를 가릅니다.","예상_소요시간":"~1주"},{"우선순위":2,"할_일":"월세 협의 가능 여부를 임대인에게 직접 확인하세요","이유":"고정비가 적자의 핵심 원인입니다.","예상_소요시간":"~1주"}]},
+             "운영조건":{"임대_조건_코멘트":"월세 1,400만원에 보증금 1억, 권리금 1.9억으로 세 매물 중 초기·고정 부담이 가장 큽니다. 다만 가격 협의와 임대료 조정이 가능 표기라 협상 여지는 있습니다.","시설_운영_코멘트":"주차 3면과 엘리베이터를 갖춰 운영 편의는 좋은 편이며, 인테리어가 일부 남아 있어 초기 공사비를 줄일 여지가 있습니다.","현장_체크_코멘트":"1층 코너인 만큼 간판 노출 각도와 저녁 보행 동선을, 그리고 건물에 일식 영업 등록이 가능한지 계약 전 확인하세요."},
+             "입지":{"시간대_패턴_해석":"점심(12시)과 저녁(19~20시) 더블 피크이며 저녁 피크가 더 높아, 저녁 객단가 설계가 매출의 핵심입니다.","포지셔닝_제안":"동종 경쟁이 과밀하므로 신선도·혼밥 수요를 흡수하는 대표 메뉴 중심으로 좁히는 편이 유리합니다.","매출_환경_해석":"점포당 추정 매출 1,467만원으로 동일 업종 상위 30% 수준의 매출 환경입니다.","접근성_종합_평가":"2호선 홍대입구역과 합정역 사이로 접근성이 우수하고 주말·야간 유입도 기대됩니다."},
+             "적합도":{"선택_카테고리_해석":"이 입지에서 일식은 78점으로 9개 업종 중 1위입니다. 유동과 매출 기반이 받쳐주는 자리라, 일식 콘셉트를 명확히 좁히면 점수를 그대로 살릴 수 있습니다.","best_3_카테고리":"일식(78) > 카페·디저트(74) > 주점(69)"},
+             "시장":{"수요_구성_코멘트":"분기 유동 228만에 2030 비율 37%로 젊은 수요가 두텁고, 직장/유동 비율 22%로 평일 점심·퇴근 수요도 함께 받칩니다.","경쟁_성장_코멘트":"500m 내 동종 134곳으로 과밀하나 상권 자체는 성장형으로 분류됩니다. 밀도를 이기려면 메뉴 차별화가 전제입니다.","매출_리스크_코멘트":"폐업률 1.9%로 매우 안정적이고 저녁 매출 비중 41%로 저녁 수요가 분명합니다. 다만 교체가 활발한 상권이라 콘셉트 정체 시 빠르게 밀릴 수 있습니다."},
+             "내력":{"점수_추세_해석":"이 자리 입지 점수는 2020년 62점까지 내렸다가 2024년 78점으로 꾸준히 회복했습니다.","업종_교체_패턴_해석":"거쳐간 가게가 일식·중식에 몰려 있고 대부분 3년 안팎에 교체된 점은, 해당 업태가 오래 자리 잡기 어려웠음을 시사합니다.","종합_판정":"입지는 회복 중이나 짧은 존속이 반복된 자리이므로, 단명했던 업태를 피하고 콘셉트를 좁히면 과거 패턴을 비껴갈 여지가 있습니다."},
+             "수익성":{"회수_해석":"초기투자비 2.6억에 현재 추정 월 순이익이 적자로 잡혀, 손익분기 달성이 우선 과제입니다. 점심 회전·저녁 객단가·포장의 세 매출원을 합산 설계해야 합니다. 초기투자비에는 인테리어·설비 공사비가 포함되지 않아 실제 투자비는 더 높을 수 있습니다.","bep_action":"손익분기를 넘기려면 피크 시간 기준 시간당 약 38그릇이 필요합니다."},
+             "리뷰":{"코멘트":"주변은 신선도와 혼밥 편의가 가장 강한 수요입니다. 1인 좌석과 당일 입고 재료를 전면에 내세우면 인근 수요와 바로 맞물립니다."}},
+            {"rank":2,
+             "요약":{"한_줄_평가":"월세가 가장 낮아 흑자 전환이 가장 빠른 자리입니다.","종합_해석":"동교로 195는 월세 190만원으로 고정비가 가장 낮아 회수 11개월로 흑자 전환 여력이 가장 큽니다. 지하1층이라 노출·환기·간판 가시성은 약점이며, 분위기·데이트·가벼운 술 수요가 두드러져 저녁 사케·안주 중심 콘셉트가 잘 맞습니다.","점수_분해":"입지 점수 72점은 낮은 월세가 가장 크게 끌어올렸고, 지하 노출과 경쟁 과밀이 점수를 일부 깎았습니다.","미래_전망":"1년 80점에서 5년 61점으로 완만히 낮아져, 저비용 구조를 유지하며 단골을 만드는 운영이 중요합니다.",
+               "리스크_요인":[{"리스크":"지하층이라 노출과 간판 가시성이 약합니다","심각도":"중간","대응_방안":"입구 사인과 계단 동선, 환기 상태를 현장에서 반드시 확인하세요."},{"리스크":"동종 경쟁이 평균의 4배입니다","심각도":"높음","대응_방안":"저녁 술·안주 결합으로 점심 경쟁을 피한 시간대를 노리세요."}],
+               "액션_아이템":[{"우선순위":1,"할_일":"지하 환기와 간판 노출을 현장에서 확인하세요","이유":"지하 입지의 가장 큰 약점입니다.","예상_소요시간":"~1주"},{"우선순위":2,"할_일":"렌트프리 기간을 협의하세요","이유":"무상임대 표기가 있어 초기 부담을 더 낮출 수 있습니다.","예상_소요시간":"~1주"}]},
+             "운영조건":{"임대_조건_코멘트":"월세 190만·보증금 2,000만으로 고정비가 가장 낮아 흑자 전환에 절대적으로 유리합니다. 가격 협의·임대료 조정·무상임대 기간까지 모두 가능 표기라 협상 여지가 큽니다.","시설_운영_코멘트":"주차·엘리베이터는 없지만 심야영업이 가능해 저녁·야간 콘셉트로 운영하기에 제약이 적습니다.","현장_체크_코멘트":"지하 환기·습도와 계단 동선, 간판을 지상에서 어떻게 노출할지 계약 전 확인하세요."},
+             "입지":{"시간대_패턴_해석":"저녁 피크가 뚜렷해 점심보다 저녁 매출에 집중하는 편이 유리합니다.","포지셔닝_제안":"지하 특성상 목적 방문형이 맞아, 저녁 사케·안주 전문으로 좁히는 포지셔닝을 권합니다.","매출_환경_해석":"동네 점포당 매출 기반은 1순위와 동일 상권 수준입니다.","접근성_종합_평가":"홍대입구역과 가까워 접근성은 좋으나, 지하 노출을 보완할 사인 설계가 필요합니다."},
+             "적합도":{"선택_카테고리_해석":"이 입지에서 일식은 무난하며, 저비용 구조 덕분에 객단가가 낮아도 흑자 운영이 가능합니다. 저녁 술 결합 시 주점 수요까지 흡수할 수 있습니다.","best_3_카테고리":"일식(72) > 주점(69) > 카페·디저트(66)"},
+             "시장":{"수요_구성_코멘트":"2030 비율 34%로 젊은 수요가 받쳐주고, 여성 비율도 높아 분위기형 콘셉트에 우호적입니다.","경쟁_성장_코멘트":"동종 경쟁은 1순위와 같은 과밀 수준이나, 심야 가능 입지라 경쟁이 덜한 야간대를 노릴 수 있습니다.","매출_리스크_코멘트":"폐업률 2.2%로 안정적이고 심야 매출 비중 18%로 야간 수요가 분명합니다. 저녁·심야 집중 운영이 매출 방어에 유리합니다."},
+             "내력":{"점수_추세_해석":"이 자리 점수는 2020년 58점에서 2024년 72점으로 회복세입니다.","업종_교체_패턴_해석":"주점·일식이 거쳐갔고 평균 3년가량 존속했습니다. 술 수요와 맞는 업태가 비교적 오래 버틴 자리입니다.","종합_판정":"저녁·술 수요에 맞춘 콘셉트라면 과거 흐름과 자연스럽게 이어집니다."},
+             "수익성":{"회수_해석":"초기투자비 6,000만에 월 순이익 558만으로, 회수기간 약 11개월로 세 매물 중 가장 빠릅니다. 저비용 구조가 그대로 수익성으로 이어진 사례입니다. 초기투자비에 인테리어·설비비는 포함되지 않습니다.","bep_action":"현재 추정 기준 손익분기를 이미 상회하므로, 객석 회전보다 단골 확보에 집중하세요."},
+             "리뷰":{"코멘트":"일대는 분위기·데이트·가벼운 술 수요가 두드러집니다. 저녁 객단가를 높이는 사케·안주 구성과 좌석 동선이 유효합니다."}},
+            {"rank":3,
+             "요약":{"한_줄_평가":"중간 임대에 2층 테라스를 갖춘 균형형 자리입니다.","종합_해석":"동교로25길 34는 임대료가 중간 수준이고 2층 90㎡에 테라스를 갖춰 비용과 공간·콘셉트의 균형이 좋습니다. 2층이라 접근성·간판 노출은 보완이 필요하며, 맛·신선도 만족이 강하고 웨이팅 부담이 적어 목적 방문형 콘셉트에 적합합니다.","점수_분해":"입지 점수 69점은 평균 수준 월세와 안정적 유동이 받쳤고, 동종 경쟁 과밀이 점수를 일부 깎았습니다.","미래_전망":"1년 76점에서 5년 58점으로 낮아져, 테라스·코스 같은 차별 요소로 재방문을 만드는 운영이 필요합니다.",
+               "리스크_요인":[{"리스크":"2층이라 접근성·간판 노출이 약합니다","심각도":"중간","대응_방안":"1층 입구 사인과 계단 동선, 엘리베이터 부재를 현장에서 확인하세요."},{"리스크":"동종 경쟁이 평균을 크게 웃돕니다","심각도":"중간","대응_방안":"테라스·코스 등 공간 경험으로 차별화하세요."}],
+               "액션_아이템":[{"우선순위":1,"할_일":"2층 접근 동선과 간판 노출 위치를 확인하세요","이유":"2층 입지의 핵심 약점입니다.","예상_소요시간":"~1주"},{"우선순위":2,"할_일":"테라스 영업 허가·소음 규제를 확인하세요","이유":"테라스가 차별 포인트이자 규제 대상입니다.","예상_소요시간":"~2주"}]},
+             "운영조건":{"임대_조건_코멘트":"월세 550만·보증금 5,000만으로 1순위와 2순위의 중간 수준이라 비용과 규모의 균형이 좋습니다. 다만 가격 협의는 불가 표기라 협상 여지는 제한적입니다.","시설_운영_코멘트":"주차 2면과 테라스를 갖춰 브런치·디저트 결합 콘셉트와 잘 맞습니다. 엘리베이터가 없어 2층 동선은 계단 중심입니다.","현장_체크_코멘트":"2층 접근성과 간판 노출, 테라스 사용 가능 범위를 계약 전 확인하세요."},
+             "입지":{"시간대_패턴_해석":"저녁 피크가 뚜렷하며 주말 유입도 기대되는 흐름입니다.","포지셔닝_제안":"테라스를 살린 목적 방문형(코스·예약) 포지셔닝이 2층 약점을 상쇄합니다.","매출_환경_해석":"동네 매출 기반은 인근과 유사한 수준입니다.","접근성_종합_평가":"홍대입구역에서 도보권이나 2층이라 인지 동선을 별도 설계해야 합니다."},
+             "적합도":{"선택_카테고리_해석":"일식이 무난하며, 테라스·공간을 살린 코스·오마카세 형태가 점수를 보완합니다.","best_3_카테고리":"일식(69) > 카페·디저트(67) > 주점(64)"},
+             "시장":{"수요_구성_코멘트":"2030 비율 31%로 다소 낮지만 상주·생활권 수요가 받쳐줍니다.","경쟁_성장_코멘트":"동종 경쟁은 과밀하나 교체가 덜한 상권이라 안정적으로 자리 잡을 여지가 있습니다.","매출_리스크_코멘트":"폐업률 1.8%로 가장 안정적입니다. 다만 저녁 매출 비중이 평이해 공간 경험으로 객단가를 끌어올리는 전략이 필요합니다."},
+             "내력":{"점수_추세_해석":"점수는 2020년 57점에서 2024년 69점으로 회복했습니다.","업종_교체_패턴_해석":"양식이 단명한 뒤 일식이 들어와 영업 중입니다. 업태 적합도가 존속을 좌우한 자리입니다.","종합_판정":"교체가 잦지 않은 자리라, 콘셉트만 맞으면 비교적 안정적으로 운영할 수 있습니다."},
+             "수익성":{"회수_해석":"초기투자비 1.2억에 월 순이익 210만으로 회수기간 약 57개월입니다. 흑자지만 회수는 더딘 편이라, 테라스·코스로 객단가를 높이는 전략이 회수 단축의 핵심입니다. 초기투자비에 인테리어·설비비는 포함되지 않습니다.","bep_action":"객단가를 높이는 코스 구성으로 1인당 결제액을 끌어올리세요."},
+             "리뷰":{"코멘트":"맛과 신선도 만족이 핵심이고 웨이팅 부담이 적습니다. 빠른 회전과 대표 메뉴 품질로 재방문을 노릴 수 있습니다."}}
+          ],
+          "your_choice":{
+            "축별_가이드":[
+              {"기준":"초기 비용을 최우선으로 한다면","추천_rank":2,"이유":"월세 190만·회수 11개월로 가장 빠른 흑자 전환이 가능합니다."},
+              {"기준":"유동 노출과 인지도가 중요하다면","추천_rank":1,"이유":"1층 코너로 유동 노출이 가장 좋습니다."},
+              {"기준":"비용과 공간·콘셉트의 균형을 본다면","추천_rank":3,"이유":"중간 임대에 2층 테라스를 갖춰 균형이 좋습니다."}],
+            "재확인":"세 자리의 입지 점수는 69~78점 범위로, 같은 상권이라 입지 여건은 비슷합니다. 최종 선택은 당신의 예산·콘셉트·리스크 성향에 달려 있으니, 위 가이드를 자신의 우선순위에 비춰보세요."
+          },
+          "chapter_7_appendix":{
+            "본_보고서의_한계":"입지 점수는 AI가 3년 후 영업 가능성(생존 확률)을 예측한 참고 지표이며, 실제 성과는 운영 역량·메뉴 경쟁력에 따라 달라집니다.\n매출·회수는 동네 평균 기반 추정값으로 개별 매물 실제와 다를 수 있습니다.\n본 보고서는 보조 참고 자료이며 현장 실사·전문가 상담을 병행하시기 바랍니다."
           }
         }
         """.trimIndent()

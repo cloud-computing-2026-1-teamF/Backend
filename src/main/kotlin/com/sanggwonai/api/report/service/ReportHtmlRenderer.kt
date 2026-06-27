@@ -34,12 +34,21 @@ class ReportHtmlRenderer {
         append("<main class=\"report-shell\">")
         append("<nav class=\"report-nav\"><div><b>상권을 부탁해</b><span>AI 입지 분석 보고서</span></div>")
         append("<a href=\"#appendix\">분석 기준 보기</a></nav>")
+        // v6.5 매물별 탭 레이아웃: report 에 property_reports 가 있으면 매물 탭 보고서로 렌더.
+        if (report.containsKey("property_reports")) {
+            renderPerProperty(this, report, input)
+            append("</main></body></html>")
+            return@buildString
+        }
         sectionSummary(this, report, input)
         sectionProperty(this, report, input)
         sectionLocation(this, report, input)
         sectionFit(this, report, input)
         sectionTop3(this, report, input)
         sectionMarketSignals(this, report, input)
+        // v6.3 신규: 이 자리의 내력(점수 추세 + 점유 이력/무덤자리). input 섹션 존재 시에만.
+        if (path(input, "section_07_location_history") != null)
+            sectionLocationHistory(this, report, input)
         // 렌더 여부는 백엔드가 조립한 input 섹션 존재만으로 판정한다. LLM 자기보고(활성_여부)에
         // 의존하면, 데이터가 있는데도 LLM 이 활성_여부=false 로 내보내면 섹션이 조용히 사라진다.
         if (path(input, "section_06_investment_payback") != null)
@@ -51,7 +60,7 @@ class ReportHtmlRenderer {
     }
 
     // ── §1 표지 + 임원 요약 ──────────────────────────────────────
-    private fun sectionSummary(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+    private fun sectionSummary(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>, cover: Boolean = true) {
         val meta = asMap(report["report_metadata"]) ?: emptyMap<Any?, Any?>()
         val sa = asMap(path(input, "saved_analysis")) ?: emptyMap<Any?, Any?>()
         val top1 = asList(sa["top3"]).firstOrNull().let { asMap(it) } ?: emptyMap<Any?, Any?>()
@@ -64,6 +73,7 @@ class ReportHtmlRenderer {
         val stamp = str(meta["추천_도장"])
         val score = (intOf(sa["topScore"]) ?: intOf(top1["score"]) ?: 0).coerceIn(0, 100)
 
+        if (!cover) { sb.append("<div class=\"sheet\">"); summaryBody(sb, sa, top1, ch1, score); return }
         sb.append("<div class=\"sheet first\">")
         // cover
         sb.append("<div class=\"cover\"><div class=\"brand\">상권을 부탁해 · AI 입지 분석 보고서</div>")
@@ -78,7 +88,11 @@ class ReportHtmlRenderer {
         sb.append("</span>")
         str(sa["date"]).ifBlank { null }?.let { sb.append("<span class=\"badge\">").append(esc(it)).append("</span>") }
         sb.append("</div></div>")
+        summaryBody(sb, sa, top1, ch1, score)
+    }
 
+    /** §1 임원 요약 본문 (표지 제외). 매물별 탭에서도 동일하게 재사용. */
+    private fun summaryBody(sb: StringBuilder, sa: Map<*, *>, top1: Map<*, *>, ch1: Map<*, *>, score: Int) {
         // body
         sb.append("<div class=\"pad\">")
         secHead(sb, "1", "임원 요약", null)
@@ -86,7 +100,7 @@ class ReportHtmlRenderer {
         sb.append("<table class=\"hero\"><tr><td class=\"gaugecell\">")
         sb.append("<div class=\"gauge\">").append(gaugeSvg(score))
         sb.append("<div class=\"gctr\"><b style=\"color:").append(scoreColor(score)).append("\">").append(score)
-            .append("</b><span>생존 점수</span></div></div>")
+            .append("</b><span>입지 점수</span></div></div>")
         sb.append("</td><td class=\"herobody\">")
         // KPI cards from input
         sb.append("<table class=\"kpis\"><tr>")
@@ -99,6 +113,35 @@ class ReportHtmlRenderer {
         sb.append("</td></tr></table>")
         // summary body
         str(ch1["요약_본문"]).ifBlank { null }?.let { sb.append("<p class=\"body\">").append(esc(it)).append("</p>") }
+
+        // v6.3 점수 분해 + 미래 전망 (왜 이 점수인가 / 앞으로 N년)
+        val feats = asList(path(top1, "scoreExplanation", "top_features"))
+        val horizons = asList(sa["horizon_forecast"]).ifEmpty { asList(top1["horizon"]) }
+        if (feats.isNotEmpty() || horizons.isNotEmpty()) {
+            sb.append("<table class=\"twocol\"><tr><td>")
+            if (feats.isNotEmpty()) {
+                sb.append("<div class=\"panel\"><h3>왜 이 입지 점수인가 <span class=\"hint\">— 상권 평균 대비</span></h3>")
+                feats.take(5).forEach { f ->
+                    val fm = asMap(f) ?: return@forEach
+                    effectBar(sb, str(fm["label"]), str(fm["effect"]), dbl(fm["current"]), dbl(fm["average"]))
+                }
+                str(ch1["점수_분해"]).ifBlank { null }?.let { sb.append("<p class=\"body sm faint\">").append(esc(it)).append("</p>") }
+                sb.append("</div>")
+            }
+            sb.append("</td><td>")
+            if (horizons.isNotEmpty()) {
+                sb.append("<div class=\"panel\"><h3>미래 전망 <span class=\"hint\">기간별 입지 점수</span></h3>")
+                horizons.sortedBy { intOf(asMap(it)?.get("years")) ?: 99 }.forEach { hz ->
+                    val hm = asMap(hz) ?: return@forEach
+                    val yr = intOf(hm["years"]) ?: return@forEach
+                    val sc = (intOf(hm["score"]) ?: 0).coerceIn(0, 100)
+                    barColored(sb, "${yr}년", sc, "${sc}점", scoreColor(sc), yr == 3)
+                }
+                str(ch1["미래_전망"]).ifBlank { null }?.let { sb.append("<p class=\"body sm faint\">").append(esc(it)).append("</p>") }
+                sb.append("</div>")
+            }
+            sb.append("</td></tr></table>")
+        }
 
         // risks | actions (two columns)
         val risks = asList(ch1["리스크_요인"])
@@ -514,7 +557,7 @@ class ReportHtmlRenderer {
             sb.append("<li>본 보고서는 참고용이며, 최종 결정 전 현장 실사·전문가 상담을 권장합니다.</li>")
         }
         sb.append("</ul></div>")
-        sb.append("<p class=\"body sm faint\" style=\"margin-top:12px\">분석 모델: 생존율 예측 모델 · 공공데이터(인허가·상권분석·소상공인·공시지가) 기반</p>")
+        sb.append("<p class=\"body sm faint\" style=\"margin-top:12px\">입지 점수: AI가 예측한 3년 생존 확률 기반 · 공공데이터(인허가·상권분석·소상공인·공시지가) 기반</p>")
         sb.append("<p class=\"body sm\" style=\"margin-top:16px\"><b>투자 회수 계산 방법</b></p>")
         sb.append("<div class=\"disc\"><ul>")
         sb.append("<li><b>초기투자비</b> = 보증금 + 권리금 + 중개수수료 + (월세+관리비) × 3개월 운전자금</li>")
@@ -527,7 +570,332 @@ class ReportHtmlRenderer {
         sb.append("</div></div>")
     }
 
+    // ── §내력 이 자리의 내력 (v6.3 신규) ─────────────────────────
+    private fun sectionLocationHistory(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+        val hist = asMap(path(input, "section_07_location_history")) ?: return
+        val chh = asMap(report["chapter_5_location_history"]) ?: emptyMap<Any?, Any?>()
+        val trend = asList(hist["score_trend"])
+        val occ = asMap(hist["occupancy"]) ?: emptyMap<Any?, Any?>()
+        val timeline = asList(occ["timeline"])
+
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "★", "이 자리의 내력", "과거 입지 점수 추세 + 점유 이력")
+
+        // 무덤자리 요약 KPI
+        val tenantCount = intOf(occ["tenant_count"]) ?: timeline.size
+        val closedCount = intOf(occ["closed_count"]) ?: timeline.count { str(asMap(it)?.get("status")) == "closed" }
+        val dir = str(occ["score_direction"])
+        sb.append("<table class=\"kpis\"><tr>")
+        kpi(sb, "거쳐간 가게", tenantCount.toString(), "곳")
+        kpi(sb, "그중 폐업", closedCount.toString(), "곳")
+        kpi(sb, "점수 방향", when (dir) { "up" -> "회복 ↑"; "down" -> "악화 ↓"; else -> "보합 →" }, "")
+        sb.append("</tr></table>")
+
+        sb.append("<table class=\"twocol\"><tr><td>")
+        // 과거 생존율 추세선
+        sb.append("<div class=\"panel\"><h3>과거 입지 점수 추세 <span class=\"hint\">연도별</span></h3>")
+        val pts = trend.mapNotNull { p -> val pm = asMap(p) ?: return@mapNotNull null
+            val y = intOf(pm["year"]) ?: return@mapNotNull null; val s = dbl(pm["score"]) ?: return@mapNotNull null; y to s }
+        if (pts.size >= 2) {
+            sb.append(scoreTrendSvg(pts))
+            sb.append("<table class=\"axis\"><tr><td>").append(pts.first().first)
+                .append("</td><td style=\"text-align:right\">").append(pts.last().first).append("</td></tr></table>")
+        }
+        str(chh["점수_추세_해석"]).ifBlank { null }?.let { sb.append("<p class=\"body sm\">").append(esc(it)).append("</p>") }
+        sb.append("</div></td><td>")
+        // 점유 이력 타임라인
+        sb.append("<div class=\"panel\"><h3>점유 이력 <span class=\"hint\">인허가 실데이터</span></h3>")
+        if (timeline.isEmpty()) sb.append("<p class=\"body sm faint\">점유 이력 데이터가 없습니다.</p>")
+        else timeline.take(6).forEach { ev ->
+            val em = asMap(ev) ?: return@forEach
+            val closed = str(em["status"]) == "closed"
+            val span = listOf(str(em["from"]).take(4), str(em["to"]).take(4).ifBlank { "현재" }).joinToString("–")
+            sb.append("<div class=\"tlev\"><span class=\"tldot ").append(if (closed) "c" else "o").append("\"></span>")
+            sb.append("<span class=\"tlnm\">").append(esc(str(em["tenant"])))
+            str(em["category"]).ifBlank { null }?.let { sb.append(" <small>· ").append(esc(it)).append("</small>") }
+            sb.append("</span><span class=\"tlpill ").append(if (closed) "c" else "o").append("\">")
+                .append(if (closed) "폐업" else "영업중").append("</span><span class=\"tlyr\">").append(esc(span)).append("</span></div>")
+        }
+        str(chh["업종_교체_패턴_해석"]).ifBlank { null }?.let { sb.append("<p class=\"body sm\">").append(esc(it)).append("</p>") }
+        sb.append("</div></td></tr></table>")
+
+        str(chh["종합_판정"]).ifBlank { null }?.let { sb.append("<div class=\"callout\">").append(esc(it)).append("</div>") }
+        sb.append("<p class=\"body sm faint\">⚠ 인허가 데이터에는 폐업 '사유'가 없어, 업태·존속기간 패턴으로 해석합니다.</p>")
+        sb.append("</div></div>")
+    }
+
+
+    // ═══════════════ v6.5 매물별 탭 레이아웃 ═══════════════
+    private fun top3Of(input: Map<String, Any?>) = asList(path(input, "saved_analysis", "top3")).mapNotNull { asMap(it) }
+
+    /** report.property_reports(매물별 해석) 를 input.top3 와 rank 로 짝지어 점수 내림차순 정렬. */
+    private fun orderedReports(report: Map<String, Any?>, input: Map<String, Any?>): List<Pair<Map<*, *>, Map<*, *>>> {
+        val top3 = top3Of(input)
+        return asList(report["property_reports"]).mapNotNull { asMap(it) }.mapNotNull { pr ->
+            val rank = intOf(pr["rank"])
+            val prop = top3.firstOrNull { intOf(it["rank"]) == rank } ?: return@mapNotNull null
+            pr to prop
+        }.sortedByDescending { intOf(it.second["score"]) ?: 0 }
+    }
+
+    private fun renderPerProperty(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+        val ordered = orderedReports(report, input)
+        coverV65(sb, report, input, ordered.size)
+        compareTopV65(sb, report, input, ordered)
+
+        // 매물 탭 네비
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "★", "매물별 상세 보고서", "탭으로 매물을 전환하세요")
+        sb.append("<div class=\"ptabs\">")
+        ordered.forEachIndexed { idx, (_, prop) ->
+            val addr = str(prop["addr"]).ifBlank { "매물 ${idx + 1}" }
+            sb.append("<button type=\"button\" class=\"ptab").append(if (idx == 0) " on" else "")
+                .append("\" data-pp=\"").append(idx).append("\"><span class=\"ptaddr\">")
+                .append(esc(addr)).append("</span></button>")
+        }
+        sb.append("</div></div></div>")
+
+        // 매물별 패널 (탭 전환)
+        ordered.forEachIndexed { idx, (pr, prop) ->
+            sb.append("<div class=\"pppanel\" data-pp=\"").append(idx).append("\"")
+            if (idx != 0) sb.append(" style=\"display:none\"")
+            sb.append(">")
+            val mInput = microInput(input, prop)
+            val mReport = microReport(pr)
+            sectionSummary(sb, mReport, mInput, cover = false)
+            sectionProperty(sb, mReport, mInput)
+            sectionLocation(sb, mReport, mInput)
+            sectionFit(sb, mReport, mInput)
+            sectionMarketSignals(sb, mReport, mInput)
+            if (path(mInput, "section_07_location_history") != null) sectionLocationHistory(sb, mReport, mInput)
+            if (path(mInput, "section_06_investment_payback") != null) sectionPayback(sb, mReport, mInput)
+            if (mReport.containsKey("chapter_8_review_insight")) sectionReview(sb, mReport, mInput)
+            sb.append("</div>")
+        }
+
+        sectionYourChoiceV65(sb, report, ordered)
+        sectionAppendix(sb, report)
+
+        sb.append("<script>document.querySelectorAll('.ptab').forEach(function(b){b.addEventListener('click',function(){")
+            .append("var i=b.getAttribute('data-pp');")
+            .append("document.querySelectorAll('.ptab').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-pp')===i)});")
+            .append("document.querySelectorAll('.pppanel').forEach(function(p){p.style.display=(p.getAttribute('data-pp')===i)?'':'none'});")
+            .append("})});</script>")
+    }
+
+    private fun coverV65(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>, n: Int) {
+        val sa = asMap(path(input, "saved_analysis")) ?: emptyMap<Any?, Any?>()
+        val meta = asMap(report["report_metadata"]) ?: emptyMap<Any?, Any?>()
+        sb.append("<div class=\"sheet first\"><div class=\"cover\"><div class=\"brand\">상권을 부탁해 · AI 입지 분석 보고서</div>")
+        sb.append("<h1>").append(esc(str(meta["보고서_제목"]).ifBlank { "[${str(sa["region"])}] ${str(sa["category"])} 매물 비교 분석" })).append("</h1>")
+        str(meta["보고서_부제"]).ifBlank { null }?.let { sb.append("<div class=\"csub\">").append(esc(it)).append("</div>") }
+        sb.append("<div class=\"badges\">")
+        str(meta["보고서_등급"]).ifBlank { null }?.let { sb.append("<span class=\"badge grade\">등급 ").append(esc(it)).append("</span>") }
+        sb.append("<span class=\"badge\">📍 ").append(esc(str(sa["region"])))
+        intOf(sa["radius"])?.let { sb.append(" · 반경 ").append(it).append("m") }
+        sb.append("</span><span class=\"badge\">").append(esc(str(sa["category"]))).append("</span>")
+        sb.append("<span class=\"badge\">매물 ").append(n).append("개 비교</span></div></div></div>")
+    }
+
+    /** 상단 — 세 매물 한눈 비교 (성격 카드 + 핵심지표 3열표). 점수순. */
+    private fun compareTopV65(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>, ordered: List<Pair<Map<*, *>, Map<*, *>>>) {
+        val ov = asMap(report["comparison_overview"]) ?: emptyMap<Any?, Any?>()
+        val chars = asList(ov["매물_성격"]).mapNotNull { asMap(it) }
+        val cols = ordered.map { it.second }
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "1", "세 매물 한눈 비교", "본인 우선순위로 고르세요")
+        str(ov["인트로"]).ifBlank { null }?.let { sb.append("<p class=\"body\">").append(esc(it)).append("</p>") }
+        sb.append("<div class=\"charrow\">")
+        ordered.forEach { (_, prop) ->
+            val rank = intOf(prop["rank"])
+            val ch = chars.firstOrNull { intOf(it["rank"]) == rank }
+            val score = intOf(prop["score"]) ?: 0
+            sb.append("<div class=\"charcard\"><span class=\"ptag\">").append(esc(str(ch?.get("성격")).ifBlank { "매물" })).append("</span>")
+            sb.append("<b>").append(esc(shortAddr(str(prop["addr"])).ifBlank { "-" })).append("</b>")
+            sb.append("<small>").append(esc(str(ch?.get("한줄")).ifBlank { "-" })).append("</small>")
+            sb.append("<span class=\"ptscore big\">입지 점수 ").append(score).append("점</span></div>")
+        }
+        sb.append("</div>")
+        sb.append("<table class=\"cmp3\"><thead><tr><th>지표</th>")
+        cols.forEach { sb.append("<th>").append(esc(shortAddr(str(it["addr"])))).append("</th>") }
+        sb.append("</tr></thead><tbody>")
+        cmpRow(sb, "하루 유동", cols, cmp = { dbl(it["foot"]) }) { commaOrDash(it["foot"]) }
+        cmpRow(sb, "500m 경쟁", cols, lowGood = true, cmp = { dbl(it["comp"]) }) { intOf(it["comp"])?.toString() ?: "-" }
+        cmpRow(sb, "월세", cols, lowGood = true, cmp = { dbl(it["rent"]) }) { wonShort(dbl(it["rent"])) }
+        cmpRow(sb, "보증금", cols, lowGood = true, cmp = { dbl(it["deposit"]) }) { wonShort(dbl(it["deposit"])) }
+        cmpRow(sb, "전용면적", cols, highlight = false) { pyeong(dbl(it["area"])) }
+        cmpRow(sb, "회수기간", cols, lowGood = true, cmp = { dbl(payByRank(input, intOf(it["rank"]) ?: 0, str(it["vacancyId"]))?.get("투자회수기간_개월")) }) { t ->
+            intOf(payByRank(input, intOf(t["rank"]) ?: 0, str(t["vacancyId"]))?.get("투자회수기간_개월"))?.let { "${it}개월" } ?: "적자/미정"
+        }
+        cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { str(it["floor"]).ifBlank { "-" } }
+        sb.append("</tbody></table>")
+        sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물</p>")
+        str(ov["종합_비교평"]).ifBlank { null }?.let { sb.append("<div class=\"callout\">").append(esc(it)).append("</div>") }
+        sb.append("</div></div>")
+    }
+
+    private fun sectionYourChoiceV65(sb: StringBuilder, report: Map<String, Any?>, ordered: List<Pair<Map<*, *>, Map<*, *>>>) {
+        val yc = asMap(report["your_choice"]) ?: return
+        sb.append("<div class=\"sheet\"><div class=\"pad\">")
+        secHead(sb, "★", "당신에게 맞는 선택", "우선순위로 고르기")
+        asList(yc["축별_가이드"]).mapNotNull { asMap(it) }.forEach { g ->
+            val rank = intOf(g["추천_rank"])
+            val prop = ordered.firstOrNull { intOf(it.second["rank"]) == rank }?.second
+            val addr = shortAddr(str(prop?.get("addr"))).ifBlank { rank?.let { "${it}순위" } ?: "-" }
+            sb.append("<div class=\"guide\"><div class=\"gaxis\">").append(esc(str(g["기준"])))
+                .append("</div><div class=\"garrow\">→</div><div class=\"gpick\">").append(esc(addr))
+                .append("</div><div class=\"greason\">").append(esc(str(g["이유"]))).append("</div></div>")
+        }
+        str(yc["재확인"]).ifBlank { null }?.let { sb.append("<p class=\"body sm faint\">").append(esc(it)).append("</p>") }
+        sb.append("</div></div>")
+    }
+
+    // ── micro 어댑터: property_reports[i] + top3[i] → 레거시 단일 보고서 입력으로 변환 ──
+    private fun payByRank(input: Map<String, Any?>, rank: Int, vid: String): Map<*, *>? {
+        val props = asList(path(input, "section_06_investment_payback", "properties")).mapNotNull { asMap(it) }
+        return props.firstOrNull { str(it["vacancy_id"]) == vid } ?: props.firstOrNull { intOf(it["rank"]) == rank }
+    }
+
+    private fun cmpRow(sb: StringBuilder, label: String, cols: List<Map<*, *>>, lowGood: Boolean = false, cmp: ((Map<*, *>) -> Double?)? = null, highlight: Boolean = true, value: (Map<*, *>) -> String) {
+        val vals = cols.map { value(it) }
+        // 비교는 cmp(원본 숫자)가 있으면 그걸로 — '1억'/'2,000만' 처럼 단위가 섞인 표시 문자열은 파싱이 깨지므로.
+        val nums = if (cmp != null) cols.map { cmp(it) } else vals.map { it.replace(Regex("[^0-9.-]"), "").toDoubleOrNull() }
+        val best = if (!highlight) null else nums.filterNotNull().let { if (it.isEmpty()) null else if (lowGood) it.min() else it.max() }
+        sb.append("<tr><td class=\"cmpk\">").append(esc(label)).append("</td>")
+        vals.forEachIndexed { i, v ->
+            val isBest = best != null && nums[i] != null && nums[i] == best
+            sb.append("<td").append(if (isBest) " class=\"win\"" else "").append(">").append(esc(v)).append("</td>")
+        }
+        sb.append("</tr>")
+    }
+
+    /** 전용면적(㎡) → 평 표기. */
+    private fun pyeong(areaM2: Double?): String = areaM2?.takeIf { it > 0 }?.let { "${(it / 3.305785).roundToInt()}평" } ?: "-"
+
+    /** 층 비교용 점수 — 1층이 가장 유리, 그다음 저층, 지하가 최하. */
+    private fun floorScore(floor: String): Double? {
+        if (floor.isBlank()) return null
+        if (floor.contains("지하") || floor.startsWith("B")) return 1.0
+        val n = Regex("\\d+").find(floor)?.value?.toIntOrNull() ?: return 2.0
+        return if (n == 1) 3.0 else (3.0 - (n - 1) * 0.3).coerceAtLeast(1.2)
+    }
+
+    /** input 을 복제하되 saved_analysis.top3 를 해당 매물 1건으로 좁히고, 매물별 섹션(수익성/리뷰/내력)을 그 매물 것으로 교체. */
+    private fun microInput(input: Map<String, Any?>, prop: Map<*, *>): Map<String, Any?> {
+        val sa = asMap(path(input, "saved_analysis")) ?: emptyMap<Any?, Any?>()
+        val newSa = LinkedHashMap<String, Any?>()
+        sa.forEach { (k, v) -> newSa[k.toString()] = v }
+        newSa["top3"] = listOf(prop)
+        newSa["topScore"] = prop["score"]
+        val m = LinkedHashMap<String, Any?>()
+        input.forEach { (k, v) -> m[k] = v }
+        m["saved_analysis"] = newSa
+        asMap(prop["metric_reference"])?.let { m["vacancy_metric_reference"] = it }
+        asMap(prop["selected_vacancy_extra"])?.let { m["selected_vacancy_extra"] = it }
+        m["section_06_investment_payback"] = microPay(input, prop)
+        m["section_05_review_insight"] = microReview(input, prop)
+        m["section_07_location_history"] = microHistory(prop)
+        return m
+    }
+
+    /** 이 매물의 리뷰만 추림. 테스트 fixture(prop.review) 우선, 없으면 prod 경로(root section_05.properties[rank]). */
+    private fun microReview(input: Map<String, Any?>, prop: Map<*, *>): Map<String, Any?>? {
+        asMap(prop["review"])?.let { return linkedMapOf("properties" to listOf(it)) }
+        val props = asList(path(input, "section_05_review_insight", "properties")).mapNotNull { asMap(it) }
+        if (props.isEmpty()) return null
+        val rank = intOf(prop["rank"]); val vid = str(prop["vacancyId"])
+        val mine = props.firstOrNull { str(it["vacancy_id"]) == vid } ?: props.firstOrNull { intOf(it["rank"]) == rank } ?: return null
+        return linkedMapOf("properties" to listOf(mine))
+    }
+
+    private fun microPay(input: Map<String, Any?>, prop: Map<*, *>): Map<String, Any?>? {
+        val pay = asMap(path(input, "section_06_investment_payback")) ?: return null
+        val mine = payByRank(input, intOf(prop["rank"]) ?: -1, str(prop["vacancyId"])) ?: return null
+        return linkedMapOf(
+            "properties" to listOf(mine),
+            "초기투자비_만원" to mine["초기투자비_만원"],
+            "투자회수평가" to (mine["투자회수평가"] ?: pay["투자회수평가"]),
+            "bep_action" to (mine["bep_action"] ?: pay["bep_action"]),
+            "기존시설_문구" to (mine["기존시설_문구"] ?: pay["기존시설_문구"])
+        )
+    }
+
+    private fun microHistory(prop: Map<*, *>): Map<String, Any?>? {
+        val trend = asList(prop["history"])
+        val occ = asMap(prop["occupancy"])
+        if (trend.isEmpty() && occ == null) return null
+        return linkedMapOf("score_trend" to trend, "occupancy" to (occ ?: emptyMap<Any?, Any?>()))
+    }
+
+    /** property_reports[i] 의 매물별 해석을 레거시 챕터 키 구조로 변환(렌더 함수 재사용). */
+    private fun microReport(pr: Map<*, *>): Map<String, Any?> {
+        val m = LinkedHashMap<String, Any?>()
+        val 요약 = asMap(pr["요약"]) ?: emptyMap<Any?, Any?>()
+        m["chapter_1_executive_summary"] = linkedMapOf(
+            "한_줄_결론" to 요약["한_줄_평가"],
+            "요약_본문" to 요약["종합_해석"],
+            "의사결정_권장" to 요약["한_줄_평가"],
+            "점수_분해" to 요약["점수_분해"],
+            "미래_전망" to 요약["미래_전망"],
+            "리스크_요인" to 요약["리스크_요인"],
+            "액션_아이템" to 요약["액션_아이템"]
+        )
+        m["chapter_2_property_operation_context"] = asMap(pr["운영조건"]) ?: emptyMap<Any?, Any?>()
+        val 입지 = asMap(pr["입지"]) ?: emptyMap<Any?, Any?>()
+        m["chapter_4_location_characteristics"] = linkedMapOf(
+            "section_4_1_floating_population" to linkedMapOf("시간대_패턴_해석" to 입지["시간대_패턴_해석"]),
+            "section_4_2_competition" to linkedMapOf("포지셔닝_제안" to 입지["포지셔닝_제안"]),
+            "section_4_3_estimated_revenue" to linkedMapOf("매출_환경_해석" to 입지["매출_환경_해석"]),
+            "section_4_4_accessibility" to linkedMapOf("접근성_종합_평가" to 입지["접근성_종합_평가"])
+        )
+        val 적합 = asMap(pr["적합도"]) ?: emptyMap<Any?, Any?>()
+        m["chapter_5_business_fit_analysis"] = linkedMapOf(
+            "선택_카테고리_평가" to linkedMapOf("해석" to 적합["선택_카테고리_해석"]),
+            "best_3_카테고리" to 적합["best_3_카테고리"]
+        )
+        m["chapter_6_market_signal_diagnosis"] = asMap(pr["시장"]) ?: emptyMap<Any?, Any?>()
+        asMap(pr["내력"])?.let { m["chapter_5_location_history"] = it }
+        asMap(pr["수익성"])?.let { m["chapter_9_investment_payback"] = it }
+        asMap(pr["리뷰"])?.let { rv ->
+            m["chapter_8_review_insight"] = linkedMapOf(
+                "데이터_범위" to "반경 50m 동일 업종 방문자 태그",
+                "매물별_리뷰" to listOf(linkedMapOf("순위" to pr["rank"], "코멘트" to rv["코멘트"])),
+                "리뷰_종합_해석" to ""
+            )
+        }
+        return m
+    }
+
     // ───────────────────────── 차트/컴포넌트 ─────────────────────
+    /** 점수 분해 — 상권 평균 대비 발산형 막대(긍정=초록 우측, 부정=빨강 좌측). */
+    private fun effectBar(sb: StringBuilder, label: String, effect: String, current: Double?, average: Double?) {
+        val color = when (effect) { "positive" -> GREEN; "negative" -> RED; "neutral" -> "#9AA4B2"; else -> "#C4CCD8" }
+        val word = when (effect) { "positive" -> "강점"; "negative" -> "주의"; "neutral" -> "비슷"; else -> "-" }
+        val mag = if (current != null && average != null && abs(average) > 0.0)
+            ((abs(current - average) / abs(average)) * 100).coerceIn(12.0, 46.0) else 30.0
+        val pos = effect == "positive"
+        sb.append("<table class=\"xai\"><tr><td class=\"xlab\">").append(esc(label)).append("</td>")
+        sb.append("<td class=\"xtrack\"><div class=\"xmid\"></div><div class=\"xfill\" style=\"")
+        if (pos) sb.append("left:50%;") else sb.append("right:50%;")
+        sb.append("width:").append("%.0f".format(mag)).append("%;background:").append(color).append("\"></div></td>")
+        sb.append("<td class=\"xval\" style=\"color:").append(color).append("\">").append(word).append("</td></tr></table>")
+    }
+
+    /** 과거 연도별 생존율 추세 — 0~100 스케일 라인차트. */
+    private fun scoreTrendSvg(pts: List<Pair<Int, Double>>): String {
+        val w = 360; val h = 96; val n = pts.size
+        if (n < 2) return ""
+        fun x(i: Int) = 8.0 + (w - 16.0) * i / (n - 1)
+        fun y(v: Double) = h - 12.0 - (h - 26.0) * (v.coerceIn(0.0, 100.0) / 100.0)
+        val line = pts.indices.joinToString(" ") { "${"%.0f".format(x(it))},${"%.0f".format(y(pts[it].second))}" }
+        val area = "${"%.0f".format(x(0))},$h $line ${"%.0f".format(x(n - 1))},$h"
+        val last = pts.last()
+        return "<svg xmlns=\"http://www.w3.org/2000/svg\" style=\"width:100%;height:96px\" viewBox=\"0 0 $w $h\" preserveAspectRatio=\"none\">" +
+            "<polyline fill=\"#E9F1FB\" stroke=\"none\" points=\"$area\"/>" +
+            "<polyline fill=\"none\" stroke=\"#2D6FE0\" stroke-width=\"2.5\" points=\"$line\"/>" +
+            "<circle cx=\"${"%.0f".format(x(n - 1))}\" cy=\"${"%.0f".format(y(last.second))}\" r=\"4\" fill=\"#2D6FE0\"/></svg>"
+    }
+
     private fun gaugeSvg(score: Int): String {
         val r = 62.0
         val c = 2 * PI * r
@@ -899,7 +1267,64 @@ class ReportHtmlRenderer {
             .mval { margin-top:3px; font-size:20px; line-height:1.2; font-weight:950; }
             .disc { padding:18px 20px; border:1px dashed #CBD5E1; border-radius:16px; background:#FAFBFC; }
             .disc ul { margin:0; padding-left:18px; } .disc li { color:#4B5563; margin:5px 0; }
+            /* v6.3 점수 분해 발산형 막대 */
+            .xai { width:100%; border-collapse:collapse; margin:7px 0; }
+            .xai .xlab { width:30%; padding-right:10px; color:var(--ink); font-size:13px; font-weight:700; }
+            .xtrack { position:relative; height:16px; background:#EEF1F5; border-radius:999px; }
+            .xmid { position:absolute; left:50%; top:-2px; bottom:-2px; width:2px; background:#C4CCD8; }
+            .xfill { position:absolute; top:0; bottom:0; border-radius:999px; }
+            .xai .xval { width:48px; text-align:right; font-size:12px; font-weight:900; }
+            /* v6.3 점유 이력 타임라인 */
+            .tlev { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px dashed #E7EBF1; font-size:13px; }
+            .tldot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+            .tldot.c { background:var(--red); } .tldot.o { background:var(--green); }
+            .tlnm { font-weight:700; color:var(--ink); } .tlnm small { color:var(--muted); font-weight:600; }
+            .tlpill { font-size:11px; font-weight:850; padding:2px 8px; border-radius:999px; }
+            .tlpill.c { background:#FCEAEA; color:var(--red); } .tlpill.o { background:#E9F7EF; color:var(--green); }
+            .tlyr { margin-left:auto; color:var(--muted); font-size:12px; white-space:nowrap; }
+            /* v6.4 비교 중심 */
+            .prank { display:inline-block; background:var(--blue); color:#fff; font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; }
+            .prank.sm { font-size:10px; padding:1px 7px; }
+            .charrow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:8px; }
+            .charcard { padding:14px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#fff,#FAFBFD); }
+            .charcard b { display:block; margin:8px 0 4px; font-size:15px; line-height:1.3; }
+            .charcard small { color:var(--muted); font-size:12px; font-weight:700; }
+            .cmp3 { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:14px; }
+            .cmp3 th { background:#F6F8FB; color:var(--muted); padding:11px 14px; font-size:12px; font-weight:900; text-align:center; }
+            .cmp3 th:first-child { text-align:left; }
+            .cmp3 td { padding:11px 14px; border-top:1px solid #EDF0F5; text-align:center; }
+            .cmp3 td.cmpk { text-align:left; color:var(--muted); font-weight:800; font-size:13px; }
+            .cmp3 td.win { background:#FFF7F2; color:var(--orange); font-weight:950; }
+            .ptag { background:#E9F7EF; color:var(--green); font-size:11px; font-weight:900; padding:2px 9px; border-radius:999px; }
+            .charcard .ptscore.big { display:block; margin-top:9px; font-size:13px; font-weight:950; color:var(--orange); }
+            /* 매물 전환 탭 — 주소만 */
+            .ptabs { display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; }
+            .ptab { flex:1 1 0; min-width:170px; display:flex; align-items:center; justify-content:center; padding:15px 18px; border:1.5px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#fff,#FAFBFD); cursor:pointer; transition:transform .15s, box-shadow .15s, border-color .15s; }
+            .ptab:hover { border-color:#F0A877; transform:translateY(-1px); box-shadow:0 8px 20px rgba(15,23,42,.07); }
+            .ptab.on { border-color:var(--orange); background:linear-gradient(180deg,#FFF7F2,#fff); box-shadow:0 6px 18px rgba(232,93,31,.16); }
+            .ptab .ptaddr { font-size:15px; font-weight:900; color:var(--muted); line-height:1.3; text-align:center; }
+            .ptab.on .ptaddr { color:var(--ink); }
+            .pppanel { display:block; }
+            /* 점수 분해 3열 */
+            .ccols { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+            .ccol { padding:14px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#fff,#FAFBFD); }
+            .ccol-h { font-size:13px; font-weight:900; color:var(--ink); margin-bottom:10px; }
+            .ccol-h .prank { background:var(--orange); }
+            /* 매물별 총평 단락 */
+            .verdict { padding:16px 0; border-bottom:1px solid var(--line); }
+            .verdict:last-child { border-bottom:none; }
+            .verdict-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+            .verdict-h b { font-size:16px; }
+            .verdict-h .vsc { font-size:13px; color:var(--muted); font-weight:800; }
+            .fitline { display:flex; gap:8px; margin:7px 0; font-size:13.5px; line-height:1.55; }
+            .fitline span { flex:0 0 auto; font-weight:900; color:var(--blue); }
+            .guide { display:grid; grid-template-columns:minmax(150px,210px) 24px minmax(90px,130px) minmax(0,1fr); align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #EEF1F5; font-size:14px; }
+            .gaxis { font-weight:850; } .garrow { color:var(--muted); text-align:center; }
+            .gpick { color:var(--orange); font-weight:950; } .greason { color:var(--muted); font-size:13px; }
             @media (max-width: 900px) {
+              .charrow, .ccols { grid-template-columns:1fr; }
+              .cmp3 { font-size:13px; }
+              .guide { grid-template-columns:1fr; gap:3px; } .garrow { display:none; }
               .report-shell { width:min(100% - 24px, 1180px); padding-top:12px; }
               .cover { padding:30px 24px; } .cover h1 { font-size:30px; }
               .ops-grid, .signal-layout { grid-template-columns:1fr; }

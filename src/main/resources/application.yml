@@ -57,9 +57,10 @@ app:
       api-key: ${OPENAI_API_KEY:}
       endpoint: ${OPENAI_RESPONSES_ENDPOINT:https://api.openai.com/v1/responses}
       model: ${OPENAI_REPORT_MODEL:gpt-5.4-nano}
-      # 보고서 JSON(필수 챕터 10개)은 ~12.5k 토큰·~85초 소요. 9000/60초로는 잘림·타임아웃 -> 503.
-      timeout-seconds: ${OPENAI_REPORT_TIMEOUT_SECONDS:180}
-      max-output-tokens: ${OPENAI_REPORT_MAX_OUTPUT_TOKENS:16000}
+      # v6.5 병렬: 매물별 콜 N개 + 공통 콜 1개를 동시 호출. 아래 값은 '콜 1건' 기준(단일 매물 ~v5.0 1매물 분량).
+      # 콜이 병렬이라 벽시계는 ~25~30초(AWS 60초 인바운드 한도 내). timeout은 콜당 한도.
+      timeout-seconds: ${OPENAI_REPORT_TIMEOUT_SECONDS:90}
+      max-output-tokens: ${OPENAI_REPORT_MAX_OUTPUT_TOKENS:12000}
 
 springdoc:
   swagger-ui:

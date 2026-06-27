@@ -1,7 +1,9 @@
 package com.sanggwonai.api.report.service
 
 import com.sanggwonai.api.analysis.dto.AnalysisRecommendationDto
+import com.sanggwonai.api.analysis.dto.VacancyHistoryDto
 import com.sanggwonai.api.analysis.service.AnalysisService
+import com.sanggwonai.api.vacancy.dto.VacancyScoreExplanationDto
 import com.sanggwonai.api.auth.service.AuthContext
 import com.sanggwonai.api.report.config.ReportProperties
 import com.sanggwonai.api.report.repository.ReviewStorePoolRepository
@@ -64,7 +66,7 @@ class ReportContextAssembler(
         val categoryLabel = snap.categoryName(categoryId) ?: top1?.category
 
         val createdAt = analysis.createdAt.atZone(zone)
-        val top3 = recs.take(3).map { buildTop3Item(it, categoryId, snap) }
+        val top3 = recs.take(3).map { buildTop3Item(it, categoryId, categoryLabel, snap) }
 
         val result = LinkedHashMap<String, Any?>()
         result["saved_analysis"] = linkedMapOf(
@@ -126,7 +128,7 @@ class ReportContextAssembler(
     }
 
     // ── Top3 매물 1건 ──────────────────────────────────────────────
-    private fun buildTop3Item(rec: AnalysisRecommendationDto, categoryId: String, snap: VacancyDatasetSnapshot): Map<String, Any?> {
+    private fun buildTop3Item(rec: AnalysisRecommendationDto, categoryId: String, categoryLabel: String?, snap: VacancyDatasetSnapshot): Map<String, Any?> {
         val metric = metricRepository.find(categoryId, rec.vacancyId)
         val vacancy = snap.vacancyById[rec.vacancyId]
         val common = snap.commonByProperty[rec.vacancyId]
@@ -249,7 +251,56 @@ class ReportContextAssembler(
                 "spendingPerStore" to common?.spendingPerStore?.toLong(),
                 "commercialTurnoverType" to ((common?.commercialTurnoverType?.signum() ?: 0) != 0),
                 "commercialGrowthType" to ((common?.commercialGrowthType?.signum() ?: 0) != 0)
-            )
+            ),
+            // v6.5 매물별 — 보고서 탭이 매물마다 점수분해/미래전망/내력/9업종을 그리려면 top3 각 매물에 직접 들어가야 함.
+            "scoreExplanation" to scoreExplanationBlock(rec.scoreExplanation),
+            "horizon" to rec.horizonScores.sortedBy { it.horizonYears }
+                .map { linkedMapOf("years" to it.horizonYears, "score" to it.survivalScore.toInt()) },
+            "history" to rec.history?.scoreTrend
+                ?.map { linkedMapOf("year" to it.year, "score" to it.score.toDouble(), "delta" to it.delta?.toDouble()) },
+            "occupancy" to occupancyBlock(rec.history),
+            "selected_vacancy_extra" to buildSelectedExtra(rec, categoryId, categoryLabel, snap)
+        )
+    }
+
+    // ── 매물별 점수 분해(SHAP) — 렌더러 scoreExplanation.top_features 형태로 ──────────
+    private fun scoreExplanationBlock(exp: VacancyScoreExplanationDto?): Map<String, Any?>? = exp?.let {
+        linkedMapOf(
+            "source" to it.source,
+            "top_features" to it.features.sortedBy { f -> f.rank }.map { f ->
+                linkedMapOf(
+                    "rank" to f.rank,
+                    "label" to f.featureLabel,
+                    "effect" to f.effect,
+                    "current" to f.currentValue?.toDouble(),
+                    "average" to f.averageValue?.toDouble(),
+                    "unit" to f.displayUnit
+                )
+            }
+        )
+    }
+
+    // ── 매물별 점유 이력 — 렌더러 occupancy{tenant_count,closed_count,score_direction,timeline[]} 형태로 ──
+    private fun occupancyBlock(history: VacancyHistoryDto?): Map<String, Any?>? = history?.let { h ->
+        val timeline = h.occupancyTimeline
+        val trend = h.scoreTrend
+        val dir = if (trend.size >= 2) {
+            when (trend.last().score.compareTo(trend.first().score)) { 1 -> "up"; -1 -> "down"; else -> "flat" }
+        } else "flat"
+        linkedMapOf(
+            "tenant_count" to timeline.size,
+            "closed_count" to timeline.count { it.endedOn != null || it.status == "closed" },
+            "score_direction" to dir,
+            "pattern_label" to h.summary.occupancyPatternLabel,
+            "timeline" to timeline.map { ev ->
+                linkedMapOf(
+                    "tenant" to ev.tenantLabel,
+                    "category" to ev.businessCategory,
+                    "from" to ev.startedOn?.toString(),
+                    "to" to ev.endedOn?.toString(),
+                    "status" to (if (ev.endedOn != null) "closed" else "open")
+                )
+            }
         )
     }
 
