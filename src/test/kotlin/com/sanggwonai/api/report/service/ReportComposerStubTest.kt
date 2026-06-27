@@ -63,5 +63,39 @@ class ReportComposerStubTest {
         assertTrue(html.contains("당신에게 맞는 선택"), "공통 하단 섹션 누락")
     }
 
+    // 회귀: 실제 assembler 의 top3 항목엔 rank 가 없다. rank 없이도 매물 탭이 비지 않아야 한다(인덱스 폴백).
+    @Test
+    fun `top3에 rank 없어도 매물 탭이 렌더된다`() {
+        val full = mapper.readValue(resource("/report/sample_report_v65.json"), tr)
+        val overviewPiece = full.filterKeys { it != "property_reports" }
+        val propByRank = (full["property_reports"] as List<*>).map { it as Map<*, *> }
+            .associateBy { (it["rank"] as Number).toInt() }
+
+        val fake = object : LlmTextClient {
+            override fun isAvailable() = true
+            override fun generate(systemPrompt: String, userPrompt: String, temperature: Double): String? {
+                if (userPrompt.contains("공통 영역만")) return mapper.writeValueAsString(overviewPiece)
+                val rank = Regex("rank (\\d+) 매물").find(userPrompt)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+                return mapper.writeValueAsString(propByRank[rank])
+            }
+        }
+
+        // 프로덕션처럼 top3 에서 rank 키 제거
+        val input = mapper.readValue(resource("/report/sample_input_v65.json"), tr).toMutableMap()
+        val sa = (input["saved_analysis"] as Map<*, *>).toMutableMap()
+        sa["top3"] = (sa["top3"] as List<*>).map { (it as Map<*, *>).filterKeys { k -> k != "rank" } }
+        input["saved_analysis"] = sa
+
+        val result = ReportLlmComposer(fake, mapper).compose(input)
+        assertEquals("openai", result.source)
+        val html = ReportHtmlRenderer().render(result.report!!, input).toString(Charsets.UTF_8)
+
+        assertTrue(html.contains("매물 3개 비교"), "매물 0개로 비어버림(rank 매칭 실패)")
+        assertTrue(
+            html.contains("동교로 194") && html.contains("동교로 195") && html.contains("동교로25길 34"),
+            "rank 없을 때 매물 탭이 비었음"
+        )
+    }
+
     private fun resource(path: String) = javaClass.getResourceAsStream(path)!!.readBytes().decodeToString()
 }
