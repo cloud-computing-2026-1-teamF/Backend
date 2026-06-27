@@ -1,91 +1,779 @@
 {
   "saved_analysis": {
-    "id":"an_v65","date":"2026.06.20","region":"서교동","radius":800,"category":"일식","categoryEmoji":"🍣","topScore":78,
-    "top3":[
-      {"rank":1,"vacancyId":"v1","addr":"서울 마포구 동교로 194","score":78,
-       "rent":1400,"deposit":10000,"mgmt":50,"premium":19000,"area":281,"floor":"1층","foot":126607,"comp":134,"rev":1467,
-       "footHourly":[12,9,6,4,3,4,9,22,33,30,28,40,58,46,38,44,55,62,72,80,76,52,30,16],
-       "nearby":{"subway":"홍대입구(2호선)·합정(2,6호선)","bus":"동교동삼거리; 홍대입구역; 서교동","parking":"인근 공영주차장 2곳"},
-       "horizon":[{"years":1,"score":85},{"years":3,"score":78},{"years":5,"score":64}],
-       "scoreExplanation":{"top_features":[
-         {"label":"동종 경쟁점포","effect":"negative","current":134,"average":34},
-         {"label":"일평균 유동인구","effect":"positive","current":126607,"average":95000},
-         {"label":"점포당 평균매출","effect":"positive","current":1467,"average":1180},
-         {"label":"월세","effect":"negative","current":1400,"average":620}]},
-       "property":{"roadAddress":"서울 마포구 동교로 194","lotAddress":"서교동 357-1","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"1층","totalFloors":"5층"},
-       "lease":{"deposit":10000,"monthlyRent":1400,"maintenanceFee":50,"premium":19000,"dedicatedArea":281,"officialLandPrice":42000000},
-       "facilities":{"parkingAvailable":true,"parkingCount":3,"elevatorAvailable":true,"elevatorCount":1,"restroomType":"남녀구분","restroomCount":2,"heatingType":"중앙난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":false,"priceNegotiable":true,"rentAdjustable":true,"rentFreePeriodAvailable":false,"terrace":false,"rooftop":false,"interior":true,"storage":true},
-       "population":{"floatingQuarterly":2280000,"residentQuarterly":34000,"workerQuarterly":51000,"age2030PopulationRatio":0.369,"femalePopulationRatio":0.52,"workerToFloatingRatio":0.22},
-       "commercial":{"restaurantCount250m":120,"cafeCount250m":64,"sameCategoryRestaurantCount250m":48,"industryGrowthRate250m":-0.012,"restaurantCount500m":260,"cafeCount500m":150,"sameCategoryRestaurantCount500m":134,"industryGrowthRate500m":-0.01,"restaurantCount1000m":540,"cafeCount1000m":300,"sameCategoryRestaurantCount1000m":280,"industryGrowthRate1000m":0.004,"averageSalesPerStore":1467,"openingRate":0.2,"closureRate":0.019,"eveningSalesRatio":0.41,"lateNightSalesRatio":0.12,"foodSpending":38000000,"commercialGrowthType":true,"commercialTurnoverType":true},
-       "history":[{"year":2019,"score":70},{"year":2020,"score":62},{"year":2021,"score":68},{"year":2022,"score":73},{"year":2023,"score":76},{"year":2024,"score":78}],
-       "occupancy":{"tenant_count":4,"closed_count":3,"score_direction":"up","timeline":[
-         {"tenant":"스시노바","category":"일식","from":"2014-03-01","to":"2017-08-01","status":"closed"},
-         {"tenant":"홍대돈부리","category":"일식","from":"2017-10-01","to":"2020-05-01","status":"closed"},
-         {"tenant":"마라공방","category":"중식","from":"2020-07-01","to":"2023-02-01","status":"closed"},
-         {"tenant":"오마카세 키","category":"일식","from":"2023-04-01","to":"","status":"open"}]},
-       "review":{"rank":1,"주소_간략":"서울 마포구 동교로 194","demand_tags":[
-         {"tag":"재료가 신선해요","score":18.4},{"tag":"혼밥하기 좋아요","score":14.2},{"tag":"가성비가 좋아요","score":11.0},{"tag":"양이 많아요","score":8.3},{"tag":"친절해요","score":6.1}]}},
-      {"rank":2,"vacancyId":"v2","addr":"서울 마포구 동교로 195","score":72,
-       "rent":190,"deposit":2000,"mgmt":20,"premium":5000,"area":60,"floor":"지하1층","foot":126607,"comp":134,"rev":1467,
-       "footHourly":[12,9,6,4,3,4,9,22,33,30,28,40,58,46,38,44,55,62,72,80,76,52,30,16],
-       "nearby":{"subway":"홍대입구(2호선)","bus":"홍대입구역; 서교동","parking":"없음"},
-       "horizon":[{"years":1,"score":80},{"years":3,"score":72},{"years":5,"score":61}],
-       "scoreExplanation":{"top_features":[
-         {"label":"월세","effect":"positive","current":190,"average":620},
-         {"label":"일평균 유동인구","effect":"positive","current":126607,"average":95000},
-         {"label":"동종 경쟁점포","effect":"negative","current":134,"average":34}]},
-       "property":{"roadAddress":"서울 마포구 동교로 195","lotAddress":"서교동 358-2","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"지하1층","totalFloors":"4층"},
-       "lease":{"deposit":2000,"monthlyRent":190,"maintenanceFee":20,"premium":5000,"dedicatedArea":60,"officialLandPrice":38000000},
-       "facilities":{"parkingAvailable":false,"elevatorAvailable":false,"restroomType":"공용","restroomCount":1,"heatingType":"개별난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":true,"priceNegotiable":true,"rentAdjustable":true,"rentFreePeriodAvailable":true,"terrace":false,"rooftop":false,"interior":false,"storage":false},
-       "population":{"floatingQuarterly":2280000,"residentQuarterly":34000,"workerQuarterly":51000,"age2030PopulationRatio":0.34,"femalePopulationRatio":0.53,"workerToFloatingRatio":0.22},
-       "commercial":{"restaurantCount250m":120,"cafeCount250m":64,"sameCategoryRestaurantCount250m":48,"industryGrowthRate250m":-0.012,"restaurantCount500m":260,"cafeCount500m":150,"sameCategoryRestaurantCount500m":134,"industryGrowthRate500m":-0.01,"averageSalesPerStore":1467,"openingRate":0.21,"closureRate":0.022,"eveningSalesRatio":0.44,"lateNightSalesRatio":0.18,"foodSpending":38000000,"commercialGrowthType":true,"commercialTurnoverType":true},
-       "history":[{"year":2019,"score":66},{"year":2020,"score":58},{"year":2021,"score":63},{"year":2022,"score":68},{"year":2023,"score":70},{"year":2024,"score":72}],
-       "occupancy":{"tenant_count":3,"closed_count":2,"score_direction":"up","timeline":[
-         {"tenant":"와인바 로","category":"주점","from":"2016-05-01","to":"2019-09-01","status":"closed"},
-         {"tenant":"이자카야 하루","category":"일식","from":"2019-11-01","to":"2022-12-01","status":"closed"},
-         {"tenant":"사케하우스","category":"일식","from":"2023-02-01","to":"","status":"open"}]},
-       "review":{"rank":2,"주소_간략":"서울 마포구 동교로 195","demand_tags":[
-         {"tag":"분위기가 좋아요","score":16.7},{"tag":"데이트하기 좋아요","score":12.9},{"tag":"술이 다양해요","score":9.4},{"tag":"친절해요","score":7.0},{"tag":"매장이 청결해요","score":5.2}]}},
-      {"rank":3,"vacancyId":"v3","addr":"서울 마포구 동교로25길 34","score":69,"recommended":false,
-       "rent":550,"deposit":5000,"mgmt":30,"premium":9000,"area":90,"floor":"2층","foot":110000,"comp":120,"rev":1467,
-       "footHourly":[10,8,6,4,3,4,8,20,30,28,26,38,55,44,36,42,52,60,70,78,74,50,28,14],
-       "nearby":{"subway":"홍대입구(2호선)","bus":"서교동; 동교동삼거리","parking":"인근 공영"},
-       "horizon":[{"years":1,"score":76},{"years":3,"score":69},{"years":5,"score":58}],
-       "scoreExplanation":{"top_features":[
-         {"label":"월세","effect":"positive","current":550,"average":620},
-         {"label":"일평균 유동인구","effect":"positive","current":110000,"average":95000},
-         {"label":"동종 경쟁점포","effect":"negative","current":120,"average":34}]},
-       "property":{"roadAddress":"서울 마포구 동교로25길 34","lotAddress":"서교동 360-5","buildingType":"근린생활시설","buildingUse":"제2종근린생활시설","transactionType":"임대","floor":"2층","totalFloors":"6층"},
-       "lease":{"deposit":5000,"monthlyRent":550,"maintenanceFee":30,"premium":9000,"dedicatedArea":90,"officialLandPrice":36000000},
-       "facilities":{"parkingAvailable":true,"parkingCount":2,"elevatorAvailable":false,"restroomType":"남녀구분","restroomCount":2,"heatingType":"개별난방","airConditioner":true,"heater":true,"lateNightOperationAvailable":false,"priceNegotiable":false,"rentAdjustable":false,"rentFreePeriodAvailable":false,"terrace":true,"rooftop":false,"interior":true,"storage":true},
-       "population":{"floatingQuarterly":1980000,"residentQuarterly":36000,"workerQuarterly":44000,"age2030PopulationRatio":0.31,"femalePopulationRatio":0.51,"workerToFloatingRatio":0.21},
-       "commercial":{"restaurantCount250m":104,"cafeCount250m":58,"sameCategoryRestaurantCount250m":42,"industryGrowthRate250m":0.002,"restaurantCount500m":240,"cafeCount500m":138,"sameCategoryRestaurantCount500m":120,"industryGrowthRate500m":0.004,"averageSalesPerStore":1467,"openingRate":0.19,"closureRate":0.018,"eveningSalesRatio":0.4,"lateNightSalesRatio":0.1,"foodSpending":36000000,"commercialGrowthType":true,"commercialTurnoverType":false},
-       "history":[{"year":2019,"score":64},{"year":2020,"score":57},{"year":2021,"score":61},{"year":2022,"score":65},{"year":2023,"score":67},{"year":2024,"score":69}],
-       "occupancy":{"tenant_count":2,"closed_count":1,"score_direction":"up","timeline":[
-         {"tenant":"파스타공방","category":"양식","from":"2018-04-01","to":"2022-06-01","status":"closed"},
-         {"tenant":"우동상회","category":"일식","from":"2022-09-01","to":"","status":"open"}]},
-       "review":{"rank":3,"주소_간략":"서울 마포구 동교로25길 34","demand_tags":[
-         {"tag":"음식이 맛있어요","score":15.1},{"tag":"재료가 신선해요","score":10.8},{"tag":"웨이팅 짧아요","score":7.7},{"tag":"좌석이 편해요","score":5.5},{"tag":"양이 많아요","score":4.0}]}}
+    "id": "an_v65",
+    "date": "2026.06.20",
+    "region": "서교동",
+    "radius": 800,
+    "category": "일식",
+    "categoryEmoji": "🍣",
+    "topScore": 78,
+    "top3": [
+      {
+        "rank": 1,
+        "vacancyId": "v1",
+        "addr": "서울 마포구 동교로 194",
+        "score": 78,
+        "rent": 1400,
+        "deposit": 10000,
+        "mgmt": 50,
+        "premium": 19000,
+        "area": 281,
+        "floor": 1,
+        "foot": 126607,
+        "comp": 134,
+        "rev": 1467,
+        "footHourly": [
+          12,
+          9,
+          6,
+          4,
+          3,
+          4,
+          9,
+          22,
+          33,
+          30,
+          28,
+          40,
+          58,
+          46,
+          38,
+          44,
+          55,
+          62,
+          72,
+          80,
+          76,
+          52,
+          30,
+          16
+        ],
+        "nearby": {
+          "subway": "홍대입구(2호선)·합정(2,6호선)",
+          "bus": "동교동삼거리; 홍대입구역; 서교동",
+          "parking": "인근 공영주차장 2곳"
+        },
+        "horizon": [
+          {
+            "years": 1,
+            "score": 85
+          },
+          {
+            "years": 3,
+            "score": 78
+          },
+          {
+            "years": 5,
+            "score": 64
+          }
+        ],
+        "scoreExplanation": {
+          "top_features": [
+            {
+              "label": "동종 경쟁점포",
+              "effect": "negative",
+              "current": 134,
+              "average": 34
+            },
+            {
+              "label": "일평균 유동인구",
+              "effect": "positive",
+              "current": 126607,
+              "average": 95000
+            },
+            {
+              "label": "점포당 평균매출",
+              "effect": "positive",
+              "current": 1467,
+              "average": 1180
+            },
+            {
+              "label": "월세",
+              "effect": "negative",
+              "current": 1400,
+              "average": 620
+            }
+          ]
+        },
+        "property": {
+          "roadAddress": "서울 마포구 동교로 194",
+          "lotAddress": "서교동 357-1",
+          "buildingType": "근린생활시설",
+          "buildingUse": "제2종근린생활시설",
+          "transactionType": "임대",
+          "floor": "1층",
+          "totalFloors": "5층"
+        },
+        "lease": {
+          "deposit": 10000,
+          "monthlyRent": 1400,
+          "maintenanceFee": 50,
+          "premium": 19000,
+          "dedicatedArea": 281,
+          "officialLandPrice": 42000000
+        },
+        "facilities": {
+          "parkingAvailable": true,
+          "parkingCount": 3,
+          "elevatorAvailable": true,
+          "elevatorCount": 1,
+          "restroomType": "남녀구분",
+          "restroomCount": 2,
+          "heatingType": "중앙난방",
+          "airConditioner": true,
+          "heater": true,
+          "lateNightOperationAvailable": false,
+          "priceNegotiable": true,
+          "rentAdjustable": true,
+          "rentFreePeriodAvailable": false,
+          "terrace": false,
+          "rooftop": false,
+          "interior": true,
+          "storage": true
+        },
+        "population": {
+          "floatingQuarterly": 2280000,
+          "residentQuarterly": 34000,
+          "workerQuarterly": 51000,
+          "age2030PopulationRatio": 0.369,
+          "femalePopulationRatio": 0.52,
+          "workerToFloatingRatio": 0.22
+        },
+        "commercial": {
+          "restaurantCount250m": 120,
+          "cafeCount250m": 64,
+          "sameCategoryRestaurantCount250m": 48,
+          "industryGrowthRate250m": -0.012,
+          "restaurantCount500m": 260,
+          "cafeCount500m": 150,
+          "sameCategoryRestaurantCount500m": 134,
+          "industryGrowthRate500m": -0.01,
+          "restaurantCount1000m": 540,
+          "cafeCount1000m": 300,
+          "sameCategoryRestaurantCount1000m": 280,
+          "industryGrowthRate1000m": 0.004,
+          "averageSalesPerStore": 1467,
+          "openingRate": 0.2,
+          "closureRate": 0.019,
+          "eveningSalesRatio": 0.41,
+          "lateNightSalesRatio": 0.12,
+          "foodSpending": 38000000,
+          "commercialGrowthType": true,
+          "commercialTurnoverType": true
+        },
+        "history": [
+          {
+            "year": 2019,
+            "score": 70
+          },
+          {
+            "year": 2020,
+            "score": 62
+          },
+          {
+            "year": 2021,
+            "score": 68
+          },
+          {
+            "year": 2022,
+            "score": 73
+          },
+          {
+            "year": 2023,
+            "score": 76
+          },
+          {
+            "year": 2024,
+            "score": 78
+          }
+        ],
+        "occupancy": {
+          "tenant_count": 4,
+          "closed_count": 3,
+          "score_direction": "up",
+          "timeline": [
+            {
+              "tenant": "스시노바",
+              "category": "일식",
+              "from": "2014-03-01",
+              "to": "2017-08-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "홍대돈부리",
+              "category": "일식",
+              "from": "2017-10-01",
+              "to": "2020-05-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "마라공방",
+              "category": "중식",
+              "from": "2020-07-01",
+              "to": "2023-02-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "오마카세 키",
+              "category": "일식",
+              "from": "2023-04-01",
+              "to": "",
+              "status": "open"
+            }
+          ]
+        },
+        "review": {
+          "rank": 1,
+          "주소_간략": "서울 마포구 동교로 194",
+          "demand_tags": [
+            {
+              "tag": "재료가 신선해요",
+              "score": 18.4
+            },
+            {
+              "tag": "혼밥하기 좋아요",
+              "score": 14.2
+            },
+            {
+              "tag": "가성비가 좋아요",
+              "score": 11.0
+            },
+            {
+              "tag": "양이 많아요",
+              "score": 8.3
+            },
+            {
+              "tag": "친절해요",
+              "score": 6.1
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "vacancyId": "v2",
+        "addr": "서울 마포구 동교로 195",
+        "score": 72,
+        "rent": 0,
+        "deposit": 0,
+        "mgmt": 20,
+        "premium": 5000,
+        "area": 60,
+        "floor": -1,
+        "foot": 126607,
+        "comp": 134,
+        "rev": 1467,
+        "footHourly": [
+          12,
+          9,
+          6,
+          4,
+          3,
+          4,
+          9,
+          22,
+          33,
+          30,
+          28,
+          40,
+          58,
+          46,
+          38,
+          44,
+          55,
+          62,
+          72,
+          80,
+          76,
+          52,
+          30,
+          16
+        ],
+        "nearby": {
+          "subway": "홍대입구(2호선)",
+          "bus": "홍대입구역; 서교동",
+          "parking": "없음"
+        },
+        "horizon": [
+          {
+            "years": 1,
+            "score": 80
+          },
+          {
+            "years": 3,
+            "score": 72
+          },
+          {
+            "years": 5,
+            "score": 61
+          }
+        ],
+        "scoreExplanation": {
+          "top_features": [
+            {
+              "label": "월세",
+              "effect": "positive",
+              "current": 190,
+              "average": 620
+            },
+            {
+              "label": "일평균 유동인구",
+              "effect": "positive",
+              "current": 126607,
+              "average": 95000
+            },
+            {
+              "label": "동종 경쟁점포",
+              "effect": "negative",
+              "current": 134,
+              "average": 34
+            }
+          ]
+        },
+        "property": {
+          "roadAddress": "서울 마포구 동교로 195",
+          "lotAddress": "서교동 358-2",
+          "buildingType": "근린생활시설",
+          "buildingUse": "제2종근린생활시설",
+          "transactionType": "임대",
+          "floor": "지하1층",
+          "totalFloors": "4층"
+        },
+        "lease": {
+          "deposit": 2000,
+          "monthlyRent": 190,
+          "maintenanceFee": 20,
+          "premium": 5000,
+          "dedicatedArea": 60,
+          "officialLandPrice": 38000000
+        },
+        "facilities": {
+          "parkingAvailable": false,
+          "elevatorAvailable": false,
+          "restroomType": "공용",
+          "restroomCount": 1,
+          "heatingType": "개별난방",
+          "airConditioner": true,
+          "heater": true,
+          "lateNightOperationAvailable": true,
+          "priceNegotiable": true,
+          "rentAdjustable": true,
+          "rentFreePeriodAvailable": true,
+          "terrace": false,
+          "rooftop": false,
+          "interior": false,
+          "storage": false
+        },
+        "population": {
+          "floatingQuarterly": 2280000,
+          "residentQuarterly": 34000,
+          "workerQuarterly": 51000,
+          "age2030PopulationRatio": 0.34,
+          "femalePopulationRatio": 0.53,
+          "workerToFloatingRatio": 0.22
+        },
+        "commercial": {
+          "restaurantCount250m": 120,
+          "cafeCount250m": 64,
+          "sameCategoryRestaurantCount250m": 48,
+          "industryGrowthRate250m": -0.012,
+          "restaurantCount500m": 260,
+          "cafeCount500m": 150,
+          "sameCategoryRestaurantCount500m": 134,
+          "industryGrowthRate500m": -0.01,
+          "averageSalesPerStore": 1467,
+          "openingRate": 0.21,
+          "closureRate": 0.022,
+          "eveningSalesRatio": 0.44,
+          "lateNightSalesRatio": 0.18,
+          "foodSpending": 38000000,
+          "commercialGrowthType": true,
+          "commercialTurnoverType": true
+        },
+        "history": [
+          {
+            "year": 2019,
+            "score": 66
+          },
+          {
+            "year": 2020,
+            "score": 58
+          },
+          {
+            "year": 2021,
+            "score": 63
+          },
+          {
+            "year": 2022,
+            "score": 68
+          },
+          {
+            "year": 2023,
+            "score": 70
+          },
+          {
+            "year": 2024,
+            "score": 72
+          }
+        ],
+        "occupancy": {
+          "tenant_count": 3,
+          "closed_count": 2,
+          "score_direction": "up",
+          "timeline": [
+            {
+              "tenant": "와인바 로",
+              "category": "주점",
+              "from": "2016-05-01",
+              "to": "2019-09-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "이자카야 하루",
+              "category": "일식",
+              "from": "2019-11-01",
+              "to": "2022-12-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "사케하우스",
+              "category": "일식",
+              "from": "2023-02-01",
+              "to": "",
+              "status": "open"
+            }
+          ]
+        },
+        "review": {
+          "rank": 2,
+          "주소_간략": "서울 마포구 동교로 195",
+          "demand_tags": [
+            {
+              "tag": "분위기가 좋아요",
+              "score": 16.7
+            },
+            {
+              "tag": "데이트하기 좋아요",
+              "score": 12.9
+            },
+            {
+              "tag": "술이 다양해요",
+              "score": 9.4
+            },
+            {
+              "tag": "친절해요",
+              "score": 7.0
+            },
+            {
+              "tag": "매장이 청결해요",
+              "score": 5.2
+            }
+          ]
+        },
+        "transactionType": "매매"
+      },
+      {
+        "rank": 3,
+        "vacancyId": "v3",
+        "addr": "서울 마포구 동교로25길 34",
+        "score": 69,
+        "recommended": false,
+        "rent": 550,
+        "deposit": 5000,
+        "mgmt": 30,
+        "premium": 9000,
+        "area": 90,
+        "floor": 2,
+        "foot": 110000,
+        "comp": 120,
+        "rev": 1467,
+        "footHourly": [
+          10,
+          8,
+          6,
+          4,
+          3,
+          4,
+          8,
+          20,
+          30,
+          28,
+          26,
+          38,
+          55,
+          44,
+          36,
+          42,
+          52,
+          60,
+          70,
+          78,
+          74,
+          50,
+          28,
+          14
+        ],
+        "nearby": {
+          "subway": "홍대입구(2호선)",
+          "bus": "서교동; 동교동삼거리",
+          "parking": "인근 공영"
+        },
+        "horizon": [
+          {
+            "years": 1,
+            "score": 76
+          },
+          {
+            "years": 3,
+            "score": 69
+          },
+          {
+            "years": 5,
+            "score": 58
+          }
+        ],
+        "scoreExplanation": {
+          "top_features": [
+            {
+              "label": "월세",
+              "effect": "positive",
+              "current": 550,
+              "average": 620
+            },
+            {
+              "label": "일평균 유동인구",
+              "effect": "positive",
+              "current": 110000,
+              "average": 95000
+            },
+            {
+              "label": "동종 경쟁점포",
+              "effect": "negative",
+              "current": 120,
+              "average": 34
+            }
+          ]
+        },
+        "property": {
+          "roadAddress": "서울 마포구 동교로25길 34",
+          "lotAddress": "서교동 360-5",
+          "buildingType": "근린생활시설",
+          "buildingUse": "제2종근린생활시설",
+          "transactionType": "임대",
+          "floor": "2층",
+          "totalFloors": "6층"
+        },
+        "lease": {
+          "deposit": 5000,
+          "monthlyRent": 550,
+          "maintenanceFee": 30,
+          "premium": 9000,
+          "dedicatedArea": 90,
+          "officialLandPrice": 36000000
+        },
+        "facilities": {
+          "parkingAvailable": true,
+          "parkingCount": 2,
+          "elevatorAvailable": false,
+          "restroomType": "남녀구분",
+          "restroomCount": 2,
+          "heatingType": "개별난방",
+          "airConditioner": true,
+          "heater": true,
+          "lateNightOperationAvailable": false,
+          "priceNegotiable": false,
+          "rentAdjustable": false,
+          "rentFreePeriodAvailable": false,
+          "terrace": true,
+          "rooftop": false,
+          "interior": true,
+          "storage": true
+        },
+        "population": {
+          "floatingQuarterly": 1980000,
+          "residentQuarterly": 36000,
+          "workerQuarterly": 44000,
+          "age2030PopulationRatio": 0.31,
+          "femalePopulationRatio": 0.51,
+          "workerToFloatingRatio": 0.21
+        },
+        "commercial": {
+          "restaurantCount250m": 104,
+          "cafeCount250m": 58,
+          "sameCategoryRestaurantCount250m": 42,
+          "industryGrowthRate250m": 0.002,
+          "restaurantCount500m": 240,
+          "cafeCount500m": 138,
+          "sameCategoryRestaurantCount500m": 120,
+          "industryGrowthRate500m": 0.004,
+          "averageSalesPerStore": 1467,
+          "openingRate": 0.19,
+          "closureRate": 0.018,
+          "eveningSalesRatio": 0.4,
+          "lateNightSalesRatio": 0.1,
+          "foodSpending": 36000000,
+          "commercialGrowthType": true,
+          "commercialTurnoverType": false
+        },
+        "history": [
+          {
+            "year": 2019,
+            "score": 64
+          },
+          {
+            "year": 2020,
+            "score": 57
+          },
+          {
+            "year": 2021,
+            "score": 61
+          },
+          {
+            "year": 2022,
+            "score": 65
+          },
+          {
+            "year": 2023,
+            "score": 67
+          },
+          {
+            "year": 2024,
+            "score": 69
+          }
+        ],
+        "occupancy": {
+          "tenant_count": 2,
+          "closed_count": 1,
+          "score_direction": "up",
+          "timeline": [
+            {
+              "tenant": "파스타공방",
+              "category": "양식",
+              "from": "2018-04-01",
+              "to": "2022-06-01",
+              "status": "closed"
+            },
+            {
+              "tenant": "우동상회",
+              "category": "일식",
+              "from": "2022-09-01",
+              "to": "",
+              "status": "open"
+            }
+          ]
+        },
+        "review": {
+          "rank": 3,
+          "주소_간략": "서울 마포구 동교로25길 34",
+          "demand_tags": [
+            {
+              "tag": "음식이 맛있어요",
+              "score": 15.1
+            },
+            {
+              "tag": "재료가 신선해요",
+              "score": 10.8
+            },
+            {
+              "tag": "웨이팅 짧아요",
+              "score": 7.7
+            },
+            {
+              "tag": "좌석이 편해요",
+              "score": 5.5
+            },
+            {
+              "tag": "양이 많아요",
+              "score": 4.0
+            }
+          ]
+        }
+      }
     ]
   },
-  "vacancy_metric_reference":{
-    "peerCount":40,
-    "footTrafficDaily":{"selected":126607,"average":95000,"median":92000,"min":40000,"max":180000,"percentile":70},
-    "competition500m":{"selected":134,"average":34,"median":30,"min":5,"max":150,"percentile":95},
-    "averageSalesMonthly":{"selected":1467,"average":1180,"median":1180,"min":620,"max":1950,"percentile":70}
+  "vacancy_metric_reference": {
+    "peerCount": 40,
+    "footTrafficDaily": {
+      "selected": 126607,
+      "average": 95000,
+      "median": 92000,
+      "min": 40000,
+      "max": 180000,
+      "percentile": 70
+    },
+    "competition500m": {
+      "selected": 134,
+      "average": 34,
+      "median": 30,
+      "min": 5,
+      "max": 150,
+      "percentile": 95
+    },
+    "averageSalesMonthly": {
+      "selected": 1467,
+      "average": 1180,
+      "median": 1180,
+      "min": 620,
+      "max": 1950,
+      "percentile": 70
+    }
   },
-  "selected_vacancy_extra":{
-    "vacancy_id":"v1","selected_category":"일식","selected_score_percent":78,
-    "nine_category_scores":{"한식":62,"중식":51,"일식":78,"서양식":63,"기타":47,"구내식당및뷔페":40,"패스트푸드":54,"주점업":69,"카페디저트":74},
-    "ranking_in_9_categories":1
+  "selected_vacancy_extra": {
+    "vacancy_id": "v1",
+    "selected_category": "일식",
+    "selected_score_percent": 78,
+    "nine_category_scores": {
+      "한식": 62,
+      "중식": 51,
+      "일식": 78,
+      "서양식": 63,
+      "기타": 47,
+      "구내식당및뷔페": 40,
+      "패스트푸드": 54,
+      "주점업": 69,
+      "카페디저트": 74
+    },
+    "ranking_in_9_categories": 1
   },
-  "section_06_investment_payback":{
-    "vacancy_id":"v1","matched_category":"일식",
-    "초기투자비_만원":26000,"월순이익_만원":-652,"투자회수기간_개월":null,"투자회수평가":"적자",
-    "bep_action":{"객단가원":12000,"피크_손익분기_잔수":38},
-    "properties":[
-      {"rank":1,"vacancy_id":"v1","주소_간략":"동교로 194","초기투자비_만원":26000,"월순이익_만원":-652,"투자회수기간_개월":null,"투자회수평가":"적자"},
-      {"rank":2,"vacancy_id":"v2","주소_간략":"동교로 195","초기투자비_만원":6000,"월순이익_만원":558,"투자회수기간_개월":11,"투자회수평가":"3년 이내"},
-      {"rank":3,"vacancy_id":"v3","주소_간략":"동교로25길 34","초기투자비_만원":12000,"월순이익_만원":210,"투자회수기간_개월":57,"투자회수평가":"3년 이상"}]
+  "section_06_investment_payback": {
+    "vacancy_id": "v1",
+    "matched_category": "일식",
+    "초기투자비_만원": 26000,
+    "월순이익_만원": -652,
+    "투자회수기간_개월": null,
+    "투자회수평가": "적자",
+    "bep_action": {
+      "객단가원": 12000,
+      "피크_손익분기_잔수": 38
+    },
+    "properties": [
+      {
+        "rank": 1,
+        "vacancy_id": "v1",
+        "주소_간략": "동교로 194",
+        "초기투자비_만원": 26000,
+        "월순이익_만원": -652,
+        "투자회수기간_개월": null,
+        "투자회수평가": "적자"
+      },
+      {
+        "rank": 2,
+        "vacancy_id": "v2",
+        "주소_간략": "동교로 195",
+        "초기투자비_만원": 6000,
+        "월순이익_만원": 558,
+        "투자회수기간_개월": 11,
+        "투자회수평가": "3년 이내"
+      },
+      {
+        "rank": 3,
+        "vacancy_id": "v3",
+        "주소_간략": "동교로25길 34",
+        "초기투자비_만원": 12000,
+        "월순이익_만원": 210,
+        "투자회수기간_개월": 57,
+        "투자회수평가": "3년 이상"
+      }
+    ]
   }
 }

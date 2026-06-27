@@ -422,7 +422,7 @@ class ReportContextAssembler(
     }
 
     private data class Payback(
-        val initial: Long, val sales: Long?, val netProfit: Long?,
+        val initial: Long?, val sales: Long?, val netProfit: Long?,
         val months: Double?, val label: String, val basis: String,
         // 기존 시설 활용 가능(이전에도 같은 업종 -> 인테리어·설비 capex 절감). 가영 실데이터에만 존재.
         val facilityReusable: Boolean = false, val facilityReuseNote: String? = null
@@ -450,8 +450,14 @@ class ReportContextAssembler(
         val maint = rec.maintenanceFee ?: 0
         val brokerage = ((deposit + rent * 100).toDouble() * a.brokerageRate).roundToLong() // 만원
         val sale = rec.salePrice
-        val initial = if (sale != null && rec.transactionType == "매매") {
-            sale + brokerage
+        // 매매(거래유형 '매매' 또는 매매가 존재)인데 매매가가 미적재면 초기투자비를 계산할 수 없다.
+        // 이전엔 else 로 빠져 (월세+관리비)×3 만 잡혀 '초기투자비 수십만원·회수 0개월' 같은 오값이 나왔음 → '매매가 미확인'.
+        val isSale = rec.transactionType == "매매" || (sale != null && sale > 0)
+        if (isSale && (sale == null || sale <= 0)) {
+            return Payback(null, null, null, null, "매매가 미확인", "매매가 미적재로 회수 계산 불가")
+        }
+        val initial = if (isSale) {
+            sale!! + brokerage
         } else {
             deposit + premium + brokerage + (rent + maint) * a.workingCapitalMonths
         }
