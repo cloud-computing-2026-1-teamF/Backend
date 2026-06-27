@@ -194,8 +194,10 @@ class ReportHtmlRenderer {
         metricTile(sb, "보증금", wonShort(dbl(lease["deposit"]) ?: dbl(top1["deposit"])), "초기 현금")
         metricTile(sb, "권리금", wonShort(dbl(lease["premium"])), "인수 비용")
         metricTile(sb, "전용면적", areaText(dbl(lease["dedicatedArea"]) ?: dbl(top1["area"])), "운영 가능 면적")
-        metricTile(sb, "층 / 총층", listOf(str(property["floor"]).ifBlank { str(top1["floor"]) }, str(property["totalFloors"]))
-            .filter { it.isNotBlank() }.joinToString(" / ").ifBlank { "-" }, "동선 확인")
+        metricTile(sb, "층 / 총층", listOf(
+            floorText(str(property["floor"]).ifBlank { str(top1["floor"]) }),
+            str(property["totalFloors"]).ifBlank { null }?.let { "${it}층" }
+        ).filterNotNull().filter { it.isNotBlank() && it != "-" }.joinToString(" / ").ifBlank { "-" }, "동선 확인")
         metricTile(sb, "임대 부담률", burden?.let { "%.1f%%".format(it * 100) } ?: "-", "월 임대비 / 평균매출")
         sb.append("</div>")
         comment(sb, str(ch2["임대_조건_코멘트"]))
@@ -722,13 +724,13 @@ class ReportHtmlRenderer {
         sb.append("</tr></thead><tbody>")
         cmpRow(sb, "하루 유동", cols, cmp = { dbl(it["foot"]) }) { commaOrDash(it["foot"]) }
         cmpRow(sb, "500m 경쟁", cols, lowGood = true, cmp = { dbl(it["comp"]) }) { intOf(it["comp"])?.toString() ?: "-" }
-        cmpRow(sb, "월세", cols, lowGood = true, cmp = { dbl(it["rent"]) }) { wonShort(dbl(it["rent"])) }
-        cmpRow(sb, "보증금", cols, lowGood = true, cmp = { dbl(it["deposit"]) }) { wonShort(dbl(it["deposit"])) }
+        cmpRow(sb, "월세", cols, lowGood = true, cmp = { dbl(it["rent"]).takeIf { v -> (v ?: 0.0) > 0 } }) { priceText(it, "rent") }
+        cmpRow(sb, "보증금", cols, lowGood = true, cmp = { dbl(it["deposit"]).takeIf { v -> (v ?: 0.0) > 0 } }) { priceText(it, "deposit") }
         cmpRow(sb, "전용면적", cols, highlight = false) { pyeong(dbl(it["area"])) }
         cmpRow(sb, "회수기간", cols, lowGood = true, cmp = { dbl(payByRank(input, intOf(it["rank"]) ?: 0, str(it["vacancyId"]))?.get("투자회수기간_개월")) }) { t ->
             intOf(payByRank(input, intOf(t["rank"]) ?: 0, str(t["vacancyId"]))?.get("투자회수기간_개월"))?.let { "${it}개월" } ?: "적자/미정"
         }
-        cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { str(it["floor"]).ifBlank { "-" } }
+        cmpRow(sb, "층", cols, cmp = { floorScore(str(it["floor"])) }) { floorText(str(it["floor"])) }
         sb.append("</tbody></table>")
         sb.append("<p class=\"body sm faint\">* 굵게 = 해당 지표에서 가장 유리한 매물</p>")
         str(ov["종합_비교평"]).ifBlank { null }?.let { sb.append("<div class=\"callout\">").append(esc(it)).append("</div>") }
@@ -773,12 +775,31 @@ class ReportHtmlRenderer {
     /** 전용면적(㎡) → 평 표기. */
     private fun pyeong(areaM2: Double?): String = areaM2?.takeIf { it > 0 }?.let { "${(it / 3.305785).roundToInt()}평" } ?: "-"
 
-    /** 층 비교용 점수 — 1층이 가장 유리, 그다음 저층, 지하가 최하. */
-    private fun floorScore(floor: String): Double? {
+    /** "1층"/"지하1층"/"-1"/"2" 등을 정수 층으로 정규화. 지하=음수. */
+    private fun floorToInt(floor: String): Int? {
         if (floor.isBlank()) return null
-        if (floor.contains("지하") || floor.startsWith("B")) return 1.0
-        val n = Regex("\\d+").find(floor)?.value?.toIntOrNull() ?: return 2.0
-        return if (n == 1) 3.0 else (3.0 - (n - 1) * 0.3).coerceAtLeast(1.2)
+        if (floor.contains("지하") || floor.startsWith("B", true))
+            return -(Regex("\\d+").find(floor)?.value?.toIntOrNull() ?: 1)
+        return Regex("-?\\d+").find(floor)?.value?.toIntOrNull()
+    }
+
+    /** 층 표시용 — 정수/문자 모두 '지하N층 / N층'으로. */
+    private fun floorText(floor: String): String {
+        val n = floorToInt(floor) ?: return floor.ifBlank { "-" }
+        return when { n < 0 -> "지하${-n}층"; n == 0 -> "-"; else -> "${n}층" }
+    }
+
+    /** 층 비교용 점수 — 1층이 가장 유리, 그다음 저층, 지하·0층이 최하. */
+    private fun floorScore(floor: String): Double? {
+        val n = floorToInt(floor) ?: return null
+        return when { n == 1 -> 3.0; n >= 2 -> (3.0 - (n - 1) * 0.3).coerceAtLeast(1.5); else -> 1.0 }
+    }
+
+    /** 가격 셀 — 0이면 매매 매물은 '매매', 아니면 '-'. (매매의 월세 0 을 '최저'로 강조하지 않기 위함) */
+    private fun priceText(prop: Map<*, *>, key: String): String {
+        val v = dbl(prop[key]) ?: 0.0
+        if (v > 0) return wonShort(v)
+        return if (str(prop["transactionType"]).contains("매매")) "매매" else "-"
     }
 
     /** input 을 복제하되 saved_analysis.top3 를 해당 매물 1건으로 좁히고, 매물별 섹션(수익성/리뷰/내력)을 그 매물 것으로 교체. */
