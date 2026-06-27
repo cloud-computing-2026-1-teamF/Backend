@@ -102,7 +102,9 @@
           "buildingUse": "제2종근린생활시설",
           "transactionType": "임대",
           "floor": "1층",
-          "totalFloors": "5층"
+          "totalFloors": "5층",
+          "viewCount": 3120,
+          "favoriteCount": 210
         },
         "lease": {
           "deposit": 10000,
@@ -137,7 +139,9 @@
           "workerQuarterly": 51000,
           "age2030PopulationRatio": 0.369,
           "femalePopulationRatio": 0.52,
-          "workerToFloatingRatio": 0.22
+          "workerToFloatingRatio": 0.22,
+          "eveningPopulationRatio": 0.33,
+          "weekendPopulationRatio": 0.41
         },
         "commercial": {
           "restaurantCount250m": 120,
@@ -159,7 +163,11 @@
           "lateNightSalesRatio": 0.12,
           "foodSpending": 38000000,
           "commercialGrowthType": true,
-          "commercialTurnoverType": true
+          "commercialTurnoverType": true,
+          "weekendSalesRatio": 0.38,
+          "age2030SalesRatio": 0.46,
+          "femaleSalesRatio": 0.55,
+          "spendingPerStore": 2100000
         },
         "history": [
           {
@@ -337,7 +345,9 @@
           "buildingUse": "제2종근린생활시설",
           "transactionType": "임대",
           "floor": "지하1층",
-          "totalFloors": "4층"
+          "totalFloors": "4층",
+          "viewCount": 640,
+          "favoriteCount": 38
         },
         "lease": {
           "deposit": 2000,
@@ -370,7 +380,9 @@
           "workerQuarterly": 51000,
           "age2030PopulationRatio": 0.34,
           "femalePopulationRatio": 0.53,
-          "workerToFloatingRatio": 0.22
+          "workerToFloatingRatio": 0.22,
+          "eveningPopulationRatio": 0.33,
+          "weekendPopulationRatio": 0.41
         },
         "commercial": {
           "restaurantCount250m": 120,
@@ -388,7 +400,11 @@
           "lateNightSalesRatio": 0.18,
           "foodSpending": 38000000,
           "commercialGrowthType": true,
-          "commercialTurnoverType": true
+          "commercialTurnoverType": true,
+          "weekendSalesRatio": 0.38,
+          "age2030SalesRatio": 0.46,
+          "femaleSalesRatio": 0.55,
+          "spendingPerStore": 2100000
         },
         "history": [
           {
@@ -561,7 +577,9 @@
           "buildingUse": "제2종근린생활시설",
           "transactionType": "임대",
           "floor": "2층",
-          "totalFloors": "6층"
+          "totalFloors": "6층",
+          "viewCount": 1180,
+          "favoriteCount": 77
         },
         "lease": {
           "deposit": 5000,
@@ -595,7 +613,9 @@
           "workerQuarterly": 44000,
           "age2030PopulationRatio": 0.31,
           "femalePopulationRatio": 0.51,
-          "workerToFloatingRatio": 0.21
+          "workerToFloatingRatio": 0.21,
+          "eveningPopulationRatio": 0.33,
+          "weekendPopulationRatio": 0.41
         },
         "commercial": {
           "restaurantCount250m": 104,
@@ -613,7 +633,11 @@
           "lateNightSalesRatio": 0.1,
           "foodSpending": 36000000,
           "commercialGrowthType": true,
-          "commercialTurnoverType": false
+          "commercialTurnoverType": false,
+          "weekendSalesRatio": 0.38,
+          "age2030SalesRatio": 0.46,
+          "femaleSalesRatio": 0.55,
+          "spendingPerStore": 2100000
         },
         "history": [
           {
