@@ -29,7 +29,6 @@ databaseChangeLog:
               create index if not exists idx_vacancy_category_horizon_scores_rank
                 on vacancy_category_horizon_scores (horizon_years, category_id, survival_score desc);
 
-  # Score data is intentionally loaded from local CSVs with
-  # scripts/load_yearwise_score_history.py through the RDS proxy.
-  # Keep Liquibase responsible for schema only so ECS startup never streams
-  # the large score datasets during application boot.
+  # Horizon score data comes from the AI backend horizon export CSVs, not from
+  # annual score history. Keep Liquibase responsible for schema only so ECS
+  # startup never streams the large score datasets during application boot.

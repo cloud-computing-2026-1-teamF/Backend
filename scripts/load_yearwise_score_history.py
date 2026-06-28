@@ -4,6 +4,8 @@
 The source CSVs are intentionally kept outside the repository because they are
 large. By default this script reads the 2022-2026 files from the local Drive
 download folder and maps each CSV `property_id` to `vacancies."매물번호"`.
+It only refreshes `vacancy_score_history`; primary category scores and horizon
+forecasts come from the AI horizon export.
 
 Usage:
   python3 scripts/load_yearwise_score_history.py --dry-run
@@ -65,8 +67,8 @@ class LoadStats:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Replace vacancy_score_history and refresh current/horizon score "
-            "tables from local scores_YYYY.csv files."
+            "Replace vacancy_score_history from local scores_YYYY.csv files. "
+            "Primary and horizon score tables are loaded from AI horizon exports."
         )
     )
     parser.add_argument(
@@ -86,7 +88,10 @@ def parse_args() -> argparse.Namespace:
         "--current-year",
         type=int,
         default=max(DEFAULT_YEARS),
-        help="Year used to refresh vacancy_category_scores. Default: 2026",
+        help=(
+            "Deprecated compatibility option. Yearwise loads no longer refresh "
+            "vacancy_category_scores or vacancy_category_horizon_scores."
+        ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Validate and summarize CSVs without touching the DB.")
     parser.add_argument(
@@ -309,7 +314,7 @@ def validate_stage(cursor, allow_unmapped: bool) -> None:
         )
 
 
-def replace_history(cursor, current_year: int) -> tuple[int, int, int]:
+def replace_history(cursor) -> int:
     cursor.execute("delete from vacancy_score_history")
     cursor.execute(
         """
@@ -377,106 +382,7 @@ def replace_history(cursor, current_year: int) -> tuple[int, int, int]:
         (DATA_BASIS, SOURCE),
     )
     inserted_history = cursor.rowcount
-
-    cursor.execute(
-        """
-        with mapped as (
-          select
-            v.property_id,
-            s.category_id,
-            s.survival_score,
-            s.recommended
-          from stage_yearwise_scores s
-          join vacancies v on v."매물번호" = s.listing_number
-          where s.score_year = %s
-        )
-        insert into vacancy_category_scores (
-          property_id,
-          category_id,
-          생존점수,
-          추천여부
-        )
-        select
-          property_id,
-          category_id,
-          survival_score,
-          recommended
-        from mapped
-        on conflict (property_id, category_id) do update set
-          생존점수 = excluded.생존점수,
-          추천여부 = excluded.추천여부
-        """,
-        (current_year,),
-    )
-    refreshed_current_scores = cursor.rowcount
-
-    cursor.execute("delete from vacancy_category_horizon_scores")
-    cursor.execute(
-        """
-        with mapped as (
-          select
-            v.property_id,
-            s.category_id,
-            s.score_year,
-            s.survival_score,
-            s.recommended
-          from stage_yearwise_scores s
-          join vacancies v on v."매물번호" = s.listing_number
-        ),
-        latest as (
-          select distinct on (property_id, category_id)
-            property_id,
-            category_id,
-            survival_score,
-            recommended
-          from mapped
-          where score_year = %s
-          order by property_id, category_id, score_year desc
-        ),
-        five_year as (
-          select
-            property_id,
-            category_id,
-            avg(survival_score)::numeric(8,6) as survival_score,
-            max(recommended)::smallint as recommended
-          from mapped
-          group by property_id, category_id
-        ),
-        horizons as (
-          select property_id, category_id, 1 as horizon_years, survival_score, recommended
-          from latest
-          union all
-          select property_id, category_id, 3 as horizon_years, survival_score, recommended
-          from latest
-          union all
-          select property_id, category_id, 5 as horizon_years, survival_score, recommended
-          from five_year
-        )
-        insert into vacancy_category_horizon_scores (
-          property_id,
-          category_id,
-          horizon_years,
-          survival_score,
-          recommended,
-          source
-        )
-        select
-          property_id,
-          category_id,
-          horizon_years,
-          survival_score,
-          recommended,
-          %s
-        from horizons
-        on conflict (property_id, category_id, horizon_years) do update set
-          survival_score = excluded.survival_score,
-          recommended = excluded.recommended,
-          source = excluded.source
-        """,
-        (current_year, SOURCE),
-    )
-    refreshed_horizon_scores = cursor.rowcount
-    return inserted_history, refreshed_current_scores, refreshed_horizon_scores
+    return inserted_history
 
 
 def print_db_summary(cursor) -> None:
@@ -510,12 +416,8 @@ def load_database(args: argparse.Namespace, files: Sequence[tuple[int, Path]]) -
                     _, execute_values = driver
                     insert_stage_rows_psycopg2(cursor, execute_values, rows, stats)
                 validate_stage(cursor, args.allow_unmapped)
-                inserted_history, refreshed_scores, refreshed_horizon_scores = replace_history(cursor, args.current_year)
-                print(
-                    f"Loaded {inserted_history:,} score history rows, refreshed "
-                    f"{refreshed_scores:,} current-year category scores, and refreshed "
-                    f"{refreshed_horizon_scores:,} horizon scores."
-                )
+                inserted_history = replace_history(cursor)
+                print(f"Loaded {inserted_history:,} score history rows.")
                 print_db_summary(cursor)
     finally:
         conn.close()
@@ -533,8 +435,6 @@ def print_stats(stats: LoadStats) -> None:
 def main() -> int:
     args = parse_args()
     files = score_files(args.csv_dir.expanduser(), args.years)
-    if args.current_year not in set(args.years):
-        raise ValueError("--current-year must be one of the loaded --years")
 
     if args.dry_run:
         print_stats(summarize(files))
