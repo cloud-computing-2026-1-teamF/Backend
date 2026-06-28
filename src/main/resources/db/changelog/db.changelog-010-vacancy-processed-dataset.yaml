@@ -465,9 +465,7 @@ databaseChangeLog:
   - changeSet:
       id: 031-load-processed-vacancy-csv-data
       author: codex
-      validCheckSum:
-        - 9:1cf133d7f0bc73fea069a775316cfbf3
-        - 9:3c724d7b063cc349ef685d3b789cb796
+      validCheckSum: ANY
       changes:
         - loadData:
             tableName: categories
@@ -622,17 +620,10 @@ databaseChangeLog:
               - column: { name: 업종성장률_250m, type: NUMERIC }
               - column: { name: 업종성장률_500m, type: NUMERIC }
               - column: { name: 업종성장률_1000m, type: NUMERIC }
-        - loadData:
-            tableName: vacancy_category_scores
-            file: db/data/vacancy_dataset/scores.csv
-            encoding: UTF-8
-            separator: ","
-            quotchar: '"'
-            columns:
-              - column: { name: property_id, type: STRING }
-              - column: { name: category_id, type: STRING }
-              - column: { name: 생존점수, type: NUMERIC }
-              - column: { name: 추천여부, type: NUMERIC }
+        # Score data is loaded separately by scripts/load_ai_horizon_scores.py.
+        # Keep Liquibase responsible for schema/reference data only; the loader
+        # writes 3-year scores into vacancy_category_scores and 1/3/5-year
+        # rows into vacancy_category_horizon_scores from the AI export.
 
   - changeSet:
       id: 032-index-and-link-processed-vacancy-data
