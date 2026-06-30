@@ -36,11 +36,11 @@ from load_vacancy_score_top_features import parse_decimal
 
 
 DEFAULT_STRENGTH_WEAKNESS_PATH = (
-    Path.home() / "Downloads" / "drive-download-20260630T163309Z-3-001" / "강점약점_2026.json"
+    Path.home() / "Downloads" / "nemo-normalized-shap-2026" / "강점약점_2026.csv"
 )
 DEFAULT_FEATURE_CSV = Path.home() / "Downloads" / "scored_full_2019" / "scored_full_2026.csv"
-SOURCE = "model_strength_weakness_2026"
-OLD_SOURCES = (SOURCE, "model_top_features_2026", "mock_score_top_features")
+SOURCE = "normalized_shap_2026"
+OLD_SOURCES = (SOURCE, "model_strength_weakness_2026", "model_top_features_2026", "mock_score_top_features")
 BATCH_SIZE = 5_000
 
 
@@ -80,6 +80,16 @@ class StrengthWeaknessRow:
     contribution_log_odds: Decimal | None
     contribution_pp: Decimal | None
     percentile_label: str | None
+    feature_label: str | None = None
+    display_unit: str | None = None
+    higher_is_positive: bool | None = None
+    current_value: Decimal | None = None
+    average_value: Decimal | None = None
+    value_percentile: Decimal | None = None
+    value_percentile_label: str | None = None
+    normalized_impact: Decimal | None = None
+    impact_percentile: Decimal | None = None
+    source: str = SOURCE
 
 
 @dataclass
@@ -101,7 +111,7 @@ class SourceStats:
 
 @dataclass
 class SourceCsvData:
-    value_rows: list[tuple[str, str | None, str | None, str, Decimal]]
+    value_rows: list[tuple[str, str | None, str | None, str, Decimal | None, Decimal | None, Decimal | None, str | None]]
     average_rows: list[tuple[str, Decimal, int]]
     missing_features: set[str]
     source_rows: int
@@ -154,11 +164,20 @@ def build_dsn(args: argparse.Namespace) -> str:
 
 def tone_from_source(value: object) -> str:
     text = normalize_text(value)
-    if text == "강점":
+    if text in {"강점", "positive"}:
         return "positive"
-    if text == "약점":
+    if text in {"약점", "negative"}:
         return "negative"
     raise ValueError(f"Unknown strength/weakness tone: {value!r}")
+
+
+def parse_bool(value: object) -> bool | None:
+    text = normalize_text(value).lower()
+    if text in {"true", "t", "1", "yes", "y"}:
+        return True
+    if text in {"false", "f", "0", "no", "n"}:
+        return False
+    return None
 
 
 def validate_feature_specs() -> None:
@@ -207,6 +226,44 @@ def parse_source_row(
     )
 
 
+def parse_enriched_csv_row(raw: dict[str, str]) -> StrengthWeaknessRow | None:
+    feature_rank = int(raw["순위"])
+    if feature_rank > 3:
+        return None
+
+    raw_feature_name = normalize_text(raw.get("raw_feature_name") or raw.get("피처"))
+    feature_key = normalize_text(raw.get("feature_key"))
+    if not raw_feature_name:
+        raise ValueError("Enriched strength/weakness row is missing raw_feature_name/피처")
+    if not feature_key:
+        raise ValueError(f"Enriched strength/weakness row for {raw_feature_name!r} is missing feature_key")
+
+    lower_is_better = parse_bool(raw.get("lower_is_better"))
+    higher_is_positive = None if lower_is_better is None else not lower_is_better
+    source_tone = raw.get("explanation_tone") or raw.get("구분")
+    return StrengthWeaknessRow(
+        listing_number=normalize_text(raw["property_id"]),
+        category_label=normalize_text(raw["서비스_카테고리"]),
+        explanation_tone=tone_from_source(source_tone),
+        feature_rank=feature_rank,
+        raw_feature_name=raw_feature_name,
+        feature_key=feature_key,
+        contribution_log_odds=parse_decimal(raw.get("기여_로그오즈")),
+        contribution_pp=parse_decimal(raw.get("기여_pp")),
+        percentile_label=normalize_text(raw.get("백분위")) or None,
+        feature_label=normalize_text(raw.get("feature_label")) or None,
+        display_unit=normalize_text(raw.get("display_unit")) if raw.get("display_unit") is not None else None,
+        higher_is_positive=higher_is_positive,
+        current_value=parse_decimal(raw.get("current_value")),
+        average_value=parse_decimal(raw.get("average_value")),
+        value_percentile=parse_decimal(raw.get("value_percentile")),
+        value_percentile_label=normalize_text(raw.get("value_percentile_label")) or None,
+        normalized_impact=parse_decimal(raw.get("normalized_impact")),
+        impact_percentile=parse_decimal(raw.get("impact_percentile")),
+        source=normalize_text(raw.get("source")) or SOURCE,
+    )
+
+
 def iter_json_rows(path: Path) -> tuple[list[StrengthWeaknessRow], SourceStats]:
     with path.open("r", encoding="utf-8-sig") as handle:
         payload = json.load(handle)
@@ -245,21 +302,20 @@ def iter_csv_rows(path: Path) -> tuple[list[StrengthWeaknessRow], SourceStats]:
     seen_vacancies: set[str] = set()
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        required = {"property_id", "서비스_카테고리", "구분", "순위", "피처"}
+        fieldnames = set(reader.fieldnames or [])
+        enriched = {"feature_key", "current_value", "average_value", "value_percentile"} <= fieldnames
+        required = {"property_id", "서비스_카테고리", "순위", "피처"}
+        if not enriched:
+            required.add("구분")
         missing = required - set(reader.fieldnames or [])
         if missing:
             raise ValueError(f"{path} is missing required columns: {', '.join(sorted(missing))}")
         for raw in reader:
-            rank = int(raw["순위"])
-            if rank > 3:
-                continue
-            listing_number = normalize_text(raw["property_id"])
-            source_tone = normalize_text(raw["구분"])
-            row = parse_source_row(
-                listing_number,
+            row = parse_enriched_csv_row(raw) if enriched else parse_source_row(
+                raw["property_id"],
                 raw["서비스_카테고리"],
-                source_tone,
-                rank,
+                raw["구분"],
+                raw["순위"],
                 (
                     raw["피처"],
                     raw.get("기여_로그오즈"),
@@ -269,7 +325,7 @@ def iter_csv_rows(path: Path) -> tuple[list[StrengthWeaknessRow], SourceStats]:
             )
             if row is not None:
                 rows.append(row)
-                seen_vacancies.add(listing_number)
+                seen_vacancies.add(row.listing_number)
                 stats.rows += 1
                 stats.categories[row.category_label] += 1
                 stats.raw_features[row.raw_feature_name] += 1
@@ -312,7 +368,7 @@ def read_source_csv(path: Path, explanation_rows: Sequence[StrengthWeaknessRow])
 
     sums: dict[str, Decimal] = defaultdict(Decimal)
     counts: Counter[str] = Counter()
-    value_rows: list[tuple[str, str | None, str | None, str, Decimal]] = []
+    value_rows: list[tuple[str, str | None, str | None, str, Decimal | None, Decimal | None, Decimal | None, str | None]] = []
     source_rows = 0
 
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
@@ -346,7 +402,7 @@ def read_source_csv(path: Path, explanation_rows: Sequence[StrengthWeaknessRow])
                     spec = FEATURE_BY_RAW[explanation.raw_feature_name]
                     value = value_from_source_row(raw, spec, spec_to_column[spec.raw_name])
                     if value is not None:
-                        value_rows.append((listing_number, category_label, category_id, explanation.feature_key, value))
+                        value_rows.append((listing_number, category_label, category_id, explanation.feature_key, value, None, None, None))
 
     average_rows = [
         (feature_key, (sums[feature_key] / counts[feature_key]).quantize(Decimal("0.000001")), counts[feature_key])
@@ -360,6 +416,42 @@ def read_source_csv(path: Path, explanation_rows: Sequence[StrengthWeaknessRow])
     return SourceCsvData(value_rows, average_rows, missing_features, source_rows)
 
 
+def has_embedded_feature_values(explanation_rows: Sequence[StrengthWeaknessRow]) -> bool:
+    return any(
+        row.current_value is not None or row.average_value is not None or row.value_percentile is not None
+        for row in explanation_rows
+    )
+
+
+def read_embedded_feature_values(explanation_rows: Sequence[StrengthWeaknessRow]) -> SourceCsvData:
+    sums: dict[str, Decimal] = defaultdict(Decimal)
+    counts: Counter[str] = Counter()
+    value_rows: list[tuple[str, str | None, str | None, str, Decimal | None, Decimal | None, Decimal | None, str | None]] = []
+
+    for row in explanation_rows:
+        value_rows.append(
+            (
+                row.listing_number,
+                row.category_label,
+                None,
+                row.feature_key,
+                row.current_value,
+                row.average_value,
+                row.value_percentile,
+                row.value_percentile_label,
+            )
+        )
+        if row.average_value is not None:
+            sums[row.feature_key] += row.average_value
+            counts[row.feature_key] += 1
+
+    average_rows = [
+        (feature_key, (sums[feature_key] / counts[feature_key]).quantize(Decimal("0.000001")), counts[feature_key])
+        for feature_key in sorted(counts)
+    ]
+    return SourceCsvData(value_rows, average_rows, set(), len(explanation_rows))
+
+
 def ensure_schema(cursor) -> None:
     cursor.execute(
         """
@@ -367,7 +459,14 @@ def ensure_schema(cursor) -> None:
           add column if not exists explanation_tone varchar(16),
           add column if not exists contribution_log_odds numeric(20,6),
           add column if not exists contribution_pp numeric(20,6),
-          add column if not exists percentile_label varchar(40);
+          add column if not exists percentile_label varchar(40),
+          add column if not exists normalized_impact numeric(20,6),
+          add column if not exists impact_percentile numeric(20,6);
+
+        alter table vacancy_score_feature_values
+          add column if not exists average_value numeric(20,6),
+          add column if not exists value_percentile numeric(20,6),
+          add column if not exists value_percentile_label varchar(40);
 
         update vacancy_category_score_explanations
         set explanation_tone = 'model'
@@ -438,7 +537,9 @@ def create_stage_tables(cursor) -> None:
           feature_key varchar(80) not null,
           contribution_log_odds numeric(20,6),
           contribution_pp numeric(20,6),
-          percentile_label varchar(40)
+          percentile_label varchar(40),
+          normalized_impact numeric(20,6),
+          impact_percentile numeric(20,6)
         ) on commit drop;
 
         create temp table stage_source_feature_values (
@@ -446,7 +547,10 @@ def create_stage_tables(cursor) -> None:
           category_label varchar(120),
           category_id varchar(40),
           feature_key varchar(80) not null,
-          current_value numeric(20,6) not null
+          current_value numeric(20,6),
+          average_value numeric(20,6),
+          value_percentile numeric(20,6),
+          value_percentile_label varchar(40)
         ) on commit drop;
 
         create temp table stage_source_feature_averages (
@@ -465,17 +569,21 @@ def insert_stage_data(
     explanation_rows: Sequence[StrengthWeaknessRow],
     source_data: SourceCsvData,
 ) -> None:
-    used_features = {row.feature_key for row in explanation_rows}
-    catalog_rows = [
-        (
-            spec.feature_key,
-            spec.raw_name,
-            spec.feature_label,
-            spec.display_unit,
-            spec.higher_is_positive,
+    catalog_by_key: dict[str, tuple[str, str, str, bool]] = {}
+    for row in explanation_rows:
+        spec = FEATURE_BY_RAW.get(row.raw_feature_name)
+        catalog_by_key.setdefault(
+            row.feature_key,
+            (
+                row.raw_feature_name,
+                row.feature_label or (spec.feature_label if spec else row.raw_feature_name),
+                "" if row.display_unit is None else row.display_unit,
+                row.higher_is_positive if row.higher_is_positive is not None else (spec.higher_is_positive if spec else True),
+            ),
         )
-        for spec in FEATURE_SPECS
-        if spec.feature_key in used_features
+    catalog_rows = [
+        (feature_key, raw_name, feature_label, display_unit, higher_is_positive)
+        for feature_key, (raw_name, feature_label, display_unit, higher_is_positive) in sorted(catalog_by_key.items())
     ]
     stage_rows = [
         (
@@ -488,6 +596,8 @@ def insert_stage_data(
             row.contribution_log_odds,
             row.contribution_pp,
             row.percentile_label,
+            row.normalized_impact,
+            row.impact_percentile,
         )
         for row in explanation_rows
     ]
@@ -514,6 +624,8 @@ def insert_stage_data(
             "contribution_log_odds",
             "contribution_pp",
             "percentile_label",
+            "normalized_impact",
+            "impact_percentile",
         ),
         stage_rows,
     )
@@ -522,7 +634,16 @@ def insert_stage_data(
         driver,
         cursor,
         "stage_source_feature_values",
-        ("listing_number", "category_label", "category_id", "feature_key", "current_value"),
+        (
+            "listing_number",
+            "category_label",
+            "category_id",
+            "feature_key",
+            "current_value",
+            "average_value",
+            "value_percentile",
+            "value_percentile_label",
+        ),
         source_data.value_rows,
     )
     insert_rows(
@@ -647,6 +768,9 @@ def apply_load(cursor) -> dict[str, int]:
             coalesce(s.category_id, c.category_id) as category_id,
             s.feature_key,
             s.current_value,
+            s.average_value,
+            s.value_percentile,
+            s.value_percentile_label,
             catalog.raw_feature_name
           from stage_source_feature_values s
           join vacancies v
@@ -662,6 +786,9 @@ def apply_load(cursor) -> dict[str, int]:
           category_id,
           feature_key,
           current_value,
+          average_value,
+          value_percentile,
+          value_percentile_label,
           raw_feature_name,
           source,
           calculated_at
@@ -671,6 +798,9 @@ def apply_load(cursor) -> dict[str, int]:
           source_resolved.category_id,
           source_resolved.feature_key,
           round(source_resolved.current_value, 6),
+          round(source_resolved.average_value, 6),
+          round(source_resolved.value_percentile, 6),
+          source_resolved.value_percentile_label,
           source_resolved.raw_feature_name,
           %s,
           now()
@@ -682,6 +812,9 @@ def apply_load(cursor) -> dict[str, int]:
           on benchmarks.feature_key = source_resolved.feature_key
         on conflict (property_id, category_id, feature_key) do update set
           current_value = excluded.current_value,
+          average_value = excluded.average_value,
+          value_percentile = excluded.value_percentile,
+          value_percentile_label = excluded.value_percentile_label,
           raw_feature_name = excluded.raw_feature_name,
           source = excluded.source,
           calculated_at = excluded.calculated_at
@@ -701,6 +834,8 @@ def apply_load(cursor) -> dict[str, int]:
           contribution_log_odds,
           contribution_pp,
           percentile_label,
+          normalized_impact,
+          impact_percentile,
           source,
           created_at
         )
@@ -713,6 +848,8 @@ def apply_load(cursor) -> dict[str, int]:
           rows.contribution_log_odds,
           rows.contribution_pp,
           rows.percentile_label,
+          rows.normalized_impact,
+          rows.impact_percentile,
           %s,
           now()
         from stage_strength_rows rows
@@ -730,6 +867,8 @@ def apply_load(cursor) -> dict[str, int]:
           contribution_log_odds = excluded.contribution_log_odds,
           contribution_pp = excluded.contribution_pp,
           percentile_label = excluded.percentile_label,
+          normalized_impact = excluded.normalized_impact,
+          impact_percentile = excluded.impact_percentile,
           source = excluded.source,
           created_at = excluded.created_at
         """,
@@ -783,7 +922,11 @@ def print_summary(
 def run(args: argparse.Namespace) -> int:
     validate_feature_specs()
     explanation_rows, stats = read_strength_weakness(args.strength_weakness_file)
-    source_data = read_source_csv(args.feature_csv, explanation_rows)
+    source_data = (
+        read_embedded_feature_values(explanation_rows)
+        if has_embedded_feature_values(explanation_rows)
+        else read_source_csv(args.feature_csv, explanation_rows)
+    )
 
     kind, driver = import_driver()
     dsn = build_dsn(args)
