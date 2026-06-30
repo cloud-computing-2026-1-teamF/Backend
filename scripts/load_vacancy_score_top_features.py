@@ -33,8 +33,8 @@ from typing import Iterable, Iterator, Sequence
 from urllib.parse import quote
 
 
-DEFAULT_JSON_PATH = Path.home() / "Downloads" / "top_features_2026.json"
-DEFAULT_FEATURE_CSV = Path.home() / "Downloads" / "scored_full_2026.csv"
+DEFAULT_JSON_PATH = Path.home() / "Downloads" / "top_features_2020" / "top_features_2026.json"
+DEFAULT_FEATURE_CSV = Path.home() / "Downloads" / "scored_full_2019" / "scored_full_2026.csv"
 SOURCE = "model_top_features_2026"
 BATCH_SIZE = 5_000
 
@@ -47,6 +47,7 @@ class FeatureSpec:
     display_unit: str
     higher_is_positive: bool
     aliases: tuple[str, ...] = ()
+    source_multiplier: Decimal = Decimal("1")
 
     @property
     def source_columns(self) -> tuple[str, ...]:
@@ -55,14 +56,17 @@ class FeatureSpec:
 
 FEATURE_SPECS: tuple[FeatureSpec, ...] = (
     FeatureSpec("시설총규모", "facility_total_size", "매장 규모", "m2", True),
+    FeatureSpec("시설총규모_pct", "facility_total_size_percentile", "매장 규모 백분위", "%", True, source_multiplier=Decimal("100")),
     FeatureSpec("점포_비중", "store_area_share", "매장 면적 비중", "", False),
     FeatureSpec("소재지면적", "store_site_area", "점포 면적", "m2", True),
+    FeatureSpec("소재지면적_pct", "store_site_area_percentile", "점포 면적 백분위", "%", True, source_multiplier=Decimal("100")),
     FeatureSpec("자리_과거평균수명_월", "seat_avg_lifetime_months", "이전 점포 평균 영업기간", "개월", True),
     FeatureSpec("자리_과거중앙수명_월", "seat_median_lifetime_months", "이전 점포 중앙 영업기간", "개월", True),
-    FeatureSpec("카페수_1000m", "cafe_count_1000m", "1km 내 카페 수", "곳", False),
-    FeatureSpec("건물_노후도", "building_age_years", "건물 노후도", "년", False),
+    FeatureSpec("자리_최근입점_경과월", "seat_recent_open_elapsed_months", "최근 입점 경과기간", "개월", True),
+    FeatureSpec("카페수_1000m", "cafe_count_1000m", "1km 내 카페 수", "곳", True),
+    FeatureSpec("건물_노후도", "building_age_years", "건물 노후도", "년", True),
     FeatureSpec("용적률", "floor_area_ratio", "용적률", "%", True),
-    FeatureSpec("도심거리_시청", "cityhall_distance_km", "시청 접근 거리", "km", False),
+    FeatureSpec("도심거리_시청", "cityhall_distance_km", "시청 접근 거리", "km", True),
     FeatureSpec(
         "최종_상주인구_밀도_명per㎢_2022_연간합계",
         "resident_population_density_annual",
@@ -72,23 +76,28 @@ FEATURE_SPECS: tuple[FeatureSpec, ...] = (
         aliases=("최종_상주인구_밀도_명_per_km2_2022_연간합계",),
     ),
     FeatureSpec("용적_활용도", "floor_area_utilization", "용적 활용도", "", True),
-    FeatureSpec("공시지가", "official_land_price", "공시지가", "원/m2", False),
-    FeatureSpec("여성_비율", "female_population_ratio", "여성 유동 비중", "%", True),
+    FeatureSpec("공시지가", "official_land_price", "공시지가", "원/m2", True),
+    FeatureSpec("여성_비율", "female_population_ratio", "여성 유동 비중", "%", True, source_multiplier=Decimal("100")),
+    FeatureSpec("여성_유동비중", "female_floating_population_share", "여성 유동 비중", "%", True, source_multiplier=Decimal("100")),
     FeatureSpec("평당매출", "sales_per_area", "면적당 평균매출", "만원/m2", True),
-    FeatureSpec("동네_점포수", "neighborhood_store_count", "동네 점포 수", "곳", False),
-    FeatureSpec("자리_과거폐업수", "seat_closed_count", "이전 폐업 횟수", "회", False),
+    FeatureSpec("지가대비매출", "sales_to_land_price", "지가 대비 매출", "", True),
+    FeatureSpec("동네_점포수", "neighborhood_store_count", "동네 점포 수", "곳", True),
+    FeatureSpec("자리_과거폐업수", "seat_closed_count", "이전 폐업 횟수", "회", True),
     FeatureSpec("층당_면적", "floor_area_per_floor", "층당 면적", "m2", True),
     FeatureSpec("가게당_평균매출", "sales_per_store", "점포당 평균매출", "만원", True),
-    FeatureSpec("동종_식당수_1000m", "same_category_count_1000m", "1km 내 동종점포", "곳", False),
+    FeatureSpec("식당수_1000m", "restaurant_count_1000m", "1km 내 식당 수", "곳", True),
+    FeatureSpec("동종_식당수_1000m", "same_category_count_1000m", "1km 내 동종점포", "곳", True),
     FeatureSpec("지상층수", "ground_floors", "지상층수", "층", True),
-    FeatureSpec("도심거리_강남", "gangnam_distance_km", "강남 접근 거리", "km", False),
-    FeatureSpec("자리_과거입점수", "seat_open_count", "이전 입점 횟수", "회", False),
-    FeatureSpec("상권_교체활발형", "commercial_turnover_type", "상권 교체 신호", "", False),
+    FeatureSpec("지하층수", "basement_floors", "지하층수", "층", True),
+    FeatureSpec("도심거리_강남", "gangnam_distance_km", "강남 접근 거리", "km", True),
+    FeatureSpec("자리_과거입점수", "seat_open_count", "이전 입점 횟수", "회", True),
+    FeatureSpec("상권_교체활발형", "commercial_turnover_type", "상권 교체 신호", "", True),
     FeatureSpec("건폐율", "building_coverage_ratio", "건폐율", "%", True),
-    FeatureSpec("동종_식당수_500m", "same_category_count_500m", "500m 내 동종점포", "곳", False),
-    FeatureSpec("자리_폐업비율", "seat_closure_ratio", "이전 폐업 비율", "%", False),
-    FeatureSpec("동종_포화도_500m", "same_category_saturation_500m", "500m 동종 포화도", "", False),
+    FeatureSpec("동종_식당수_500m", "same_category_count_500m", "500m 내 동종점포", "곳", True),
+    FeatureSpec("자리_폐업비율", "seat_closure_ratio", "이전 폐업 비율", "%", True, source_multiplier=Decimal("100")),
+    FeatureSpec("동종_포화도_500m", "same_category_saturation_500m", "500m 동종 포화도", "", True),
     FeatureSpec("연면적", "gross_floor_area", "건물 연면적", "m2", True),
+    FeatureSpec("2030_유동인구_밀도_명per㎢", "age2030_population_density", "2030 유동인구", "명/km2", True),
     FeatureSpec(
         "저녁_유동인구_밀도_명per㎢",
         "evening_population_density",
@@ -115,10 +124,18 @@ FEATURE_BY_KEY = {spec.feature_key: spec for spec in FEATURE_SPECS}
 
 SQL_FEATURE_EXPRESSIONS: dict[str, str] = {
     "facility_total_size": 'cf."시설총규모"::numeric',
+    "facility_total_size_percentile": "null::numeric",
     "store_area_share": 'cf."소재지면적"::numeric / nullif(cf."시설총규모"::numeric + 1, 0)',
     "store_site_area": 'cf."소재지면적"::numeric',
+    "store_site_area_percentile": "null::numeric",
     "seat_avg_lifetime_months": "hf.avg_lifetime_months",
     "seat_median_lifetime_months": "hf.median_lifetime_months",
+    "seat_recent_open_elapsed_months": """
+        case
+          when hf.last_opened_on is null then null
+          else greatest((date '2026-01-01' - hf.last_opened_on)::numeric / 30.4375, 0)
+        end
+    """,
     "cafe_count_1000m": 'cf."카페수_1000m"::numeric',
     "building_age_years": """
         case
@@ -140,14 +157,23 @@ SQL_FEATURE_EXPRESSIONS: dict[str, str] = {
     "floor_area_utilization": "null::numeric",
     "official_land_price": 'cf."공시지가"::numeric',
     "female_population_ratio": 'cf."여성_비율"::numeric * 100.0',
+    "female_floating_population_share": 'cf."여성_비율"::numeric * 100.0',
     "sales_per_area": '(cf."가게당_평균매출"::numeric / 10000.0) / nullif(cf."소재지면적"::numeric + 1, 0)',
+    "sales_to_land_price": """
+        cf."가게당_평균매출"::numeric
+        / nullif(cf."공시지가"::numeric, 0)
+    """,
     "neighborhood_store_count": 'cf."동네_점포수"::numeric',
     "seat_closed_count": "hf.closed_count::numeric",
     "floor_area_per_floor": "null::numeric",
     "sales_per_store": 'cf."가게당_평균매출"::numeric / 10000.0',
+    "restaurant_count_1000m": 'cf."식당수_1000m"::numeric',
     "same_category_count_1000m": 'sp."동종_식당수_1000m"::numeric',
     "ground_floors": """
         nullif(substring(coalesce(v."건물총층수", '') from '(-?[0-9]+(?:[.][0-9]+)?)'), '')::numeric
+    """,
+    "basement_floors": """
+        nullif(substring(coalesce(v."지하층수", '') from '(-?[0-9]+(?:[.][0-9]+)?)'), '')::numeric
     """,
     "gangnam_distance_km": """
         case when v."위도" is null or v."경도" is null then null else
@@ -165,6 +191,7 @@ SQL_FEATURE_EXPRESSIONS: dict[str, str] = {
     "seat_closure_ratio": "hf.closure_ratio * 100.0",
     "same_category_saturation_500m": 'sp."동종_식당수_500m"::numeric / nullif(cf."식당수_500m"::numeric + 1, 0)',
     "gross_floor_area": "null::numeric",
+    "age2030_population_density": 'cf."연령_2030_유동인구_밀도_명_per_km2"::numeric',
     "evening_population_density": 'cf."저녁_유동인구_밀도_명_per_km2"::numeric',
     "cafe_2030_fit": """
         case
@@ -460,6 +487,7 @@ def read_source_csv(path: Path | None, top_rows: Sequence[TopFeatureRow]) -> Sou
                 value = parse_decimal(raw.get(column))
                 if value is None:
                     continue
+                value *= spec.source_multiplier
                 sums[spec.feature_key] += value
                 counts[spec.feature_key] += 1
 
@@ -469,6 +497,8 @@ def read_source_csv(path: Path | None, top_rows: Sequence[TopFeatureRow]) -> Sou
                     continue
                 value = parse_decimal(raw.get(column))
                 if value is not None:
+                    spec = FEATURE_BY_KEY[top.feature_key]
+                    value *= spec.source_multiplier
                     value_rows.append((listing_number, category_label, category_id, top.feature_key, value))
 
     average_rows = [
@@ -608,6 +638,7 @@ def create_computed_feature_tables(cursor) -> None:
             count(*) filter (where h.status = 'closed') as closed_count,
             count(*) filter (where h.status = 'closed')::numeric
               / nullif(count(*) filter (where h.status <> 'vacant'), 0) as closure_ratio,
+            max(h.started_on) filter (where h.status <> 'vacant') as last_opened_on,
             avg(hl.lifetime_months) as avg_lifetime_months,
             percentile_cont(0.5) within group (order by hl.lifetime_months) as median_lifetime_months
           from vacancy_occupancy_history h
@@ -660,6 +691,7 @@ def create_computed_feature_tables(cursor) -> None:
             count(*) filter (where h.status = 'closed') as closed_count,
             count(*) filter (where h.status = 'closed')::numeric
               / nullif(count(*) filter (where h.status <> 'vacant'), 0) as closure_ratio,
+            max(h.started_on) filter (where h.status <> 'vacant') as last_opened_on,
             avg(hl.lifetime_months) as avg_lifetime_months,
             percentile_cont(0.5) within group (order by hl.lifetime_months) as median_lifetime_months
           from vacancy_occupancy_history h
