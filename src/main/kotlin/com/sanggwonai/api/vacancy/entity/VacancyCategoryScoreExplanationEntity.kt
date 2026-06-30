@@ -25,5 +25,11 @@ class VacancyCategoryScoreExplanationEntity(
     val contributionPp: BigDecimal?,
 
     @Column(name = "percentile_label", length = 40)
-    val percentileLabel: String?
+    val percentileLabel: String?,
+
+    @Column(name = "normalized_impact", precision = 20, scale = 6)
+    val normalizedImpact: BigDecimal?,
+
+    @Column(name = "impact_percentile", precision = 20, scale = 6)
+    val impactPercentile: BigDecimal?
 )
