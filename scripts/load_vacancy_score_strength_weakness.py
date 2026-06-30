@@ -535,6 +535,20 @@ def insert_stage_data(
     )
 
 
+def index_stage_tables(cursor) -> None:
+    cursor.execute(
+        """
+        create index on stage_strength_rows (listing_number, category_label);
+        create index on stage_strength_rows (feature_key);
+        create index on stage_source_feature_values (listing_number, category_label, feature_key);
+        create index on stage_source_feature_values (feature_key);
+        analyze stage_strength_rows;
+        analyze stage_source_feature_values;
+        analyze stage_source_feature_averages;
+        """
+    )
+
+
 def summarize_stage(cursor) -> dict[str, int | list[str]]:
     cursor.execute("select count(*) from stage_strength_rows")
     staged_rows = cursor.fetchone()[0]
@@ -778,6 +792,7 @@ def run(args: argparse.Namespace) -> int:
             ensure_schema(cursor)
             create_stage_tables(cursor)
             insert_stage_data(kind, driver, cursor, explanation_rows, source_data)
+            index_stage_tables(cursor)
             stage_summary = summarize_stage(cursor)
             if args.dry_run:
                 conn.rollback()
