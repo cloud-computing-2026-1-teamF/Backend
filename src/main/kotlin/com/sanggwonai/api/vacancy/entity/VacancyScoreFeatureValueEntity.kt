@@ -15,6 +15,15 @@ class VacancyScoreFeatureValueEntity(
     @Column(name = "current_value", precision = 20, scale = 6)
     val currentValue: BigDecimal?,
 
+    @Column(name = "average_value", precision = 20, scale = 6)
+    val averageValue: BigDecimal?,
+
+    @Column(name = "value_percentile", precision = 20, scale = 6)
+    val valuePercentile: BigDecimal?,
+
+    @Column(name = "value_percentile_label", length = 40)
+    val valuePercentileLabel: String?,
+
     @Column(name = "raw_feature_name", length = 160)
     val rawFeatureName: String?,
 
