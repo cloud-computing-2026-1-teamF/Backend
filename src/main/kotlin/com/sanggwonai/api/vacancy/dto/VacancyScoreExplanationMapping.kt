@@ -91,8 +91,9 @@ private fun VacancyCategoryScoreExplanationEntity.toFeatureDto(
     spatial: VacancyCategorySpatialEntity?
 ): VacancyScoreFeatureDto {
     val benchmark = benchmarksByKey[featureKey]
-    val currentValue = featureValuesByKey[featureKey]?.currentValue
-        ?: currentFeatureValue(featureKey, vacancy, common, spatial)
+    val featureValue = featureValuesByKey[featureKey]
+    val currentValue = featureValue?.currentValue ?: currentFeatureValue(featureKey, vacancy, common, spatial)
+    val averageValue = featureValue?.averageValue ?: benchmark?.averageValue
     return VacancyScoreFeatureDto(
         rank = rank,
         sourceRank = id.featureRank.toInt(),
@@ -101,12 +102,16 @@ private fun VacancyCategoryScoreExplanationEntity.toFeatureDto(
         featureLabel = benchmark?.featureLabel ?: featureKey,
         effect = explicitEffect(id.explanationTone) ?: inferEffect(currentValue, benchmark),
         currentValue = currentValue,
-        averageValue = benchmark?.averageValue,
+        averageValue = averageValue,
         displayUnit = benchmark?.displayUnit,
         higherIsPositive = benchmark?.higherIsPositive,
         contributionLogOdds = contributionLogOdds,
         contributionPp = contributionPp,
-        percentileLabel = percentileLabel
+        percentileLabel = percentileLabel,
+        normalizedImpact = normalizedImpact,
+        impactPercentile = impactPercentile,
+        valuePercentile = featureValue?.valuePercentile,
+        valuePercentileLabel = featureValue?.valuePercentileLabel
     )
 }
 
