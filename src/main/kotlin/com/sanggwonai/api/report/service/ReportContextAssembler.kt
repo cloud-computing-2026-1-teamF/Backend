@@ -275,7 +275,11 @@ class ReportContextAssembler(
                     "effect" to f.effect,
                     "current" to f.currentValue?.toDouble(),
                     "average" to f.averageValue?.toDouble(),
-                    "unit" to f.displayUnit
+                    "unit" to f.displayUnit,
+                    "impactPercentile" to f.impactPercentile?.toDouble(),
+                    "impactLabel" to f.percentileLabel,
+                    "valuePercentile" to f.valuePercentile?.toDouble(),
+                    "valuePercentileLabel" to f.valuePercentileLabel
                 )
             }
         )

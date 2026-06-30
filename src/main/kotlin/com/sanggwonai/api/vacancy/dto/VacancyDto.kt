@@ -126,16 +126,27 @@ data class VacancyHorizonScoreDto(
 
 data class VacancyScoreExplanationDto(
     val features: List<VacancyScoreFeatureDto>,
+    val positiveFeatures: List<VacancyScoreFeatureDto>,
+    val negativeFeatures: List<VacancyScoreFeatureDto>,
     val source: String?
 )
 
 data class VacancyScoreFeatureDto(
     val rank: Int,
+    val sourceRank: Int?,
+    val sourceTone: String?,
     val featureKey: String,
     val featureLabel: String,
     val effect: String,
     val currentValue: BigDecimal?,
     val averageValue: BigDecimal?,
     val displayUnit: String?,
-    val higherIsPositive: Boolean?
+    val higherIsPositive: Boolean?,
+    val contributionLogOdds: BigDecimal?,
+    val contributionPp: BigDecimal?,
+    val percentileLabel: String?,
+    val normalizedImpact: BigDecimal?,
+    val impactPercentile: BigDecimal?,
+    val valuePercentile: BigDecimal?,
+    val valuePercentileLabel: String?
 )

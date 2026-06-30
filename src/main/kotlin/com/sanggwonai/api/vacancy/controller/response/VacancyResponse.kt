@@ -126,16 +126,27 @@ data class VacancyHorizonScoreResponse(
 
 data class VacancyScoreExplanationResponse(
     val features: List<VacancyScoreFeatureResponse>,
+    val positiveFeatures: List<VacancyScoreFeatureResponse>,
+    val negativeFeatures: List<VacancyScoreFeatureResponse>,
     val source: String?
 )
 
 data class VacancyScoreFeatureResponse(
     val rank: Int,
+    val sourceRank: Int?,
+    val sourceTone: String?,
     val featureKey: String,
     val featureLabel: String,
     val effect: String,
     val currentValue: BigDecimal?,
     val averageValue: BigDecimal?,
     val displayUnit: String?,
-    val higherIsPositive: Boolean?
+    val higherIsPositive: Boolean?,
+    val contributionLogOdds: BigDecimal?,
+    val contributionPp: BigDecimal?,
+    val percentileLabel: String?,
+    val normalizedImpact: BigDecimal?,
+    val impactPercentile: BigDecimal?,
+    val valuePercentile: BigDecimal?,
+    val valuePercentileLabel: String?
 )

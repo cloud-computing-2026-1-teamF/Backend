@@ -360,6 +360,8 @@ class AnalysisController(
         if (data == null) return null
         return VacancyScoreExplanationResponse(
             features = data.features.map(::toResponse),
+            positiveFeatures = data.positiveFeatures.map(::toResponse),
+            negativeFeatures = data.negativeFeatures.map(::toResponse),
             source = data.source
         )
     }
@@ -367,13 +369,22 @@ class AnalysisController(
     private fun toResponse(data: VacancyScoreFeatureDto): VacancyScoreFeatureResponse {
         return VacancyScoreFeatureResponse(
             rank = data.rank,
+            sourceRank = data.sourceRank,
+            sourceTone = data.sourceTone,
             featureKey = data.featureKey,
             featureLabel = data.featureLabel,
             effect = data.effect,
             currentValue = data.currentValue,
             averageValue = data.averageValue,
             displayUnit = data.displayUnit,
-            higherIsPositive = data.higherIsPositive
+            higherIsPositive = data.higherIsPositive,
+            contributionLogOdds = data.contributionLogOdds,
+            contributionPp = data.contributionPp,
+            percentileLabel = data.percentileLabel,
+            normalizedImpact = data.normalizedImpact,
+            impactPercentile = data.impactPercentile,
+            valuePercentile = data.valuePercentile,
+            valuePercentileLabel = data.valuePercentileLabel
         )
     }
 

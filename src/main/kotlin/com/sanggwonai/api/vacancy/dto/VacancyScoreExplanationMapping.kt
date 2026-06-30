@@ -15,28 +15,58 @@ fun toScoreExplanationDto(
     featureValuesByKey: Map<String, VacancyScoreFeatureValueEntity> = emptyMap(),
     vacancy: VacancyEntity,
     common: VacancyCommonFeatureEntity?,
-    spatial: VacancyCategorySpatialEntity?
+    spatial: VacancyCategorySpatialEntity?,
+    scorePercent: BigDecimal? = null
 ): VacancyScoreExplanationDto? {
     if (entities.isEmpty()) return null
 
-    val features = entities
+    val positiveFeatures = entities
+        .filter { it.id.explanationTone == POSITIVE_TONE }
         .sortedBy { it.id.featureRank }
-        .take(5)
+        .take(3)
         .map { entity ->
-            val benchmark = benchmarksByKey[entity.featureKey]
-            val currentValue = featureValuesByKey[entity.featureKey]?.currentValue
-                ?: currentFeatureValue(entity.featureKey, vacancy, common, spatial)
-            VacancyScoreFeatureDto(
+            entity.toFeatureDto(
                 rank = entity.id.featureRank.toInt(),
-                featureKey = entity.featureKey,
-                featureLabel = benchmark?.featureLabel ?: entity.featureKey,
-                effect = inferEffect(currentValue, benchmark),
-                currentValue = currentValue,
-                averageValue = benchmark?.averageValue,
-                displayUnit = benchmark?.displayUnit,
-                higherIsPositive = benchmark?.higherIsPositive
+                benchmarksByKey = benchmarksByKey,
+                featureValuesByKey = featureValuesByKey,
+                vacancy = vacancy,
+                common = common,
+                spatial = spatial
             )
         }
+
+    val negativeFeatures = entities
+        .filter { it.id.explanationTone == NEGATIVE_TONE }
+        .sortedBy { it.id.featureRank }
+        .take(3)
+        .map { entity ->
+            entity.toFeatureDto(
+                rank = entity.id.featureRank.toInt(),
+                benchmarksByKey = benchmarksByKey,
+                featureValuesByKey = featureValuesByKey,
+                vacancy = vacancy,
+                common = common,
+                spatial = spatial
+            )
+        }
+
+    val features = if (positiveFeatures.isNotEmpty() || negativeFeatures.isNotEmpty()) {
+        selectScoreBandFeatures(scorePercent, positiveFeatures, negativeFeatures)
+    } else {
+        entities
+            .sortedBy { it.id.featureRank }
+            .take(5)
+            .map { entity ->
+                entity.toFeatureDto(
+                    rank = entity.id.featureRank.toInt(),
+                    benchmarksByKey = benchmarksByKey,
+                    featureValuesByKey = featureValuesByKey,
+                    vacancy = vacancy,
+                    common = common,
+                    spatial = spatial
+                )
+            }
+    }
     if (features.isEmpty()) return null
 
     val source = entities
@@ -46,8 +76,68 @@ fun toScoreExplanationDto(
 
     return VacancyScoreExplanationDto(
         features = features,
+        positiveFeatures = positiveFeatures,
+        negativeFeatures = negativeFeatures,
         source = source
     )
+}
+
+private fun VacancyCategoryScoreExplanationEntity.toFeatureDto(
+    rank: Int,
+    benchmarksByKey: Map<String, VacancyScoreFeatureBenchmarkEntity>,
+    featureValuesByKey: Map<String, VacancyScoreFeatureValueEntity>,
+    vacancy: VacancyEntity,
+    common: VacancyCommonFeatureEntity?,
+    spatial: VacancyCategorySpatialEntity?
+): VacancyScoreFeatureDto {
+    val benchmark = benchmarksByKey[featureKey]
+    val featureValue = featureValuesByKey[featureKey]
+    val currentValue = featureValue?.currentValue ?: currentFeatureValue(featureKey, vacancy, common, spatial)
+    val averageValue = featureValue?.averageValue ?: benchmark?.averageValue
+    return VacancyScoreFeatureDto(
+        rank = rank,
+        sourceRank = id.featureRank.toInt(),
+        sourceTone = id.explanationTone,
+        featureKey = featureKey,
+        featureLabel = benchmark?.featureLabel ?: featureKey,
+        effect = explicitEffect(id.explanationTone) ?: inferEffect(currentValue, benchmark),
+        currentValue = currentValue,
+        averageValue = averageValue,
+        displayUnit = benchmark?.displayUnit,
+        higherIsPositive = benchmark?.higherIsPositive,
+        contributionLogOdds = contributionLogOdds,
+        contributionPp = contributionPp,
+        percentileLabel = percentileLabel,
+        normalizedImpact = normalizedImpact,
+        impactPercentile = impactPercentile,
+        valuePercentile = featureValue?.valuePercentile,
+        valuePercentileLabel = featureValue?.valuePercentileLabel
+    )
+}
+
+private fun selectScoreBandFeatures(
+    scorePercent: BigDecimal?,
+    positiveFeatures: List<VacancyScoreFeatureDto>,
+    negativeFeatures: List<VacancyScoreFeatureDto>
+): List<VacancyScoreFeatureDto> {
+    val score = scorePercent ?: BigDecimal.ZERO
+    val positiveCount = when {
+        score > NINETY -> 3
+        score > EIGHTY -> 2
+        score > SEVENTY -> 1
+        else -> 0
+    }
+    val negativeCount = 3 - positiveCount
+    return (positiveFeatures.take(positiveCount) + negativeFeatures.take(negativeCount))
+        .mapIndexed { index, feature -> feature.copy(rank = index + 1) }
+}
+
+private fun explicitEffect(tone: String): String? {
+    return when (tone) {
+        POSITIVE_TONE -> "positive"
+        NEGATIVE_TONE -> "negative"
+        else -> null
+    }
 }
 
 private fun inferEffect(
@@ -100,3 +190,8 @@ private fun Int?.toDecimal(): BigDecimal? = this?.let { BigDecimal.valueOf(it.to
 private val ONE_HUNDRED = BigDecimal("100")
 private val TEN_THOUSAND = BigDecimal("10000")
 private val DAYS_PER_YEAR = BigDecimal("365")
+private val SEVENTY = BigDecimal("70")
+private val EIGHTY = BigDecimal("80")
+private val NINETY = BigDecimal("90")
+private const val POSITIVE_TONE = "positive"
+private const val NEGATIVE_TONE = "negative"

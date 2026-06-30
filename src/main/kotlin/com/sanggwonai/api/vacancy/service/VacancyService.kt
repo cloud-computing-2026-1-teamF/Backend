@@ -300,7 +300,8 @@ class VacancyService(
                 benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
                 vacancy = vacancy,
                 common = common,
-                spatial = spatial
+                spatial = spatial,
+                scorePercent = score.scorePercent()
             )
         } else {
             null
