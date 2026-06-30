@@ -376,7 +376,8 @@ class AnalysisService(
                     benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
                     vacancy = vacancy,
                     common = common,
-                    spatial = spatial
+                    spatial = spatial,
+                    scorePercent = score?.scorePercent() ?: row.score
                 )
                 toRecommendationDto(
                     row = row,
@@ -411,7 +412,8 @@ class AnalysisService(
             benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
             vacancy = vacancy,
             common = common,
-            spatial = spatial
+            spatial = spatial,
+            scorePercent = scorePercent
         )
         return listOf(
             AnalysisRecommendationDto(
@@ -472,7 +474,8 @@ class AnalysisService(
                 benchmarksByKey = snapshot.scoreFeatureBenchmarksByKey,
                 vacancy = ranked.vacancy,
                 common = ranked.common,
-                spatial = ranked.spatial
+                spatial = ranked.spatial,
+                scorePercent = ranked.score
             ),
             history = history
         )
