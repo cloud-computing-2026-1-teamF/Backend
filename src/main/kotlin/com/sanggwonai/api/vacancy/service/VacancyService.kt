@@ -35,7 +35,8 @@ import kotlin.math.sqrt
 class VacancyService(
     private val vacancyDataset: VacancyDataset,
     private val scoreExplanationService: VacancyScoreExplanationService,
-    private val metricReferenceRepository: VacancyMetricReferenceRepository
+    private val metricReferenceRepository: VacancyMetricReferenceRepository,
+    private val menuPriceOpenAiClient: MenuPriceOpenAiClient
 ) {
     @Transactional(readOnly = true)
     fun list(areaId: String?): List<VacancyDto> {
@@ -124,12 +125,10 @@ class VacancyService(
 
         val vacancy = get(vacancyId)
         val hash = stableHash("${vacancy.id}|${vacancy.categoryId}|$normalizedMenu")
-        val latencyMs = SIMULATED_MODEL_DELAY_MIN_MS + Math.floorMod(hash, SIMULATED_MODEL_DELAY_SPREAD_MS).toLong()
-        Thread.sleep(latencyMs)
-
-        val basePrice = baseMenuPrice(normalizedMenu)
+        val openAiEstimate = menuPriceOpenAiClient.estimate(normalizedMenu)
         val multiplier = priceMultiplier(vacancy, hash)
-        val recommended = roundPrice(basePrice * multiplier)
+        val recommended = openAiEstimate?.price?.toDouble()?.let(::roundPrice)
+            ?: roundPrice(baseMenuPrice(normalizedMenu) * multiplier)
         val minPrice = roundPrice(recommended * PRICE_RANGE_LOW)
         val maxPrice = roundPrice(recommended * PRICE_RANGE_HIGH)
         val confidence = confidenceLabel(vacancy)
@@ -145,8 +144,8 @@ class VacancyService(
             confidence = confidence,
             positioning = positioning,
             signals = priceSignals(vacancy, multiplier),
-            estimatedLatencyMs = latencyMs,
-            source = "mock_menu_price_model"
+            estimatedLatencyMs = openAiEstimate?.latencyMs ?: 0,
+            source = if (openAiEstimate != null) "openai_menu_price_model" else "local_menu_price_fallback"
         )
     }
 
@@ -589,8 +588,6 @@ class VacancyService(
         private const val MAX_RADIUS_M = 5000
         private const val SUMMARY_SCALE = 2
         private const val MIN_MENU_NAME_LENGTH = 1
-        private const val SIMULATED_MODEL_DELAY_MIN_MS = 2200L
-        private const val SIMULATED_MODEL_DELAY_SPREAD_MS = 1200
         private const val PRICE_RANGE_LOW = 0.9
         private const val PRICE_RANGE_HIGH = 1.12
         private const val PRICE_ROUNDING_UNIT = 500.0
