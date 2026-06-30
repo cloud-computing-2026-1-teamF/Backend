@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 056-store-vacancy-score-strength-weakness-explanations
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              alter table vacancy_category_score_explanations
+                add column if not exists explanation_tone varchar(16),
+                add column if not exists contribution_log_odds numeric(20,6),
+                add column if not exists contribution_pp numeric(20,6),
+                add column if not exists percentile_label varchar(40);
+
+              update vacancy_category_score_explanations
+              set explanation_tone = 'model'
+              where explanation_tone is null;
+
+              alter table vacancy_category_score_explanations
+                alter column explanation_tone set default 'model',
+                alter column explanation_tone set not null;
+
+              alter table vacancy_category_score_explanations
+                drop constraint if exists vacancy_category_score_explanations_pkey;
+
+              alter table vacancy_category_score_explanations
+                add constraint vacancy_category_score_explanations_pkey
+                primary key (property_id, category_id, explanation_tone, feature_rank);
+
+              alter table vacancy_category_score_explanations
+                drop constraint if exists ck_vacancy_score_explanations_tone;
+
+              alter table vacancy_category_score_explanations
+                add constraint ck_vacancy_score_explanations_tone
+                check (explanation_tone in ('model', 'positive', 'negative'));
+
+              create index if not exists idx_vacancy_score_explanations_tone_lookup
+                on vacancy_category_score_explanations (property_id, category_id, explanation_tone, feature_rank);

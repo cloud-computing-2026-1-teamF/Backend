@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 057-store-normalized-shap-explanation-metadata
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              alter table vacancy_category_score_explanations
+                add column if not exists normalized_impact numeric(20,6),
+                add column if not exists impact_percentile numeric(20,6);
+
+              alter table vacancy_score_feature_values
+                add column if not exists average_value numeric(20,6),
+                add column if not exists value_percentile numeric(20,6),
+                add column if not exists value_percentile_label varchar(40);
