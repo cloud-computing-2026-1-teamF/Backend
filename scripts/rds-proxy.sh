@@ -4,6 +4,7 @@ set -euo pipefail
 # Local RDS tunnel for IntelliJ/DataGrip.
 # Keeps RDS private and forwards localhost -> ECS task -> RDS through AWS SSM.
 
+PROFILE="${AWS_PROFILE:-teamf-main}"
 REGION="${AWS_REGION:-ap-northeast-2}"
 CLUSTER="${ECS_CLUSTER:-sanggwonai-dev-cluster}"
 SERVICE="${ECS_SERVICE:-app}"
@@ -20,7 +21,7 @@ Usage:
   scripts/rds-proxy.sh password    Print the DB password from SSM Parameter Store
 
 Optional env overrides:
-  AWS_PROFILE=... AWS_REGION=${REGION} LOCAL_PORT=${LOCAL_PORT} scripts/rds-proxy.sh tunnel
+  AWS_PROFILE=${PROFILE} AWS_REGION=${REGION} LOCAL_PORT=${LOCAL_PORT} scripts/rds-proxy.sh tunnel
 USAGE
 }
 
@@ -35,7 +36,7 @@ need_cmd() {
 }
 
 aws_text() {
-  aws --region "$REGION" "$@" --output text
+  aws --profile "$PROFILE" --region "$REGION" "$@" --output text
 }
 
 db_host() {
@@ -113,6 +114,8 @@ print_info() {
 
   cat <<INFO
 Main RDS:
+  AWS profile:   ${PROFILE}
+  AWS region:    ${REGION}
   DB instance:   ${DB_INSTANCE}
   RDS host:      ${host}
   RDS port:      ${port}
@@ -158,7 +161,7 @@ Keep this terminal open while IntelliJ/DataGrip is connected.
 Press Ctrl-C to close the tunnel.
 INFO
 
-  exec aws --region "$REGION" ssm start-session \
+  exec aws --profile "$PROFILE" --region "$REGION" ssm start-session \
     --target "$target" \
     --document-name AWS-StartPortForwardingSessionToRemoteHost \
     --parameters "$params"
