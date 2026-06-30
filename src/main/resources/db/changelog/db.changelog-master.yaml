@@ -53,3 +53,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-026-vacancy-score-explanations.yaml
   - include:
       file: db/changelog/db.changelog-027-vacancy-score-feature-values.yaml
+  - include:
+      file: db/changelog/db.changelog-028-vacancy-score-strength-weakness.yaml
