@@ -8,6 +8,7 @@ import com.sanggwonai.api.vacancy.entity.VacancyEntity
 import com.sanggwonai.api.vacancy.entity.VacancyScoreFeatureBenchmarkEntity
 import com.sanggwonai.api.vacancy.repository.VacancyCategoryScoreExplanationRepository
 import com.sanggwonai.api.vacancy.repository.VacancyScoreFeatureValueRepository
+import java.math.BigDecimal
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -23,11 +24,22 @@ class VacancyScoreExplanationService(
         benchmarksByKey: Map<String, VacancyScoreFeatureBenchmarkEntity>,
         vacancy: VacancyEntity,
         common: VacancyCommonFeatureEntity?,
-        spatial: VacancyCategorySpatialEntity?
+        spatial: VacancyCategorySpatialEntity?,
+        scorePercent: BigDecimal?
     ): VacancyScoreExplanationDto? {
         val normalizedCategoryId = categoryId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val explanations = explanationRepository
-            .findByIdPropertyIdAndIdCategoryIdOrderByIdFeatureRankAsc(propertyId, normalizedCategoryId)
+            .findByIdPropertyIdAndIdCategoryIdAndSourceOrderByIdExplanationToneAscIdFeatureRankAsc(
+                propertyId,
+                normalizedCategoryId,
+                STRENGTH_WEAKNESS_SOURCE
+            )
+            .ifEmpty {
+                explanationRepository.findByIdPropertyIdAndIdCategoryIdOrderByIdFeatureRankAsc(
+                    propertyId,
+                    normalizedCategoryId
+                )
+            }
         if (explanations.isEmpty()) return null
 
         val valuesByKey = featureValueRepository
@@ -40,7 +52,12 @@ class VacancyScoreExplanationService(
             featureValuesByKey = valuesByKey,
             vacancy = vacancy,
             common = common,
-            spatial = spatial
+            spatial = spatial,
+            scorePercent = scorePercent
         )
+    }
+
+    companion object {
+        private const val STRENGTH_WEAKNESS_SOURCE = "model_strength_weakness_2026"
     }
 }
