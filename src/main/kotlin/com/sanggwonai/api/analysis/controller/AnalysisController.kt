@@ -380,7 +380,11 @@ class AnalysisController(
             higherIsPositive = data.higherIsPositive,
             contributionLogOdds = data.contributionLogOdds,
             contributionPp = data.contributionPp,
-            percentileLabel = data.percentileLabel
+            percentileLabel = data.percentileLabel,
+            normalizedImpact = data.normalizedImpact,
+            impactPercentile = data.impactPercentile,
+            valuePercentile = data.valuePercentile,
+            valuePercentileLabel = data.valuePercentileLabel
         )
     }
 
