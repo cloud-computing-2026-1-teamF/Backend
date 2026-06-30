@@ -10,4 +10,10 @@ interface VacancyCategoryScoreExplanationRepository :
         propertyId: String,
         categoryId: String
     ): List<VacancyCategoryScoreExplanationEntity>
+
+    fun findByIdPropertyIdAndIdCategoryIdAndSourceOrderByIdExplanationToneAscIdFeatureRankAsc(
+        propertyId: String,
+        categoryId: String,
+        source: String
+    ): List<VacancyCategoryScoreExplanationEntity>
 }
