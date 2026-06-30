@@ -144,5 +144,9 @@ data class VacancyScoreFeatureDto(
     val higherIsPositive: Boolean?,
     val contributionLogOdds: BigDecimal?,
     val contributionPp: BigDecimal?,
-    val percentileLabel: String?
+    val percentileLabel: String?,
+    val normalizedImpact: BigDecimal?,
+    val impactPercentile: BigDecimal?,
+    val valuePercentile: BigDecimal?,
+    val valuePercentileLabel: String?
 )
