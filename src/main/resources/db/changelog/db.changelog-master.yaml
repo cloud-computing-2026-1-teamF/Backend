@@ -55,3 +55,5 @@ databaseChangeLog:
       file: db/changelog/db.changelog-027-vacancy-score-feature-values.yaml
   - include:
       file: db/changelog/db.changelog-028-vacancy-score-strength-weakness.yaml
+  - include:
+      file: db/changelog/db.changelog-029-normalized-shap-explanation-metadata.yaml
