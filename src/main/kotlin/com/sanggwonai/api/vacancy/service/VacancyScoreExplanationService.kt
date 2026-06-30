@@ -58,6 +58,6 @@ class VacancyScoreExplanationService(
     }
 
     companion object {
-        private const val STRENGTH_WEAKNESS_SOURCE = "model_strength_weakness_2026"
+        private const val STRENGTH_WEAKNESS_SOURCE = "normalized_shap_2026"
     }
 }
