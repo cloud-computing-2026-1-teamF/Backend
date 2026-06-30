@@ -2,7 +2,7 @@
 """Load local yearwise vacancy-category scores into PostgreSQL.
 
 The source CSVs are intentionally kept outside the repository because they are
-large. By default this script reads the 2022-2026 files from the local Drive
+large. By default this script reads the 2019-2026 files from the local Drive
 download folder and maps each CSV `property_id` to `vacancies."매물번호"`.
 It only refreshes `vacancy_score_history`; primary category scores and horizon
 forecasts come from the AI horizon export.
@@ -28,9 +28,9 @@ from typing import Iterable, Iterator, Sequence
 from urllib.parse import quote
 
 
-DEFAULT_CSV_DIR = Path.home() / "Downloads" / "drive-download-20260624T181049Z-3-001"
-DEFAULT_YEARS = tuple(range(2022, 2027))
-SOURCE = "yearwise_scores_2022_2026"
+DEFAULT_CSV_DIR = Path.home() / "Downloads" / "scored_full_2019"
+DEFAULT_YEARS = tuple(range(2019, 2027))
+SOURCE = "yearwise_scores_2019_2026"
 DATA_BASIS = "연도별 생존점수 CSV"
 BATCH_SIZE = 5_000
 
@@ -82,7 +82,7 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         type=int,
         default=list(DEFAULT_YEARS),
-        help="Score years to load. Default: 2022 2023 2024 2025 2026",
+        help="Score years to load. Default: 2019 2020 2021 2022 2023 2024 2025 2026",
     )
     parser.add_argument(
         "--current-year",
