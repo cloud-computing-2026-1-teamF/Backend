@@ -163,8 +163,8 @@ class ReportHtmlRenderer {
                 sb.append("<div class=\"colh ok\">✓ 액션 아이템</div>")
                 acts.sortedBy { intOf(asMap(it)?.get("우선순위")) ?: 9 }.take(4).forEachIndexed { i, a ->
                     val am = asMap(a) ?: return@forEachIndexed
-                    sb.append("<table class=\"act\"><tr><td class=\"ano\">").append((intOf(am["우선순위"]) ?: (i + 1)))
-                        .append("</td><td class=\"atx\"><b>").append(esc(str(am["할_일"]))).append("</b>")
+                    sb.append("<table class=\"act\"><tr><td class=\"ano\"><span>").append((intOf(am["우선순위"]) ?: (i + 1)))
+                        .append("</span></td><td class=\"atx\"><b>").append(esc(str(am["할_일"]))).append("</b>")
                     str(am["이유"]).ifBlank { null }?.let { sb.append("<p>").append(esc(it)).append("</p>") }
                     sb.append("</td><td class=\"adur\">").append(esc(str(am["예상_소요시간"]))).append("</td></tr></table>")
                 }
@@ -411,14 +411,14 @@ class ReportHtmlRenderer {
     }
 
     // ── §6 상권 수요·경쟁 시그널 ────────────────────────────────
-    private fun sectionMarketSignals(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+    private fun sectionMarketSignals(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>, no: String = "6") {
         val top1 = asList(path(input, "saved_analysis", "top3")).firstOrNull().let { asMap(it) } ?: return
         val ch6 = asMap(report["chapter_6_market_signal_diagnosis"]) ?: emptyMap<Any?, Any?>()
         val pop = asMap(top1["population"]) ?: emptyMap<Any?, Any?>()
         val commercial = asMap(top1["commercial"]) ?: emptyMap<Any?, Any?>()
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "6", "상권 수요·경쟁 시그널", "공실 상세 지표 기반")
+        secHead(sb, no, "상권 수요·경쟁 시그널", "공실 상세 지표 기반")
 
         sb.append("<div class=\"signal-layout\">")
         sb.append("<section class=\"info-card accent-blue\"><h3>인구 구성</h3><div class=\"tile-grid compact\">")
@@ -551,10 +551,10 @@ class ReportHtmlRenderer {
     }
 
     // ── §9 부록 ────────────────────────────────────────────────
-    private fun sectionAppendix(sb: StringBuilder, report: Map<String, Any?>) {
+    private fun sectionAppendix(sb: StringBuilder, report: Map<String, Any?>, no: String = "9") {
         val ch7 = asMap(report["chapter_7_appendix"]) ?: emptyMap<Any?, Any?>()
         sb.append("<div class=\"sheet\" id=\"appendix\"><div class=\"pad\">")
-        secHead(sb, "9", "부록 — 본 보고서의 한계", null)
+        secHead(sb, no, "부록 — 본 보고서의 한계", null)
         sb.append("<div class=\"disc\"><ul>")
         val limit = str(ch7["본_보고서의_한계"])
         val items = (if (limit.contains('\n')) limit.split('\n') else limit.split(Regex("(?<=다\\.)\\s+")))
@@ -580,7 +580,7 @@ class ReportHtmlRenderer {
     }
 
     // ── §내력 이 자리의 내력 (v6.3 신규) ─────────────────────────
-    private fun sectionLocationHistory(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>) {
+    private fun sectionLocationHistory(sb: StringBuilder, report: Map<String, Any?>, input: Map<String, Any?>, no: String = "★") {
         val hist = asMap(path(input, "section_07_location_history")) ?: return
         val chh = asMap(report["chapter_5_location_history"]) ?: emptyMap<Any?, Any?>()
         val trend = asList(hist["score_trend"])
@@ -588,7 +588,7 @@ class ReportHtmlRenderer {
         val timeline = asList(occ["timeline"])
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "★", "이 자리의 내력", "과거 입지 점수 추세 + 점유 이력")
+        secHead(sb, no, "이 자리의 내력", "과거 입지 점수 추세 + 점유 이력")
 
         // 무덤자리 요약 KPI
         val tenantCount = intOf(occ["tenant_count"]) ?: timeline.size
@@ -677,15 +677,15 @@ class ReportHtmlRenderer {
             sectionProperty(sb, mReport, mInput)
             sectionLocation(sb, mReport, mInput)
             sectionFit(sb, mReport, mInput)
-            sectionMarketSignals(sb, mReport, mInput)
-            if (path(mInput, "section_07_location_history") != null) sectionLocationHistory(sb, mReport, mInput)
+            sectionMarketSignals(sb, mReport, mInput, "5")
+            if (path(mInput, "section_07_location_history") != null) sectionLocationHistory(sb, mReport, mInput, "6")
             if (path(mInput, "section_06_investment_payback") != null) sectionPayback(sb, mReport, mInput)
             if (mReport.containsKey("chapter_8_review_insight")) sectionReview(sb, mReport, mInput)
             sb.append("</div>")
         }
 
         sectionYourChoiceV65(sb, report, ordered)
-        sectionAppendix(sb, report)
+        sectionAppendix(sb, report, "★")
 
         sb.append("<script>document.querySelectorAll('.ptab').forEach(function(b){b.addEventListener('click',function(){")
             .append("var i=b.getAttribute('data-pp');")
@@ -715,7 +715,7 @@ class ReportHtmlRenderer {
         val cols = ordered.map { it.second }
         val dup = dupAddrs(ordered)
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, "1", "세 매물 한눈 비교", "본인 우선순위로 고르세요")
+        secHead(sb, "★", "세 매물 한눈 비교", "본인 우선순위로 고르세요")
         str(ov["인트로"]).ifBlank { null }?.let { sb.append("<p class=\"body\">").append(esc(it)).append("</p>") }
         sb.append("<div class=\"charrow\">")
         ordered.forEach { (_, prop) ->
@@ -1197,6 +1197,7 @@ class ReportHtmlRenderer {
             .gctr span { display:block; margin-top:-40px; font-size:12px; color:var(--muted); font-weight:800; }
             .herobody { vertical-align:middle; padding-left:18px; }
             .kpis { width:100%; border-collapse:separate; border-spacing:10px 0; }
+            .kpis + .twocol { margin-top:16px; }
             .kpi {
               width:33%; padding:14px 15px; border:1px solid var(--line); border-radius:14px;
               background:linear-gradient(180deg,#fff,#FAFBFD); vertical-align:top;
@@ -1227,10 +1228,12 @@ class ReportHtmlRenderer {
             .pill.hi { background:#FCEAEA; color:var(--red); } .pill.mid { background:#FBF1DD; color:var(--amber); }
             .pill.low { background:#EAF1FD; color:var(--blue); }
             .rd { clear:both; margin-top:7px; color:var(--muted); font-size:13px; }
-            .act { width:100%; border-collapse:collapse; border-bottom:1px solid var(--line); }
-            .act td.ano { background:var(--orange); color:#fff; border-radius:999px; text-align:center; font-size:13px; font-weight:900; width:24px; height:24px; }
-            .atx { padding:8px 10px; } .atx b { font-size:14px; } .atx p { margin:4px 0 0; font-size:13px; color:var(--muted); }
-            .adur { width:64px; padding-top:8px; text-align:right; color:var(--muted); font-size:12px; white-space:nowrap; vertical-align:top; }
+            .act { width:100%; border-collapse:separate; border-spacing:0; margin:10px 0; border:1px solid var(--line); border-left:4px solid var(--orange); border-radius:13px; background:#fff; }
+            .act td { vertical-align:top; }
+            .act td.ano { width:44px; padding:13px 0 13px 13px; text-align:center; background:none; }
+            .act td.ano span { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:999px; background:var(--orange); color:#fff; font-size:13px; font-weight:900; }
+            .atx { padding:13px 8px 13px 4px; } .atx b { font-size:14px; line-height:1.45; } .atx p { margin:5px 0 0; font-size:13px; color:var(--muted); }
+            .adur { width:64px; padding:15px 14px 0 0; text-align:right; color:var(--muted); font-size:12px; white-space:nowrap; vertical-align:top; }
             .ops-grid, .signal-layout { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
             .info-card, .panel {
               position:relative; padding:18px; border:1px solid var(--line); border-radius:16px;
@@ -1333,7 +1336,7 @@ class ReportHtmlRenderer {
             .charcard { padding:14px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#fff,#FAFBFD); }
             .charcard b { display:block; margin:8px 0 4px; font-size:15px; line-height:1.3; }
             .charcard small { color:var(--muted); font-size:12px; font-weight:700; }
-            .cmp3 { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:14px; }
+            .cmp3 { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:14px; margin-top:18px; }
             .cmp3 th { background:#F6F8FB; color:var(--muted); padding:11px 14px; font-size:12px; font-weight:900; text-align:center; }
             .cmp3 th:first-child { text-align:left; }
             .cmp3 td { padding:11px 14px; border-top:1px solid #EDF0F5; text-align:center; }
