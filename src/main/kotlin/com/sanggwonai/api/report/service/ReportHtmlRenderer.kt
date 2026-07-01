@@ -100,7 +100,7 @@ class ReportHtmlRenderer {
         sb.append("<table class=\"hero\"><tr><td class=\"gaugecell\">")
         sb.append("<div class=\"gauge\">").append(gaugeSvg(score))
         sb.append("<div class=\"gctr\"><b style=\"color:").append(scoreColor(score)).append("\">").append(score)
-            .append("</b><span>입지 점수</span></div></div>")
+            .append("%</b><span>예상 생존율</span></div></div>")
         sb.append("</td><td class=\"herobody\">")
         // KPI cards from input
         sb.append("<table class=\"kpis\"><tr>")
@@ -120,7 +120,7 @@ class ReportHtmlRenderer {
         if (feats.isNotEmpty() || horizons.isNotEmpty()) {
             sb.append("<table class=\"twocol\"><tr><td>")
             if (feats.isNotEmpty()) {
-                sb.append("<div class=\"panel\"><h3>왜 이 입지 점수인가 <span class=\"hint\">— 상권 평균 대비</span></h3>")
+                sb.append("<div class=\"panel\"><h3>왜 이 예상 생존율인가 <span class=\"hint\">— 상권 평균 대비</span></h3>")
                 feats.take(5).forEach { f ->
                     val fm = asMap(f) ?: return@forEach
                     effectBar(sb, str(fm["label"]), str(fm["effect"]), dbl(fm["current"]), dbl(fm["average"]))
@@ -130,12 +130,12 @@ class ReportHtmlRenderer {
             }
             sb.append("</td><td>")
             if (horizons.isNotEmpty()) {
-                sb.append("<div class=\"panel\"><h3>미래 전망 <span class=\"hint\">기간별 입지 점수</span></h3>")
+                sb.append("<div class=\"panel\"><h3>미래 전망 <span class=\"hint\">기간별 예상 생존율</span></h3>")
                 horizons.sortedBy { intOf(asMap(it)?.get("years")) ?: 99 }.forEach { hz ->
                     val hm = asMap(hz) ?: return@forEach
                     val yr = intOf(hm["years"]) ?: return@forEach
                     val sc = (intOf(hm["score"]) ?: 0).coerceIn(0, 100)
-                    barColored(sb, "${yr}년", sc, "${sc}점", scoreColor(sc), yr == 3)
+                    barColored(sb, "${yr}년", sc, "${sc}%", scoreColor(sc), yr == 3)
                 }
                 str(ch1["미래_전망"]).ifBlank { null }?.let { sb.append("<p class=\"body sm faint\">").append(esc(it)).append("</p>") }
                 sb.append("</div>")
@@ -366,7 +366,7 @@ class ReportHtmlRenderer {
             ?.let { sb.append("<p class=\"body\" style=\"margin-top:-2px\">").append(esc(it)).append("</p>") }
 
         sb.append("<table class=\"cmp\"><thead><tr><th>매물</th><th>층</th><th class=\"r\">월세</th>")
-            .append("<th class=\"r\">보증금</th><th class=\"r\">점수</th><th class=\"r\">월순이익</th><th>회수 평가</th></tr></thead><tbody>")
+            .append("<th class=\"r\">보증금</th><th class=\"r\">예상 생존율</th><th class=\"r\">월순이익</th><th>회수 평가</th></tr></thead><tbody>")
         top3.forEachIndexed { i, t ->
             val tm = asMap(t) ?: return@forEachIndexed
             val rank = intOf(tm["rank"]) ?: (i + 1)
@@ -382,7 +382,7 @@ class ReportHtmlRenderer {
             sb.append("</td><td>").append(esc(str(tm["floor"]).ifBlank { "-" })).append("</td>")
             sb.append("<td class=\"r\">").append(wonShort(dbl(tm["rent"]))).append("</td>")
             sb.append("<td class=\"r\">").append(wonShort(dbl(tm["deposit"]))).append("</td>")
-            sb.append("<td class=\"r\"><b>").append(intOf(tm["score"]) ?: 0).append("</b></td>")
+            sb.append("<td class=\"r\"><b>").append(intOf(tm["score"]) ?: 0).append("%</b></td>")
             if (net != null) {
                 val cls = if (net < 0) "red" else "green"
                 sb.append("<td class=\"r ").append(cls).append("\">").append(if (net >= 0) "+" else "").append(net.roundToLong()).append("만</td>")
@@ -566,7 +566,7 @@ class ReportHtmlRenderer {
             sb.append("<li>본 보고서는 참고용이며, 최종 결정 전 현장 실사·전문가 상담을 권장합니다.</li>")
         }
         sb.append("</ul></div>")
-        sb.append("<p class=\"body sm faint\" style=\"margin-top:12px\">입지 점수: AI가 예측한 3년 생존 확률 기반 · 공공데이터(인허가·상권분석·소상공인·공시지가) 기반</p>")
+        sb.append("<p class=\"body sm faint\" style=\"margin-top:12px\">예상 생존율: AI가 예측한 3년 생존 확률 · 공공데이터(인허가·상권분석·소상공인·공시지가) 기반</p>")
         sb.append("<p class=\"body sm\" style=\"margin-top:16px\"><b>투자 회수 계산 방법</b></p>")
         sb.append("<div class=\"disc\"><ul>")
         sb.append("<li><b>초기투자비</b> = 보증금 + 권리금 + 중개수수료 + (월세+관리비) × 3개월 운전자금</li>")
@@ -588,7 +588,7 @@ class ReportHtmlRenderer {
         val timeline = asList(occ["timeline"])
 
         sb.append("<div class=\"sheet\"><div class=\"pad\">")
-        secHead(sb, no, "이 자리의 내력", "과거 입지 점수 추세 + 점유 이력")
+        secHead(sb, no, "이 자리의 내력", "과거 예상 생존율 추세 + 점유 이력")
 
         // 무덤자리 요약 KPI
         val tenantCount = intOf(occ["tenant_count"]) ?: timeline.size
@@ -597,12 +597,12 @@ class ReportHtmlRenderer {
         sb.append("<table class=\"kpis\"><tr>")
         kpi(sb, "거쳐간 가게", tenantCount.toString(), "곳")
         kpi(sb, "그중 폐업", closedCount.toString(), "곳")
-        kpi(sb, "점수 방향", when (dir) { "up" -> "회복 ↑"; "down" -> "악화 ↓"; else -> "보합 →" }, "")
+        kpi(sb, "생존율 방향", when (dir) { "up" -> "회복 ↑"; "down" -> "악화 ↓"; else -> "보합 →" }, "")
         sb.append("</tr></table>")
 
         sb.append("<table class=\"twocol\"><tr><td>")
         // 과거 생존율 추세선
-        sb.append("<div class=\"panel\"><h3>과거 입지 점수 추세 <span class=\"hint\">연도별</span></h3>")
+        sb.append("<div class=\"panel\"><h3>과거 예상 생존율 추세 <span class=\"hint\">연도별</span></h3>")
         val pts = trend.mapNotNull { p -> val pm = asMap(p) ?: return@mapNotNull null
             val y = intOf(pm["year"]) ?: return@mapNotNull null; val s = dbl(pm["score"]) ?: return@mapNotNull null; y to s }
         if (pts.size >= 2) {
@@ -725,7 +725,7 @@ class ReportHtmlRenderer {
             sb.append("<div class=\"charcard\"><span class=\"ptag\">").append(esc(str(ch?.get("성격")).ifBlank { "매물" })).append("</span>")
             sb.append("<b>").append(esc(propLabel(prop, full = false, dup = dup))).append("</b>")
             sb.append("<small>").append(esc(str(ch?.get("한줄")).ifBlank { "-" })).append("</small>")
-            sb.append("<span class=\"ptscore big\">입지 점수 ").append(score).append("점</span></div>")
+            sb.append("<span class=\"ptscore big\">예상 생존율 ").append(score).append("%</span></div>")
         }
         sb.append("</div>")
         sb.append("<table class=\"cmp3\"><thead><tr><th>지표</th>")
